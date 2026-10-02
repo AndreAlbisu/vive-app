@@ -1,3 +1,11 @@
+## 2026-10-02 — Andre (Claude · checkout: avisos debajo del mensaje)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`
+
+**Resumen:**
+- Pedido de Andre: acomodar los párrafos debajo de "Contame brevemente qué te trajo acá". Los tres avisos (cobro, cancelación, ausencias) pasan a una sola tarjeta suave, con el ícono a la altura del primer renglón, texto 13,5 regular en `softInk` y margen a los dos lados (antes: ícono centrado, texto oscuro en negrita media y el segundo párrafo pegado al borde derecho porque le faltaba `flex: 1`). **El texto no cambió** (tiene peso legal, T&C §9).
+- La caja celeste "El pago se procesa a través de Mercado Pago" solo aparece cuando NO hay selector de medio de pago; con selector repetía la opción marcada. Verificado en el simulador.
+
 ## 2026-10-02 — Andre (Claude · "Tu primera sesión" en el perfil)
 
 **Tocado:** `screens/ProfesionalScreen.tsx` (solo el bloque nuevo)

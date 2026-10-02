@@ -1113,8 +1113,13 @@ export default function BookingScreen_Confirm() {
             que es lo que los T&C §8.2 ya describían bien. Si el coach no tiene MP
             conectado no hay checkout y no se cobra nada; el texto sigue siendo
             válido ahí (no promete un cobro, describe cuándo ocurre). */}
+        {/* 02/10/2026 (pedido de Andre): los tres avisos juntos en una tarjeta,
+            con el ícono a la altura del primer renglón y el texto más liviano.
+            Antes eran tres párrafos sueltos, oscuros, con el ícono centrado y
+            el texto pegado al borde derecho. El contenido no cambió. */}
+        <View style={s.avisos}>
         <View style={s.noticeRow}>
-          <MaterialIcons name="shield" size={15} color={ViveColors.accent} />
+          <MaterialIcons name="shield" size={16} color={ViveColors.accent} style={{ marginTop: 2 }} />
           <Text style={s.noticeText}>
             {/* Con USDT NO es "al instante": la transferencia la confirma el cron
                 cuando la ve en la red. Prometer inmediatez acá sería el mismo
@@ -1139,7 +1144,7 @@ export default function BookingScreen_Confirm() {
             se puede, lo que no hay es reembolso. Era además lo que hacía que §9.1
             contradijera al derecho de revocación de §9.4. */}
         <View style={s.noticeRow}>
-          <MaterialIcons name="event-busy" size={15} color={ViveColors.accent} />
+          <MaterialIcons name="event-busy" size={16} color={ViveColors.accent} style={{ marginTop: 2 }} />
           <Text style={s.noticeText}>
             Podés cancelar cuando quieras. Hasta 24hs antes te devolvemos todo;
             después de esa hora la sesión se cancela igual pero sin reembolso
@@ -1152,11 +1157,12 @@ export default function BookingScreen_Confirm() {
             advertencia. Van las dos mitades —la que protege al cliente y la que
             protege al profesional—; si cambian los umbrales (10 / 20), cambia acá. */}
         <View style={s.noticeRow}>
-          <MaterialIcons name="schedule" size={15} color={ViveColors.accent} />
+          <MaterialIcons name="schedule" size={16} color={ViveColors.accent} style={{ marginTop: 2 }} />
           <Text style={s.noticeText}>
             Si tu profesional no llega en los primeros 10 minutos, no pagás la sesión.
             Si llegás más de 20 minutos tarde, se cobra igual
           </Text>
+        </View>
         </View>
 
         {/* Error */}
@@ -1167,7 +1173,9 @@ export default function BookingScreen_Confirm() {
           </View>
         )}
 
-        {/* Pago */}
+        {/* Pago. Solo cuando NO hay selector de medio abajo: con selector,
+            "se procesa a través de Mercado Pago" repetía la opción marcada. */}
+        {!internacionalDisponible && (
         <View style={s.paymentSection}>
           <View style={s.paymentInfoRow}>
             <MaterialIcons name="account-balance-wallet" size={18} color="#009EE3" />
@@ -1182,6 +1190,7 @@ export default function BookingScreen_Confirm() {
             </Text>
           </View>
         </View>
+        )}
 
       </ScrollView>
 
@@ -1495,17 +1504,25 @@ const s = StyleSheet.create({
     lineHeight: 19,
   },
 
+  avisos: {
+    backgroundColor: 'rgba(86,94,50,0.06)',
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    padding: 14,
+    gap: 12,
+    marginBottom: 16,
+  },
   noticeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 4,
-    marginBottom: 14,
+    alignItems: 'flex-start',
+    gap: 10,
   },
   noticeText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: ViveColors.accent,
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: ViveColors.softInk,
   },
 
   messageSection: {
