@@ -84,7 +84,7 @@ describe('copy de la tarjeta', () => {
     // llamarse "Profesionales" el 28/08): "aparecés en Profesionales" es un error
     // de categoría, el coach ES un profesional. Dice qué le pasa a él.
     expect(tituloVisibilidad(null)).toBe('Dónde te encuentran');
-    expect(bajadaVisibilidad(null)).toMatch(/en qué lugar entrás/);
+    expect(bajadaVisibilidad(null)).toMatch(/en qué lugar aparecés/);
   });
 
   it('un lugar ganado se dice como propio', () => {
@@ -101,11 +101,11 @@ describe('copy de la tarjeta', () => {
 
   it('las otras puertas se pluralizan bien', () => {
     const una = homeStanding([door(0, [slot('nuevo', 'ganado')]), door(1, [slot('nuevo', 'ganado')])]);
-    expect(bajadaVisibilidad(una)).toContain('1 puerta más');
+    expect(bajadaVisibilidad(una)).toContain('1 tema más');
     const dos = homeStanding([
       door(0, [slot('nuevo', 'ganado')]), door(1, [slot('nuevo', 'ganado')]), door(2, [slot('nuevo', 'ganado')]),
     ]);
-    expect(bajadaVisibilidad(dos)).toContain('2 puertas más');
+    expect(bajadaVisibilidad(dos)).toContain('2 temas más');
   });
 
   it('sin lugar muestra la brecha concreta, y si no hay usa un texto que igual sirve', () => {
@@ -114,12 +114,12 @@ describe('copy de la tarjeta', () => {
     expect(bajadaVisibilidad(con)).toBe('bajá $500');
 
     const sin = homeStanding([door(0, [slot('economico', 'bloqueado', 0, '')])]);
-    expect(bajadaVisibilidad(sin)).toBe('Mirá qué te falta en tu puerta.');
+    expect(bajadaVisibilidad(sin)).toBe('Mirá qué te falta en tu tema.');
 
     const varias = homeStanding([
       door(0, [slot('economico', 'bloqueado', 0, '')]),
       door(1, [slot('economico', 'bloqueado', 0, '')]),
     ]);
-    expect(bajadaVisibilidad(varias)).toBe('Mirá qué te falta en tus 2 puertas.');
+    expect(bajadaVisibilidad(varias)).toBe('Mirá qué te falta en tus 2 temas.');
   });
 });

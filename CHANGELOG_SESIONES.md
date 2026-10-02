@@ -1,9 +1,14 @@
 ## 2026-10-02 — Andre (Claude · simulador andando y bug de zona horaria)
 
-**Tocado:** `lib/time.ts`, `__tests__/time.test.ts`
+**Tocado:** `lib/time.ts`, `__tests__/time.test.ts`, `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`, `lib/coachVisibility.ts`, `__tests__/coachVisibilityHome.test.ts`
 
 **Resumen:**
 - **Simulador:** iPhone 17 con iOS 26 ("Vita iPhone 17 (iOS 26)"), la app compilada con Xcode 27 corre ahí (la exigencia de UIScene es de iOS 27). Toques con **idb** (Meta, Homebrew + `~/.idb-venv`), autorizado por Andre. Sesión abierta con un código de entrada generado con la clave de administrador para `andrealbisu@gmail.com` (autorizado por Andre; no cambia contraseñas).
+- **Recorrido con capturas** (perfil de ejemplo como cliente; Inicio y Reservas como coach-prueba). El bloque práctico, Cómo trabaja y las reseñas se ven bien. Arreglado lo que mostraron:
+  - **Letra grande del sistema** (accesibilidad): en "Hace rato que no los ves" el botón dejaba los nombres en "J." y "H.": con `fontScale >= 1.3` el botón baja a su propio renglón. El saludo "Hola, …" perdía el nombre entero: tope `maxFontSizeMultiplier` 1.3.
+  - Reservas vacío prometía "o propongas otro horario" (no existe para solicitudes): ahora "o le digas que no podés". "Puerta" (jerga nuestra) seguía en la tarjeta de visibilidad y en dos avisos: ahora "tema" (`lib/coachVisibility.ts` + su test).
+  - ⚠️ Sin resolver: en el simulador la 2ª reseña del ejemplo se dibuja en un renglón cortado ("…y fue mu") aunque reserva el alto de dos. No es el contenedor animado ni el `lineBreakStrategyIOS` (probados y revertidos). Sospecha: la app compilada con el SDK de iOS 27 corriendo en el simulador de iOS 26. **Mirarlo en un iPhone real.**
+  - La barra de pestañas del profesional es solo íconos, sin nombres (Inicio, Reservas, Chats, Recursos): anotado para la próxima.
 - 🔴 **Bug encontrado en la primera captura:** `deviceIsOffArgentina` comparaba el huso del teléfono (al minuto) con el de Argentina (con segundos y milisegundos), así que casi nunca daban igual y **todo teléfono en Argentina se tomaba como "de afuera"**: el perfil decía "(hora de Argentina)" y "18:00 para vos", y lo mismo Confirmar y la pantalla final de la reserva. Los tests pasaban porque usaban minutos exactos. Ahora se compara en minutos, con un test con segundos. La web (/c) no tenía el bug: decide por el nombre de la zona.
 
 ## 2026-10-02 — Andre (Claude · lado del profesional: revisión de UX de Inicio y Reservas)

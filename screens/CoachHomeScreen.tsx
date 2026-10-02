@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
   RefreshControl,
   Image,
   Share,
@@ -192,6 +193,9 @@ export default function CoachHomeScreen() {
   // esto no aparecés en la app", y abajo "Sin sesiones programadas". Ahora un
   // error se dice como error, con Reintentar.
   const [cargaFallo, setCargaFallo] = useState(false);
+  // Con la letra del sistema agrandada, las filas con botón pasan a dos
+  // renglones (ver `caenRow`).
+  const letraGrande = useWindowDimensions().fontScale >= 1.3;
   const [intento, setIntento] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -943,7 +947,7 @@ export default function CoachHomeScreen() {
                 y empujaba los íconos de la derecha fuera de eje. La causa de
                 fondo ya se arregló en `CoachLoginScreen`, esto es defensivo
                 para cualquier nombre real igual de largo. */}
-            <Text style={s.hello} numberOfLines={1} ellipsizeMode="tail">Hola, {coachName || '—'}</Text>
+            <Text style={s.hello} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>Hola, {coachName || '—'}</Text>
             <View style={s.headerRight}>
               <TouchableOpacity onPress={() => router.push('/coach-notifications')} activeOpacity={0.7} hitSlop={8} style={s.bellBtn}>
                 <Feather name="bell" size={22} color={FOREST} />
@@ -1452,7 +1456,7 @@ export default function CoachHomeScreen() {
             <View style={s.caenWrap}>
               <Text style={s.caenTitle}>Hace rato que no los ves</Text>
               {seCaen.map(p => (
-                <View key={p.userId} style={s.caenRow}>
+                <View key={p.userId} style={[s.caenRow, letraGrande && s.caenRowGrande]}>
                   {p.avatarUrl ? (
                     <Image source={{ uri: p.avatarUrl }} style={s.caenAv} />
                   ) : (
@@ -1460,7 +1464,7 @@ export default function CoachHomeScreen() {
                       <Text style={s.caenInitials}>{getInitials(p.name)}</Text>
                     </View>
                   )}
-                  <View style={{ flex: 1 }}>
+                  <View style={s.caenTexto}>
                     <Text style={s.caenName} numberOfLines={1}>{p.name}</Text>
                     <Text style={s.caenMeta} numberOfLines={1}>
                       {haceCuanto(p.diasSinVerse)}
@@ -1472,7 +1476,7 @@ export default function CoachHomeScreen() {
                       reserva, así que si no existe no se ofrece un botón muerto. */}
                   {p.salaId && (
                     <TouchableOpacity
-                      style={s.caenBtn}
+                      style={[s.caenBtn, letraGrande && s.caenBtnGrande]}
                       activeOpacity={0.85}
                       disabled={proponiendo === p.userId}
                       onPress={() => proponerHorario(p)}>
@@ -1799,7 +1803,13 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: FOREST,
   },
+  // 02/10/2026, visto en el simulador con letra grande: el botón no se achica
+  // y dejaba los nombres en "J." y "H.". Con letra grande la fila pasa a
+  // envolver y el botón ocupa su propio renglón, abajo del nombre.
   caenRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  caenRowGrande: { flexWrap: 'wrap' },
+  caenTexto: { flex: 1 },
+  caenBtnGrande: { width: '100%', alignItems: 'center' },
   caenAv: { width: 38, height: 38, borderRadius: 19 },
   caenAvFallback: { backgroundColor: CREAM_DEEP, alignItems: 'center', justifyContent: 'center' },
   caenInitials: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },

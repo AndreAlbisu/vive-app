@@ -570,7 +570,7 @@ export default function CoachReservasScreen() {
                     </View>
                     <Text style={s.emptyTitle}>Tu agenda está libre</Text>
                     <Text style={s.emptyTxt}>
-                      Cuando alguien reserve, la solicitud aparece acá para que la confirmes o propongas otro horario.
+                      Cuando alguien reserve, la solicitud aparece acá para que la confirmes o le digas que no podés.
                     </Text>
                   </View>
                 </SurfaceCard>
