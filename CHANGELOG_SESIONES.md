@@ -5,10 +5,9 @@
 **Resumen:**
 - Decisión de Andre: despublicar desde el panel tiene que tener vuelta. `approve_coach_application` acepta también a quien ya estuvo aprobado y hoy no está publicado, con las mismas exigencias que una aprobación (entrevista, identidad, matrícula) y sin pisar las notas ni la fecha de la revisión original. Una cuenta eliminada no se republica.
 - `admin-actions`: al republicar, el profesional recibe "Tu perfil vuelve a estar publicado" (tipo `sancion_levantada`, que no dispara el mail de postulación aprobada) y la auditoría anota `republicado`.
-- 🗄️ **Migración probada en `vita-pruebas`, 🔴 NO aplicada en producción** (la corre Andre). Hasta que se corra, republicar en producción sigue dando `solicitud_no_pendiente`. Probado en prueba: quien cumple todo se republica; sin entrevista o identidad, o con la cuenta eliminada, se rechaza.
+- 🗄️ **Migración `20261004020000` probada en `vita-pruebas` y ✅ aplicada en producción** (la corrió Andre; verificada y registrada; SCHEMA.md actualizado). Probado en prueba: quien cumple todo se republica; sin entrevista o identidad, o con la cuenta eliminada, se rechaza.
 
 **Pendiente para la próxima sesión:**
-- Andre: `! supabase db query --linked -f supabase/migrations/20261004020000_republish_coach.sql`. Después Claude verifica, registra y actualiza SCHEMA.md.
 - Fase 3, tanda 3: pantallas y web.
 
 ## 2026-10-04 — Andre (Claude · auditoría fase 3, tanda 2: reglas de la base y lib)
