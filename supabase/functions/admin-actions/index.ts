@@ -250,13 +250,15 @@ serve(async (req) => {
         .createSignedUrl(`${coach.profile_id}/${body.which}.jpg`, 300)
       if (signErr || !signed) return json({ error: 'no está esa foto (puede que ya se haya borrado al verificar)' }, 404)
 
-      await audit(admin, {
+      // Sin constancia de quién lo miró, no se entrega el documento.
+      const auditErr = await audit(admin, {
         ...actor,
         action: 'identity_file_url',
         targetType: 'coach',
         targetId: coach.id,
         details: { which: body.which },
       })
+      if (auditErr) return json({ error: 'no se pudo registrar la consulta; el documento no se entrega sin auditoría' }, 500)
 
       return json({ result: 'ok', url: signed.signedUrl, expires_in: 300 })
     }
@@ -1198,13 +1200,15 @@ serve(async (req) => {
 
       // Se audita MIRAR, no solo decidir: es un documento de identidad y tiene
       // que quedar quién lo abrió.
-      await audit(admin, {
+      // Sin esa constancia, no se entrega (03/10/2026).
+      const auditErr = await audit(admin, {
         ...actor,
         action: 'credential_file_url',
         targetType: 'coach_credential',
         targetId: cred.id,
         details: {},
       })
+      if (auditErr) return json({ error: 'no se pudo registrar la consulta; el documento no se entrega sin auditoría' }, 500)
 
       return json({ result: 'ok', url: signed.signedUrl, expires_in: 300 })
     }
@@ -1357,7 +1361,11 @@ serve(async (req) => {
             focos: c.focos ?? [],
             matriculaVerificada: (credentials ?? []).some((cc: any) => cc.coach_id === c.id
               && cc.status === 'verificada'
-              && cc.profesion === (c.specialty === 'Psicólogo/a' ? 'psicologia' : 'nutricion')),
+              // Misma regla que `approve_coach_application`: la profesión tiene
+              // que coincidir solo donde la matrícula es obligatoria.
+              && (c.specialty === 'Psicólogo/a' ? cc.profesion === 'psicologia'
+                : c.specialty === 'Nutricionista' ? cc.profesion === 'nutricion'
+                : true)),
             matriculaPendiente: (credentials ?? []).some((cc: any) => cc.coach_id === c.id
               && cc.status === 'pendiente'),
             createdAt: c.created_at ?? null,

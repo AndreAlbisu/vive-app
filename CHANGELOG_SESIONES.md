@@ -1,3 +1,19 @@
+## 2026-10-03 — Andre (Claude · auditoría fase 3, tanda 1: funciones del servidor)
+
+**Tocado:** `supabase/functions/delete-account/index.ts` (v30), `admin-actions/index.ts` (v42), `guarantee-claim/index.ts` (v33), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
+
+**Resumen:**
+- 🗄️ La migración `20261003010000` (endurecimiento de `coach_mp_accounts`, `are_blocked`, `email_es_de_coach`) **ya está en producción**: la corrió Andre, verificada y registrada en `schema_migrations`. SCHEMA.md actualizado.
+- Revisión con `find-bugs` de lo cambiado en `supabase/functions` desde el 24/09: sin críticos ni altos. Cinco arreglos, los tres de función desplegados en prueba y en producción:
+  - **Baja de cuenta:** solo cancela sesiones que todavía no empezaron. Antes, quien hacía su sesión y se daba de baja antes del cron la dejaba cancelada y el profesional (PayPal/USDT) salía de la lista de pagos. Probado con una baja real en `vita-pruebas`.
+  - **Textos:** política y página de eliminar cuenta decían que las sesiones futuras "se reembolsan" siempre; el trigger aplica la regla de las 24 h. Corregido. Cambió `LEGAL_VERSION`.
+  - **Panel de admin:** sin registro de auditoría no se entrega el enlace a fotos de identidad ni a documentos de matrícula. La marca "matrícula verificada" del listado de postulaciones usa la misma regla que la aprobación.
+  - **Garantía:** el aviso interno de abuso ya no viaja en la simulación cuando la pide el cliente.
+
+**Pendiente para la próxima sesión:**
+- Fase 3, tandas siguientes: `lib/`, migraciones nuevas, pantallas, web. Después fases 4 a 6.
+- Lo anterior de hoy sigue abierto: clave para Strix, limpieza de datos de cobro de bajas con pagos abiertos, contracargo tardío.
+
 ## 2026-10-03 — Andre (Claude · auditoría fases 1 y 2, tres endurecimientos)
 
 **Tocado:** `supabase/migrations/20261003010000_harden_mp_grants_block_check_email_lookup.sql` (nuevo)

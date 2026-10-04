@@ -265,7 +265,8 @@ serve(async (req) => {
       booking_id: booking.id,
       amount: booking.amount,
       hours_since_session: Math.floor(hoursSince),
-      alertas,
+      // El cliente que pide no ve los avisos: son para quien revisa.
+      ...(solicitante ? {} : { alertas }),
     })
   }
 

@@ -55,6 +55,17 @@ function hoyEnArgentina(): string {
   return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10)
 }
 
+/**
+ * ¿La sesión todavía no empezó? `scheduled_date` y `scheduled_time` están en
+ * horario argentino, sin zona ("9:00" y "09:00" son la misma hora). Si la hora
+ * no se puede leer se trata como futura: se cancela, que es lo que hacía antes.
+ */
+function todaviaNoEmpezo(fecha: string, hora: string, ahora = Date.now()): boolean {
+  const [h, m] = String(hora ?? '').split(':')
+  const inicio = Date.parse(`${fecha}T${(h ?? '').padStart(2, '0')}:${(m ?? '00').padStart(2, '0')}:00-03:00`)
+  return !Number.isFinite(inicio) || inicio > ahora
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
@@ -143,19 +154,26 @@ serve(async (req) => {
 
     // ── 2. Cancelar sesiones futuras del usuario (dispara reembolso) ─────────
     // El trigger trg_mark_refund_on_cancel pasa a 'reembolso_pendiente' los
-    // pagos aprobados, y el cron mp-process-refunds los procesa. `cancelled_late`
-    // NO se marca a propósito: una baja de cuenta no es una cancelación tardía,
-    // el usuario no debería perder el reembolso por darse de baja.
+    // pagos aprobados, y el cron mp-process-refunds los procesa. La tardanza la
+    // calcula ese trigger, no esta función: con menos de 24 h para la sesión,
+    // la baja NO reembolsa, igual que cualquier cancelación del cliente.
+    //
+    // 🔴 Solo las que TODAVÍA NO EMPEZARON (03/10/2026). Antes entraban todas
+    // las de hoy: quien hacía su sesión y se daba de baja antes de que el cron
+    // la marcara completada la dejaba 'cancelada', y el profesional desaparecía
+    // de la lista de pagos (PayPal/USDT) por una sesión que sí dio. Una sesión
+    // ya empezada queda como está y la cierra `complete_confirmed_sessions`.
     const today = hoyEnArgentina()
-    const { data: futuras, error: futurasErr } = await admin
+    const { data: deHoyEnAdelante, error: futurasErr } = await admin
       .from('bookings')
-      .select('id')
+      .select('id, scheduled_date, scheduled_time')
       .eq('user_id', userId)
       .in('status', ['pendiente', 'confirmada'])
       .gte('scheduled_date', today)
     if (futurasErr) return json({ error: 'No se pudieron consultar las sesiones futuras', detail: futurasErr.message }, 500)
+    const futuras = (deHoyEnAdelante ?? []).filter(b => todaviaNoEmpezo(b.scheduled_date, b.scheduled_time))
 
-    if (futuras?.length) {
+    if (futuras.length) {
       const { error } = await admin
         .from('bookings')
         .update({ status: 'cancelada', cancelled_by: 'usuario' })

@@ -20,6 +20,11 @@ function fixture({ futureBooking = false, failCredentialsOnce = false, openRefun
       // Reintegro en curso de una sesión cancelada: necesita el token de MP del profesional.
       ...(openRefund ? [{ id: 'reintegro', coach_id: coachId, user_id: 'client', status: 'cancelada',
         scheduled_date: '2020-01-01', payment_status: 'reembolso_pendiente', payment_provider: 'mp' }] : []),
+      // Como cliente: una sesión de hoy que ya empezó (no se toca) y una futura (se cancela).
+      { id: 'empezada', coach_id: 'otro-coach', user_id: userId, status: 'confirmada',
+        scheduled_date: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), scheduled_time: '0:00' },
+      ...(futureBooking ? [] : [{ id: 'por-venir', coach_id: 'otro-coach', user_id: userId, status: 'confirmada',
+        scheduled_date: '2099-01-01', scheduled_time: '9:00' }]),
       // Sesión vieja de la misma cuenta como cliente: queda la reserva, no lo que contó.
       { id: 'vieja', coach_id: 'otro-coach', user_id: userId, status: 'completada',
         scheduled_date: '2020-01-01', user_message: 'Vengo por ataques de pánico', tema_origen: 'Ansiedad y estrés' },
@@ -144,6 +149,8 @@ function fixture({ futureBooking = false, failCredentialsOnce = false, openRefun
   assert.equal(vieja.user_message, null);
   assert.equal(vieja.tema_origen, null);
   assert.equal(vieja.status, 'completada');
+  assert.equal(retry.tables.bookings.find(b => b.id === 'empezada').status, 'confirmada');
+  assert.equal(retry.tables.bookings.find(b => b.id === 'por-venir').status, 'cancelada');
   assert.deepEqual(retry.tables.session_notes.map(n => n.id), ['ajena', 'mia-compartida']);
   assert.equal(retry.tables.coach_calendar_feeds.length, 0);
   assert.deepEqual(retry.tables.coach_availability.map(a => a.coach_id), ['otro-coach']);
