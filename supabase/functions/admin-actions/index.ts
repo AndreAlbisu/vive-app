@@ -363,6 +363,16 @@ serve(async (req) => {
       if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
       if (typeof body.verified !== 'boolean') return json({ error: 'verified tiene que ser booleano' }, 400)
 
+      // ¿Aprobación o volver a publicar a quien ya estuvo aprobado? Solo cambia
+      // el aviso que recibe: las exigencias las pone `approve_coach_application`.
+      let republica = false
+      if (body.verified) {
+        const { data: previo, error: previoError } = await admin
+          .from('coaches').select('application_status').eq('id', body.coach_id).maybeSingle()
+        if (previoError) return json({ error: previoError.message }, 500)
+        republica = previo?.application_status === 'aprobada'
+      }
+
       if (body.verified) {
         const { data: interview, error: interviewError } = await admin
           .from('coach_application_interviews')
@@ -394,10 +404,20 @@ serve(async (req) => {
         action: 'set_coach_verified',
         targetType: 'coach',
         targetId: coach.id,
-        details: { verified: body.verified, notes: body.notes ?? null },
+        details: { verified: body.verified, notes: body.notes ?? null, ...(republica ? { republicado: true } : {}) },
       })
 
-      if (body.verified) {
+      if (body.verified && republica) {
+        // No es una sanción levantada, pero es el tipo que ya significa "volvés
+        // a aparecer" y no manda el mail de postulación aprobada otra vez.
+        await notifyProfile(
+          admin,
+          coach.profile_id,
+          'sancion_levantada',
+          'Tu perfil vuelve a estar publicado',
+          'Ya volvés a aparecer en Vita y a recibir reservas.',
+        )
+      } else if (body.verified) {
         await notifyProfile(
           admin,
           coach.profile_id,

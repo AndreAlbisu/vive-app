@@ -13,6 +13,77 @@
 - Riesgo a mirar: el terracota del texto puede competir con el naranja de los orbes cuando "vita" queda encima al fusionarse. Si se funde → terracota más oscuro o correr el texto un toque.
 - PR #8 sigue esperando merge/confirmación de Andre.
 
+## 2026-10-04 — Andre (Claude · auditoría fase 5: pruebas por rol)
+
+**Tocado:** nada del repo. Fuera del repo: `~/.config/vita-pruebas/roles-lectura.py`, `roles-escritura.py`, `seed-extra.sql`.
+
+**Resumen:**
+- Pruebas por la API del proyecto `vita-pruebas` con siete identidades (visitante, dos clientes, dos profesionales, una profesional suspendida, admin) y datos marcados en 37 tablas.
+- **Lecturas:** cada cuenta ve solo lo suyo. Ningún dato marcado como secreto apareció en una cuenta que no fuera su dueña, su contraparte en la sesión o la admin.
+- **Escrituras:** 112 intentos de modificar lo ajeno o escalar privilegios (hacerse admin, tocar montos y estados de pago, hablar en nombre de otro, falsificar avisos, publicarse, verificarse la matrícula, levantarse una sanción, correr tareas programadas, leer o pisar documentos de identidad). Rebotaron todos. Reservar con una profesional suspendida rebota por el motivo correcto, y `send-push` ignora el texto que manda el cliente.
+- Dos observaciones, sin arreglar: (1) el cliente puede leer por la API el campo `notes` de su reclamo de garantía, donde queda el motivo de rechazo que escribe el admin; (2) la admin ve `bookings.user_message` (lo que el cliente le escribió al profesional al reservar).
+- Los dos scripts se pueden volver a correr después de cada cambio de permisos.
+
+**Pendiente para la próxima sesión:**
+- Decidir qué hacer con las dos observaciones.
+- Fase 6 (Strix): falta la clave de API. Después, privacidad comprobable, cuentas y operación, y la prueba en teléfono.
+
+## 2026-10-04 — Andre (Claude · auditoría fase 4: checklist de endurecimiento)
+
+**Tocado:** `supabase/functions/delete-account/index.ts` (v31), `supabase/functions/mp-oauth-start/index.ts` (v28), `web/sala/index.html`, `web/vendor/daily-js-0.92.2.esm.js` (nuevo), `vercel.json`, `docs/politica-de-privacidad.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
+
+**Resumen:**
+- Checklist `security-and-hardening` (agent-skills) sobre lo que las fases 1 a 3 no cubrían. Bien: sin secretos en el repo ni en el historial, cabeceras de la web completas, CORS acotado, tope diario en la función con IA. Veredicto del plugin: ordena, no encontró nada nuevo de fondo.
+- **`mp-oauth-start`** ya no acepta cualquier origen (era el único con `*`). Antes de desplegar se bajó la versión en vivo: lo único que difería del repo era `verifyWebhookSignature`, que esta función no usa.
+- **`delete-account`** deja el detalle técnico del error en el log y a la persona le devuelve solo el mensaje.
+- **Sala web:** el componente de videollamada (`daily-js` 0.92.2) se sirve desde nuestro dominio en vez de unpkg.com. Es el archivo del paquete oficial, verificado contra la integridad de npm. `unpkg.com` sale del CSP y de la Política §6 y §7 (cambió `LEGAL_VERSION`). 🟡 Se comprobó que el módulo carga y expone lo que usa la sala; **no se probó una videollamada real**. Si la carga falla, la sala ya caía al iframe directo.
+- ⚠️ **Regla nueva de trabajo:** el repo es público. Un arreglo que depende de que Andre corra un comando en producción no se commitea con su descripción hasta que esté aplicado (el 04/10 quedó publicado unas horas un hallazgo todavía abierto).
+- En el historial público quedó un token de sesión de una cuenta de prueba de junio (vencido), con su mail. No se reescribió el historial.
+
+**Pendiente para la próxima sesión:**
+- Probar una videollamada real por la sala web después del próximo deploy de la web.
+- Andre, en el panel de Supabase → Authentication: largo mínimo de contraseña, contraseñas filtradas, vencimiento de códigos y captcha.
+- Fase 5 (pruebas por rol) y fase 6 (Strix, falta la clave de API).
+
+## 2026-10-04 — Andre (Claude · auditoría fase 3, tanda 3: web y pantallas)
+
+**Tocado:** `supabase/migrations/20261004030000_media_urls_only_own_storage.sql` (nuevo)
+
+**Resumen:**
+- Web sin hallazgos (lo que escribe un profesional se pinta como texto; los parámetros de URL solo buscan la reserva o el código de invitación). Pantallas revisadas por patrones sobre lo agregado desde el 24/09, no línea por línea.
+- Hallazgo: `profiles.avatar_url` y `coaches.video_url` aceptaban cualquier dirección por la API. Apuntándolas a un servidor propio, un profesional veía la IP y la hora de cada persona que abría su perfil (también en `/c`, sin cuenta), y un cliente las de su profesional. `application_video_url` aceptaba cualquier esquema por edición directa, y el admin la abre con un toque.
+- 🗄️ **Migración `20261004030000` probada en `vita-pruebas` y ✅ aplicada en producción** (la corrió Andre; verificada y registrada; SCHEMA.md actualizado): triggers `trg_guard_profile_media` y `trg_guard_coach_media`. Desde el cliente, foto y video solo en nuestro Storage y en la carpeta de la propia cuenta; el link de postulación, solo `https`. `base_de_archivos()` lleva el ref del proyecto (en `vita-pruebas` se aplicó con el suyo). Las fotos de Google ya guardadas no se tocan; en producción las 3 fotos y el video subidos por la app cumplen la regla.
+- Con esto la fase 3 queda terminada.
+
+**Pendiente para la próxima sesión:**
+- Fases 4 (checklist de endurecimiento), 5 (pruebas por rol) y 6 (Strix, falta la clave de API).
+
+## 2026-10-04 — Andre (Claude · volver a publicar a un profesional despublicado)
+
+**Tocado:** `supabase/migrations/20261004020000_republish_coach.sql` (nuevo), `supabase/functions/admin-actions/index.ts` (v43 en producción)
+
+**Resumen:**
+- Decisión de Andre: despublicar desde el panel tiene que tener vuelta. `approve_coach_application` acepta también a quien ya estuvo aprobado y hoy no está publicado, con las mismas exigencias que una aprobación (entrevista, identidad, matrícula) y sin pisar las notas ni la fecha de la revisión original. Una cuenta eliminada no se republica.
+- `admin-actions`: al republicar, el profesional recibe "Tu perfil vuelve a estar publicado" (tipo `sancion_levantada`, que no dispara el mail de postulación aprobada) y la auditoría anota `republicado`.
+- 🗄️ **Migración `20261004020000` probada en `vita-pruebas` y ✅ aplicada en producción** (la corrió Andre; verificada y registrada; SCHEMA.md actualizado). Probado en prueba: quien cumple todo se republica; sin entrevista o identidad, o con la cuenta eliminada, se rechaza.
+
+**Pendiente para la próxima sesión:**
+- Fase 3, tanda 3: pantallas y web.
+
+## 2026-10-04 — Andre (Claude · auditoría fase 3, tanda 2: reglas de la base y lib)
+
+**Tocado:** `supabase/migrations/20261004010000_lock_specialty_and_identity_name.sql` (nuevo), `lib/cambioDeNombre.ts`, `__tests__/cambioDeNombre.test.ts`
+
+**Resumen:**
+- Revisión de las migraciones nuevas y de `lib/` desde el 24/09. Sin hallazgos en notas de sesión, consentimiento, subida de identidad, panel de admin y privacidad de postulaciones pendientes.
+- 🗄️ **Migración `20261004010000`, probada en `vita-pruebas` y ✅ aplicada en producción** (la corrió Andre el 04/10; verificada y registrada; SCHEMA.md actualizado): (1) `trg_guard_coach_specialty`: desde el cliente, `coaches.specialty` solo nace con uno de los tres valores del formulario y después no se cambia (un profesional sin matrícula podía ponerse "Psicóloga clínica y psiquiatra" por la API, y ese texto se muestra en Favoritos, "tus profesionales", la reseña y Conexiones); (2) `limitar_cambio_de_nombre` bloquea el nombre desde que hay fila en `identity_verifications` (antes se podía cambiar entre la verificación del DNI y la aprobación). La app muestra el motivo.
+- Probado por la API de prueba: el cambio de especialidad y el alta con título libre rebotan, la bio se sigue pudiendo editar, la postulación normal sigue andando, y el nombre queda fijo solo para quien ya envió su identidad.
+- **Confirmado, sin arreglar:** un profesional despublicado desde el panel (`set_coach_verified` false) no se puede volver a publicar: `approve_coach_application` exige postulación `pendiente` y devuelve `solicitud_no_pendiente`. Las sanciones no pasan por ahí (usan `suspendido_hasta`).
+
+**Pendiente para la próxima sesión:**
+- Decidir si volver a publicar a un despublicado tiene que ser posible desde el panel.
+- Fase 3, tanda 3: pantallas y web. En producción hay valores viejos de `specialty` en texto libre (datos de prueba).
+
 ## 2026-10-03 — Andre (Claude · auditoría fase 3, tanda 1: funciones del servidor)
 
 **Tocado:** `supabase/functions/delete-account/index.ts` (v30), `admin-actions/index.ts` (v42), `guarantee-claim/index.ts` (v33), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
