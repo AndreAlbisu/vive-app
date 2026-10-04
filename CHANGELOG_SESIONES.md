@@ -1,3 +1,17 @@
+## 2026-10-03 — Andre (Claude · plan de auditoría, proyecto de prueba y Strix)
+
+**Tocado:** nada del código de la app. Fuera del repo: proyecto Supabase `vita-pruebas`, carpeta `~/.config/vita-pruebas/`, Strix instalado.
+
+**Resumen:**
+- Plan de auditoría ordenado en 10 fases (barrido de la base, pruebas propias, `find-bugs` por superficie, checklist de endurecimiento, lógica por rol, **ataque en vivo con Strix**, privacidad comprobable, cuentas y operación, teléfono, cierre). `supabase db advisors` da hoy 50 avisos (el último número anotado era 30).
+- **Proyecto de prueba `vita-pruebas`** (ref `ysplqcskhdkqnhawehuf`, plan gratis): estructura copiada de producción sin datos, con permisos, policies, buckets y funciones del servidor verificados idénticos por huella. Seis cuentas inventadas. Sin claves reales de Mercado Pago, PayPal, mails ni videollamadas. El repo sigue linkeado a producción; el de prueba se usa desde su propia carpeta.
+- **Baja de cuenta probada de punta a punta en el proyecto de prueba** (lo que producción no dejaba probar): la de un cliente vacía mensaje y tema de sus reservas y borra notas, diario y ánimo; la de una profesional con un reintegro en curso conserva sus datos de cobro; un profesional con sesión agendada queda bloqueado.
+- **Strix 1.6.2** instalado aislado (no con su instalador). Leído antes: manda telemetría de uso a PostHog y Scarf salvo `STRIX_TELEMETRY=false`, y monta la carpeta que se le pasa con permiso de escritura, así que corre sobre una copia sin secretos ni referencias a producción.
+
+**Pendiente para la próxima sesión:**
+- Clave de API para Strix (decisión de Andre) y primera corrida corta con tope de gasto.
+- Fases 1 a 5 del plan. Los crons de producción no se copiaron al proyecto de prueba.
+
 ## 2026-10-03 — Andre (Claude · privacidad comprobable, a raíz del cierre de CUX)
 
 **Tocado:** `supabase/functions/delete-account/index.ts` (v29 en producción), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `screens/CoachComoFuncionaScreen.tsx`, `SCHEMA.md`
