@@ -221,10 +221,63 @@ serve(async (req) => {
         has_matricula: false,
         price_per_session: null,
         price_usd: null,
+        pais_atencion: null,
+        provincia_atencion: null,
+        respuesta_riesgo: null,
         slug: `deleted-${coachRow.id}`,
       }).eq('id', coachRow.id)
       if (scrubErr) return json({ error: 'No se pudo anonimizar el perfil profesional', detail: scrubErr.message }, 500)
+
+      // Agenda y enlace de calendario: la fila de `coaches` sobrevive, así que
+      // su CASCADE no corre. El token del calendario seguiría respondiendo.
+      for (const table of ['coach_calendar_feeds', 'coach_availability', 'coach_weekly_pattern']) {
+        const { error } = await admin.from(table).delete().eq('coach_id', coachRow.id)
+        if (error) return json({ error: `No se pudo borrar ${table}`, detail: error.message }, 500)
+      }
+
+      // Notas privadas que escribió: nadie más las puede leer. Las compartidas
+      // se quedan, porque también son de la persona que las recibió.
+      const { error: notesErr } = await admin.from('session_notes')
+        .delete().eq('coach_id', userId).eq('shared', false)
+      if (notesErr) return json({ error: 'No se pudieron borrar las notas privadas', detail: notesErr.message }, 500)
       steps.push('expediente profesional y archivos borrados')
+
+      // ── 3b. Datos de cobro ────────────────────────────────────────────────
+      // CBU, alias, PayPal, billetera y la conexión con Mercado Pago. Se borran
+      // SOLO si no queda plata en movimiento: `mp-process-refunds` reembolsa con
+      // el token del profesional y el panel le paga lo adeudado con sus datos
+      // de cobro. Borrarlos antes dejaría un reintegro o un pago sin camino.
+      const hace3Dias = new Date(Date.now() - (3 * 24 + 3) * 60 * 60 * 1000).toISOString().slice(0, 10)
+      const abiertos = await Promise.all([
+        // cobros o reintegros en curso
+        admin.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachRow.id).in('payment_status', ['pendiente', 'reembolso_pendiente']),
+        // sesiones cobradas todavía dentro de la ventana de la garantía (48 h)
+        admin.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachRow.id).eq('payment_status', 'aprobado').gte('scheduled_date', hace3Dias),
+        // sesiones cobradas por PayPal o USDT que Vita todavía no le transfirió
+        admin.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachRow.id).eq('status', 'completada').eq('payment_status', 'aprobado')
+          .in('payment_provider', ['paypal', 'usdt']).is('paid_out_at', null),
+        // reclamos de garantía sin resolver
+        admin.from('guarantee_claims').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachRow.id).is('resolved_at', null),
+      ])
+      const fallo = abiertos.find(r => r.error)
+      if (fallo?.error) return json({ error: 'No se pudo comprobar si quedan pagos abiertos', detail: fallo.error.message }, 500)
+
+      if (abiertos.every(r => (r.count ?? 0) === 0)) {
+        for (const table of ['coach_payout_accounts', 'coach_mp_accounts']) {
+          const { error } = await admin.from(table).delete().eq('coach_id', coachRow.id)
+          if (error) return json({ error: `No se pudo borrar ${table}`, detail: error.message }, 500)
+        }
+        const { error: mpFlagErr } = await admin.from('coaches').update({ mp_connected: false }).eq('id', coachRow.id)
+        if (mpFlagErr) return json({ error: 'No se pudo desconectar Mercado Pago', detail: mpFlagErr.message }, 500)
+        steps.push('datos de cobro borrados')
+      } else {
+        // ⚠️ Nada los borra después: hoy es una limpieza manual (ver CHANGELOG 03/10).
+        steps.push('datos de cobro conservados: quedan pagos o reintegros abiertos')
+      }
     }
 
     // ── 4. Borrar contenido personal ────────────────────────────────────────

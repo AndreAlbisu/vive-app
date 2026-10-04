@@ -54,7 +54,9 @@ Tu ficha de perfil no se elimina del todo: queda **vaciada de todo dato personal
 
 Al darte de baja, **las sesiones futuras se cancelan automáticamente y se reembolsan**.
 
-Si sos profesional, el caso es distinto: **no podés darte de baja con sesiones agendadas**. Tenés que cancelarlas primero, para que cada persona reciba el aviso y su reembolso.
+Si sos profesional, además se borran tu agenda, tu enlace de calendario, tus notas privadas y tus datos de cobro. Los datos de cobro se conservan solo mientras quede algún cobro, reintegro o reclamo en curso.
+
+Si sos profesional, hay una condición: **no podés darte de baja con sesiones agendadas**. Tenés que cancelarlas primero, para que cada persona reciba el aviso y su reembolso.
 
 ## Dudas
 
