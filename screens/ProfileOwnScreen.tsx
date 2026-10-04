@@ -216,6 +216,9 @@ export default function ProfileOwnScreen() {
     // revalida contra el JWT en cada escritura — pero no tiene sentido mostrarle
     // a nadie una puerta que no puede abrir.
     ...(isAdmin ? [{ id: 'admin', icon: 'shield-account-outline' as const, label: 'Administración', onPress: () => router.push('/admin') }] : []),
+    // Para mostrar la app (pitch, amigos, profesionales): un perfil completo con
+    // datos ilustrativos, sin nada inventado en la base. Ver lib/perfilEjemplo.ts.
+    ...(isAdmin ? [{ id: 'ejemplo', icon: 'account-eye-outline' as const, label: 'Perfil de ejemplo', onPress: () => router.push('/profesional?profileId=ejemplo' as any) }] : []),
     { id: 'about', icon: 'account-heart-outline', label: 'Sobre nosotros', onPress: () => router.push('/legal?doc=sobre-nosotros') },
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },

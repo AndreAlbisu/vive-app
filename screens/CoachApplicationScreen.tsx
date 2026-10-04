@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, BackHandler,
-  StyleSheet, Animated, KeyboardAvoidingView, Platform,
+  StyleSheet, Animated, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,6 +12,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useCerrarSesionAlSalir } from '@/hooks/useCerrarSesionAlSalir';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { limpiarAlta } from '@/lib/altaCoach';
+import {
+  FOTOS_IDENTIDAD,
+  enviarIdentidad,
+  identidadCompleta,
+  miIdentidad,
+  subirFotoIdentidad,
+  type EstadoIdentidad,
+  type FotoIdentidad,
+} from '@/lib/identidad';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { AxisIcon } from '@/components/ui/AxisIcon';
@@ -172,6 +182,12 @@ export default function CoachApplicationScreen() {
   const [existingCoachId, setExistingCoachId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
 
+  // Identidad (01/10/2026): DNI frente, dorso y selfie con el DNI. Van acá y
+  // no después porque al enviar se cierra la sesión hasta la aprobación.
+  const [idEstado, setIdEstado] = useState<EstadoIdentidad>('sin_cargar');
+  const [fotosSubidas, setFotosSubidas] = useState<Set<FotoIdentidad>>(new Set());
+  const [subiendoFoto, setSubiendoFoto] = useState<FotoIdentidad | null>(null);
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
   const successAnim = useRef(new Animated.Value(0)).current;
@@ -260,6 +276,66 @@ export default function CoachApplicationScreen() {
     return () => { cancelled = true; };
   }, [user]);
 
+  // Lo que ya está en el servidor: una postulación rechazada que vuelve a
+  // enviarse no tiene que sacar las fotos de nuevo si siguen ahí.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    miIdentidad(user.id).then(({ estado, fotosEnServidor }) => {
+      if (cancelled) return;
+      setIdEstado(estado);
+      setFotosSubidas(new Set(fotosEnServidor));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
+
+  async function tomarFoto(foto: FotoIdentidad, origen: 'camera' | 'library') {
+    if (!user) return;
+    const permiso = origen === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar');
+      return;
+    }
+    const opciones: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ['images'],
+      quality: 0.7,
+      // La galería del iPhone puede devolver HEIC; el bucket y quien revisa
+      // esperan JPEG.
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+      ...(foto === 'selfie' ? { cameraType: ImagePicker.CameraType.front } : {}),
+    };
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = origen === 'camera'
+        ? await ImagePicker.launchCameraAsync(opciones)
+        : await ImagePicker.launchImageLibraryAsync(opciones);
+    } catch {
+      Alert.alert('No se pudo abrir la cámara', 'Volvé a intentar.');
+      return;
+    }
+    if (result.canceled || !result.assets?.[0]) return;
+
+    setSubiendoFoto(foto);
+    const error = await subirFotoIdentidad(user.id, foto, result.assets[0].uri);
+    setSubiendoFoto(null);
+    if (error) {
+      Alert.alert('No se pudo subir la foto', 'Revisá tu conexión y probá de nuevo.');
+      return;
+    }
+    setFotosSubidas(prev => new Set(prev).add(foto));
+    if (campoError === 'identidad') setCampoError(null);
+  }
+
+  function elegirFoto(foto: FotoIdentidad) {
+    Alert.alert(FOTOS_IDENTIDAD.find(f => f.id === foto)?.titulo ?? 'Foto', 'Elegí una opción', [
+      { text: 'Sacar foto', onPress: () => void tomarFoto(foto, 'camera') },
+      { text: 'Elegir de la galería', onPress: () => void tomarFoto(foto, 'library') },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }
+
   function toggleTopic(topic: string) {
     setTopics(prev => {
       const next = new Set(prev);
@@ -288,7 +364,8 @@ export default function CoachApplicationScreen() {
   const bloque3Listo = !!birthDate && lugarOk
     && !!price.trim() && !isNaN(Number(price)) && Number(price) > 0
     && isValidUrl(videoUrl.trim());
-  const listos = [bloque1Listo, bloque2Listo, bloque3Listo].filter(Boolean).length;
+  const bloque4Listo = identidadCompleta(idEstado, fotosSubidas);
+  const listos = [bloque1Listo, bloque2Listo, bloque3Listo, bloque4Listo].filter(Boolean).length;
 
   async function handleSubmit() {
     const frenar = (campo: string, msg: string) => { setCampoError(campo); setSubmitError(msg); };
@@ -325,10 +402,22 @@ export default function CoachApplicationScreen() {
       frenar('video', 'Ingresá un link HTTPS válido para tu video');
       return;
     }
+    if (!bloque4Listo) { frenar('identidad', 'Subí las tres fotos de tu identidad'); return; }
     if (!user) { setSubmitError('No encontramos tu sesión. Volvé a ingresar'); return; }
 
     setSubmitting(true);
     setSubmitError(null);
+
+    // Primero la identidad: si falta una foto en el servidor, que frene acá y
+    // no después de haber enviado la postulación.
+    if (idEstado !== 'verificada') {
+      const idError = await enviarIdentidad();
+      if (idError) {
+        setSubmitting(false);
+        frenar('identidad', idError);
+        return;
+      }
+    }
 
     // La RPC confirma perfil, coach y temas en una transacción. Nunca se
     // muestra éxito si una de las tres partes quedó sin guardar.
@@ -418,8 +507,8 @@ export default function CoachApplicationScreen() {
             <View style={styles.paso}>
               <Text style={styles.pasoNum}>1</Text>
               <Text style={styles.pasoTxt}>
-                <Text style={styles.pasoFuerte}>Miramos tu perfil y tu video.</Text> Chequeamos que lo que contás de vos
-                sea claro para quien busca ayuda.
+                <Text style={styles.pasoFuerte}>Miramos tu perfil, tu video y tu identidad.</Text> Chequeamos que lo que
+                contás de vos sea claro para quien busca ayuda. Las fotos de tu DNI se borran apenas las verificamos.
               </Text>
             </View>
             <View style={styles.paso}>
@@ -493,12 +582,12 @@ export default function CoachApplicationScreen() {
               <View style={styles.progresoWrap}>
                 <View style={styles.progresoRow}>
                   <Text style={styles.progresoTxt}>
-                    {listos === 3 ? 'Listo para enviar' : `${listos} de 3 bloques completos`}
+                    {listos === 4 ? 'Listo para enviar' : `${listos} de 4 bloques completos`}
                   </Text>
-                  <Text style={styles.progresoTxt}>{Math.round((listos / 3) * 100)}%</Text>
+                  <Text style={styles.progresoTxt}>{Math.round((listos / 4) * 100)}%</Text>
                 </View>
                 <View style={styles.progresoBarra}>
-                  <View style={[styles.progresoRelleno, { width: `${(listos / 3) * 100}%` }]} />
+                  <View style={[styles.progresoRelleno, { width: `${(listos / 4) * 100}%` }]} />
                 </View>
               </View>
             </View>
@@ -773,6 +862,49 @@ export default function CoachApplicationScreen() {
               />
             </Campo>
             </Bloque>
+
+            <Bloque
+              n={4}
+              titulo="Tu identidad"
+              desc="Antes de que alguien te cuente algo personal, confirmamos que sos quien decís ser."
+              listo={bloque4Listo}>
+              {idEstado === 'verificada' ? (
+                <Text style={styles.fieldHint}>Ya verificamos tu identidad. No hace falta que subas nada.</Text>
+              ) : (
+                <Campo
+                  label="Tres fotos"
+                  hint="Las mira una persona del equipo de Vita y se borran apenas verificamos que coinciden. No se muestran en tu perfil."
+                  error={campoError === 'identidad'}>
+                  {FOTOS_IDENTIDAD.map(f => {
+                    const lista = fotosSubidas.has(f.id);
+                    const subiendo = subiendoFoto === f.id;
+                    return (
+                      <TouchableOpacity
+                        key={f.id}
+                        style={[styles.fotoId, lista && styles.fotoIdLista]}
+                        onPress={() => elegirFoto(f.id)}
+                        disabled={!!subiendoFoto}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${f.titulo}. ${lista ? 'Subida, tocá para reemplazarla' : 'Sin subir'}`}>
+                        <View style={styles.fotoIdIcono}>
+                          {subiendo
+                            ? <ActivityIndicator size="small" color={ViveColors.primary} />
+                            : <MaterialCommunityIcons
+                                name={lista ? 'check-circle' : f.id === 'selfie' ? 'account-box-outline' : 'card-account-details-outline'}
+                                size={22}
+                                color={lista ? ViveColors.accent : '#87835C'} />}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.fotoIdTitulo}>{f.titulo}</Text>
+                          <Text style={styles.fotoIdAyuda}>{lista ? 'Subida. Tocá para reemplazarla.' : f.ayuda}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </Campo>
+              )}
+            </Bloque>
           </Animated.View>
         </ScrollView>
 
@@ -809,6 +941,22 @@ export default function CoachApplicationScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  fotoId: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,248,240,0.48)',
+  },
+  fotoIdLista: { borderColor: 'rgba(107,191,138,0.55)' },
+  fotoIdIcono: { width: 26, alignItems: 'center' },
+  fotoIdTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  fotoIdAyuda: { fontFamily: ViveFonts.regular, fontSize: 12, color: '#87835C', marginTop: 2 },
   scroll: { flexGrow: 1, paddingBottom: 28 },
   rejectionBox: {
     marginHorizontal: 20,

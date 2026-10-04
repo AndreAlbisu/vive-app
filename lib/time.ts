@@ -253,7 +253,12 @@ export function deviceIsOffArgentina(now: number = Date.now(), tz: string = devi
   // Se redondea al minuto: `partsInTz` no trae segundos, así que comparar contra
   // el instante crudo daría distinto siempre.
   const userOffsetMs = asIfUtc - Math.floor(now / 60_000) * 60_000;
-  return userOffsetMs !== arOffsetMsAt(now);
+  // 🔴 02/10/2026: se comparaban crudos, y `arOffsetMsAt` mide con segundos y
+  // milisegundos mientras que esto mide al minuto. Salvo en un minuto exacto
+  // (que es lo que usaban los tests) nunca daban igual, así que TODO teléfono
+  // en Argentina se tomaba como "de afuera" y veía "(hora de Argentina)" y
+  // "18:00 para vos". Los husos se comparan en minutos.
+  return Math.round(userOffsetMs / 60_000) !== Math.round(arOffsetMsAt(now) / 60_000);
 }
 
 export type LocalEquivalent = {

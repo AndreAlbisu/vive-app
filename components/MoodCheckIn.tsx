@@ -78,8 +78,6 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked, requi
   const scales   = useRef(MOODS.map(() => new Animated.Value(1))).current;
   const opacities = useRef(MOODS.map(() => new Animated.Value(1))).current;
 
-  const confirmOpacity = useRef(new Animated.Value(0)).current;
-  const confirmY       = useRef(new Animated.Value(-4)).current;
 
   // Cuál se está sosteniendo ahora. Uno solo a la vez, así que alcanza un valor
   // animado compartido en vez de uno por ánimo.
@@ -129,9 +127,6 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked, requi
     const id = todayEntry.mood_id as MoodId;
     setSelectedId(id);
     applyCircleAnimation(id);
-    // Show confirmation without the intro animation (already saved)
-    confirmOpacity.setValue(1);
-    confirmY.setValue(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayEntry?.mood_id]);
 
@@ -163,14 +158,6 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked, requi
     setSelectedId(id);
     applyCircleAnimation(id);
 
-    // Animate confirmation microcopy in
-    confirmOpacity.setValue(0);
-    confirmY.setValue(-4);
-    Animated.parallel([
-      Animated.timing(confirmOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
-      Animated.timing(confirmY,       { toValue: 0, duration: 260, useNativeDriver: true }),
-    ]).start();
-
     // Fecha LOCAL, no UTC. Con `toISOString()` el día saltaba a las 21:00
     // argentinas, así que dos check-ins del mismo lunes (20:00 y 22:00) se
     // guardaban con fechas distintas y el UNIQUE(user_id, entry_date) no los
@@ -193,7 +180,6 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked, requi
     );
   }
 
-  const activeMood = MOODS.find(m => m.id === selectedId);
 
   return (
     <View style={s.card}>
@@ -275,17 +261,10 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked, requi
         })}
       </View>
 
-      {/* Microcopy de confirmación — altura reservada para no saltar el layout */}
-      <Animated.Text
-        style={[
-          s.confirm,
-          { opacity: confirmOpacity, transform: [{ translateY: confirmY }] },
-        ]}
-      >
-        {activeMood
-          ? `Registrado: ${activeMood.label.toLowerCase()} · gracias por contarnos`
-          : ' '}
-      </Animated.Text>
+      {/* 02/10/2026: se sacó el renglón "Registrado: normal · gracias por
+          contarnos" (pedido de Andre). La carita elegida ya queda marcada, más
+          grande y con su nombre en negrita: el renglón repetía lo mismo y
+          ocupaba lugar también antes de elegir (tenía alto reservado). */}
     </View>
   );
 }
@@ -300,7 +279,7 @@ const s = StyleSheet.create({
     borderColor: GLASS_BORDER,
     paddingTop: 13,
     paddingHorizontal: 16,
-    paddingBottom: 11,
+    paddingBottom: 14,
     ...Platform.select({
       ios:     { shadowColor: 'rgba(0,0,0,0.25)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 6 },
       android: { elevation: 1 },
@@ -359,12 +338,5 @@ const s = StyleSheet.create({
   labelSelected: {
     fontFamily: ViveFonts.semibold,
     color: '#2E3A2A',
-  },
-  confirm: {
-    marginTop: 9,
-    fontFamily: ViveFonts.feedback,
-    fontSize: 11,
-    color: '#4B5943',
-    minHeight: 16,
   },
 });

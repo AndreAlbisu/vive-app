@@ -9,11 +9,15 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 const eventos: { nombre: string; props: Record<string, unknown> }[] = [];
+let mockUid: string | null = null;
+let mockConsiente = false;
 jest.mock('@/lib/supabase', () => ({
+  supabase: { auth: { getSession: async () => ({ data: { session: mockUid ? { user: { id: mockUid } } : null } }) } },
   registrarEvento: async (nombre: string, props: Record<string, unknown>) => {
     eventos.push({ nombre, props });
   },
 }));
+jest.mock('@/lib/consent', () => ({ puedeTratarBienestar: async (uid?: string | null) => !!uid && mockConsiente }));
 
 type Modulo = typeof import('@/lib/analytics');
 
@@ -103,5 +107,37 @@ describe('cronometro', () => {
     const s = medir();
     expect(s).toBeGreaterThan(0);
     expect(s).toBeLessThan(5);
+  });
+});
+
+describe('🔴 anotarSensible (auditoría 26/09)', () => {
+  const correr = () => new Promise(r => setTimeout(r, 5));
+  beforeEach(() => {
+    eventos.length = 0;
+    for (const k of Object.keys(mockStore)) delete mockStore[k];
+    jest.isolateModules(() => { lib = require('@/lib/analytics'); });
+  });
+
+  it('sin consentimiento no viaja la categoría, pero el paso se cuenta', async () => {
+    mockUid = 'u1'; mockConsiente = false;
+    lib.anotarSensible('onboarding_respuesta', { pantalla: 'categoria', respuesta: 'sexualidad', segundos: 3 }, ['respuesta']);
+    await correr();
+    expect(eventos[0].props).toMatchObject({ pantalla: 'categoria', segundos: 3, detalle_omitido: true });
+    expect(eventos[0].props).not.toHaveProperty('respuesta');
+  });
+
+  it('sin cuenta tampoco: el recorrido se ata a la cuenta después', async () => {
+    mockUid = null; mockConsiente = true;
+    lib.anotarSensible('onboarding_fin', { eje: 'mente' }, ['eje']);
+    await correr();
+    expect(eventos[0].props).not.toHaveProperty('eje');
+  });
+
+  it('con consentimiento va completo', async () => {
+    mockUid = 'u1'; mockConsiente = true;
+    lib.anotarSensible('onboarding_fin', { eje: 'mente' }, ['eje']);
+    await correr();
+    expect(eventos[0].props).toMatchObject({ eje: 'mente' });
+    expect(eventos[0].props).not.toHaveProperty('detalle_omitido');
   });
 });

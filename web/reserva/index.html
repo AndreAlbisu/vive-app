@@ -2,59 +2,70 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tu reserva — Vita</title>
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#F7EFE4">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: light dark; }
+  /* 01/10/2026: la identidad de la portada y de /c (misma letra, colores e
+     isotipo). Acá vuelve la persona después de pagar en Mercado Pago: con la
+     letra del sistema y "VITA" en gris parecía otro sitio justo en el momento
+     de mayor duda. Solo claro, igual que /c. */
+  :root {
+    color-scheme: light;
+    --cream: #F7EFE4; --paper: #FBF8F1; --olive: #565E32; --soft: #566245;
+    --forest: #2D4A3E; --terra-ink: #A25842; --line: rgba(86, 94, 50, .16);
+  }
   * { box-sizing: border-box; }
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0; padding: 40px 20px 64px;
-    background: #F7EFE4; color: #3A4F2A;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 16px; line-height: 1.6;
+    margin: 0; padding: 0 20px 64px;
+    background: var(--cream); color: var(--olive);
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased;
   }
   main { max-width: 520px; margin: 0 auto; }
-  .marca { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; opacity: .8; margin-bottom: 28px; }
-  h1 { font-size: 1.45rem; line-height: 1.25; margin: 0 0 12px; }
-  .cuando {
-    font-size: 1.05rem; padding: 14px 0; margin: 18px 0;
-    border-top: 1px solid rgba(58,79,42,.15); border-bottom: 1px solid rgba(58,79,42,.15);
-  }
-  .cuando b { display: block; font-size: 1.2rem; }
-  .que-sigue { font-size: .92rem; }
+  .top { padding: 22px 0 30px; }
+  .wordmark { display: inline-flex; align-items: center; gap: .28em; font-weight: 800; font-size: 26px; letter-spacing: -0.03em; color: var(--olive); text-decoration: none; line-height: 1; }
+  .vmark { width: .95em; height: .95em; fill: none; stroke: currentColor; stroke-width: 7; }
+  h1 { font-size: 1.6rem; line-height: 1.15; letter-spacing: -0.03em; font-weight: 800; margin: 0 0 12px; }
+  .tarjeta { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; padding: 24px 22px; }
+  .cuando { font-size: 1.05rem; padding: 14px 0; margin: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .cuando b { display: block; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+  .cuando span { color: var(--soft); }
+  .que-sigue { font-size: .95rem; padding-left: 1.1rem; margin: 0; }
   .que-sigue li { margin-bottom: .5rem; }
-  .nota { font-size: .85rem; opacity: .85; margin-top: 22px; }   /* .72 daba 3.90:1 */
-  .estado { padding: 40px 0; text-align: center; opacity: .85; }
-  /* El pie tenía opacity .55 Y adentro links en terracota clara: las dos cosas
-     se multiplicaban, y ahí viven los enlaces a Términos y al botón de
-     arrepentimiento, que por la Res. 424/2020 tienen que ser de acceso fácil. */
-  .pie { margin-top: 40px; font-size: .8rem; opacity: .85; text-align: center; }
-  .pie a { color: #A25842; }
-  /* Foco de teclado: la página es toda enlaces y no marcaba ninguno. */
-  :focus-visible { outline: 3px solid #A25842; outline-offset: 2px; border-radius: 3px; }
-
+  .que-sigue a { color: var(--terra-ink); font-weight: 700; }
+  .nota { font-size: .88rem; color: var(--soft); margin-top: 18px; }
+  .estado { padding: 32px 0; text-align: center; color: var(--soft); }
+  .estado h1 { color: var(--olive); font-size: 1.35rem; }
+  .estado p + p { margin-top: 12px; }
+  .ayuda a, .pie a { color: var(--terra-ink); }
+  .ayuda a { font-weight: 700; }
+  .pie { margin-top: 40px; font-size: .85rem; text-align: center; color: var(--soft); }
+  :focus-visible { outline: 3px solid var(--terra-ink); outline-offset: 2px; border-radius: 6px; }
   [hidden] { display: none !important; }
-  @media (prefers-color-scheme: dark) {
-    body { background: #1A1C16; color: #E4E0D2; }
-    .cuando { border-color: rgba(228,224,210,.18); }
-    .pie a { color: #C5735A; }
-    :focus-visible { outline-color: #C5735A; }
-  }
 </style>
 </head>
 <body>
 <main>
-  <p class="marca">Vita</p>
+  <header class="top">
+    <a class="wordmark" href="/" aria-label="Vita, ir al inicio"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>vita</a>
+  </header>
 
   <div id="cargando" class="estado"><p>Buscando tu reserva…</p></div>
 
   <div id="sinSesion" class="estado" hidden>
     <h1>No pudimos mostrarte la reserva</h1>
     <p>Puede que hayas abierto este link en otro navegador. Si pagaste, la reserva existe igual y te vamos a avisar por mail.</p>
+    <p class="ayuda">¿Algo no te cierra? Escribinos a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a> y lo vemos.</p>
   </div>
 
-  <article id="listo" hidden>
+  <article id="listo" class="tarjeta" hidden>
     <h1 id="titulo"></h1>
     <div class="cuando">
       <b id="fecha"></b>
@@ -62,6 +73,7 @@
     </div>
     <div id="queSigue"></div>
     <p class="nota" id="nota"></p>
+    <p class="nota ayuda">¿Dudas con tu reserva? Escribinos a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a>.</p>
   </article>
 
   <p class="pie">
@@ -83,7 +95,7 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 function fechaLarga(iso, hora) {
   const [y, m, d] = iso.split('-').map(Number);
   const f = new Date(y, m - 1, d);
-  return `${DIAS[f.getDay()]} ${d} de ${MESES[m - 1]}, ${String(hora).slice(0, 5)} hs`;
+  return `${DIAS[f.getDay()]} ${d} de ${MESES[m - 1]}, ${String(hora).slice(0, 5)} (hora de Argentina)`;
 }
 
 const params = new URLSearchParams(location.search);
@@ -149,7 +161,7 @@ function pintar(b) {
       const enlace = document.createElement('a');
       enlace.href = `/sala?booking=${encodeURIComponent(b.id)}`;
       enlace.textContent = 'Entrar a la sesión';
-      item.prepend(enlace, ' — ');
+      item.prepend(enlace, '. ');
     }
     lista.appendChild(item);
   }

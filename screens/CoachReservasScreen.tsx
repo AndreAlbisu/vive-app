@@ -23,7 +23,8 @@ import { notifyViaServer } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
 import { isCancelLate } from '@/lib/bookingHelpers';
 import { edadDesde } from '@/lib/time';
-import { confirmBooking, rejectBooking } from '@/lib/coachBookingActions';
+import { confirmBooking, rejectBooking, MOTIVO_RECHAZO_MAX } from '@/lib/coachBookingActions';
+import { detectContactInfo, hasDatosDeCobro } from '@/lib/contactInfoGuard';
 import { responderReagendado, retirarPropuestas } from '@/lib/reagendarApi';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -170,6 +171,9 @@ export default function CoachReservasScreen() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [completedByUser, setCompletedByUser] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  // 02/10/2026: sin señal, un error se mostraba como "Tu agenda está libre".
+  const [cargaFallo, setCargaFallo] = useState(false);
+  const [intento, setIntento] = useState(0);
   const [rejectModal, setRejectModal] = useState<{ visible: boolean; id: string | null }>({ visible: false, id: null });
   const [rejectReason, setRejectReason] = useState('');
   const [coachId, setCoachId] = useState<string | null>(null);
@@ -328,7 +332,8 @@ export default function CoachReservasScreen() {
 
     setWeeklyBlocks((pattern ?? []) as WeeklyBlock[]);
 
-    if (error || !rows) { setLoading(false); return; }
+    if (error || !rows) { setCargaFallo(true); setLoading(false); return; }
+    setCargaFallo(false);
 
     const completedMap: Record<string, number> = {};
     (completed ?? []).forEach(c => { completedMap[c.user_id as string] = (completedMap[c.user_id as string] ?? 0) + 1; });
@@ -364,8 +369,11 @@ export default function CoachReservasScreen() {
   useEffect(() => {
     if (!user) return;
     supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
-      .then(({ data }) => { if (data) setCoachId(data.id); });
-  }, [user]);
+      .then(({ data, error }) => {
+        if (error) { setCargaFallo(true); setLoading(false); return; }
+        if (data) setCoachId(data.id);
+      });
+  }, [user, intento]);
 
   useEffect(() => { loadBookings(); }, [loadBookings]);
 
@@ -381,7 +389,8 @@ export default function CoachReservasScreen() {
   // ── Acciones (lógica reusada, sin cambios) ─────────────────────────────────
   async function accept(id: string) {
     if (!user) return;
-    await confirmBooking(id, user.id);
+    const ok = await confirmBooking(id, user.id);
+    if (!ok) Alert.alert('No pudimos confirmarla', 'Revisá tu conexión y probá de nuevo.');
     await loadBookings();
   }
 
@@ -390,11 +399,43 @@ export default function CoachReservasScreen() {
     setRejectReason('');
   }
 
-  async function confirmReject() {
+  // El motivo le llega a la persona: mismo criterio que la nota de una
+  // recomendación (SalaScreen). Datos para cobrar se bloquean; datos de
+  // contacto avisan y dejan enviar, y queda registrado.
+  function confirmReject() {
     if (!rejectModal.id || !user) { setRejectModal({ visible: false, id: null }); return; }
+    const motivo = rejectReason.trim();
+    const destinatario = bookings.find(b => b.id === rejectModal.id)?.user_id ?? null;
+    const par = { role: 'coach', canal: 'motivo_rechazo', coach_id: user.id, user_id: destinatario };
+    if (motivo && hasDatosDeCobro(motivo)) {
+      registrarEvento('mensaje_contacto_detectado', { ...par, senal: 'datos_de_cobro', bloqueado: true });
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por Vita: así la persona tiene reembolso y garantía. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      return;
+    }
+    const senal = motivo ? detectContactInfo(motivo) : null;
+    if (!senal) { void enviarRechazo(motivo); return; }
+    Alert.alert(
+      '¿Compartir datos de contacto?',
+      'El mensaje parece incluir datos de contacto. Mantené la conversación y los pagos dentro de Vita.',
+      [
+        { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, senal, sent_anyway: false }) },
+        {
+          text: 'Enviar igual',
+          style: 'destructive',
+          onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, senal, sent_anyway: true }); void enviarRechazo(motivo); },
+        },
+      ],
+    );
+  }
+
+  async function enviarRechazo(motivo: string) {
+    if (!rejectModal.id || !user) return;
     const id = rejectModal.id;
     setRejectModal({ visible: false, id: null });
-    await rejectBooking(id, user.id);
+    const ok = await rejectBooking(id, user.id, motivo);
+    // Sin esto el profesional creía que había avisado y la persona seguía
+    // esperando respuesta.
+    if (!ok) Alert.alert('No pudimos avisarle', 'La solicitud sigue pendiente. Revisá tu conexión y probá de nuevo.');
     await loadBookings();
   }
 
@@ -414,7 +455,10 @@ export default function CoachReservasScreen() {
                 .from('bookings')
                 .update({ status: 'cancelada', cancelled_by: 'coach', cancelled_late: isCancelLate(booking.scheduled_date, booking.scheduled_time) })
                 .eq('id', booking.id);
-              if (error) return;
+              if (error) {
+                Alert.alert('No pudimos cancelarla', 'La sesión sigue en pie. Revisá tu conexión y probá de nuevo.');
+                return;
+              }
 
               if (booking.sala_id && user) {
                 const cancelDateStr = fullDate(booking.scheduled_date);
@@ -494,6 +538,23 @@ export default function CoachReservasScreen() {
 
         {loading ? (
           <View style={s.loadingState}><ActivityIndicator size="large" color={FOREST} /></View>
+        ) : cargaFallo ? (
+          <View style={s.falloBox}>
+            <Feather name="wifi-off" size={22} color={FOREST} />
+            <Text style={s.falloTitulo}>No pudimos cargar tus reservas</Text>
+            <Text style={s.falloTxt}>Revisá tu conexión y probá de nuevo. Tus reservas siguen como estaban.</Text>
+            <TouchableOpacity
+              style={s.falloBtn}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              onPress={() => {
+                setLoading(true);
+                setCargaFallo(false);
+                if (coachId) void loadBookings(); else setIntento(n => n + 1);
+              }}>
+              <Text style={s.falloBtnTxt}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <ScrollView
             contentContainerStyle={s.container}
@@ -509,7 +570,7 @@ export default function CoachReservasScreen() {
                     </View>
                     <Text style={s.emptyTitle}>Tu agenda está libre</Text>
                     <Text style={s.emptyTxt}>
-                      Cuando alguien reserve, la solicitud aparece acá para que la confirmes o propongas otro horario.
+                      Cuando alguien reserve, la solicitud aparece acá para que la confirmes o le digas que no podés.
                     </Text>
                   </View>
                 </SurfaceCard>
@@ -707,8 +768,12 @@ export default function CoachReservasScreen() {
                       <Text style={s.btnSolidTxt}>Confirmar</Text>
                     </TouchableOpacity>
                     {/* Rechazar queda SIEMPRE habilitado: libera el turno, no lo compromete. */}
+                    {/* 02/10/2026: decía "Otro horario" y rechaza la solicitud;
+                        el profesional creía que iba a proponer otro día. Proponer
+                        sobre una solicitud sin confirmar todavía no existe
+                        (`proponer_horarios` exige 'confirmada'). */}
                     <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => openReject(b.id)}>
-                      <Text style={s.btnGhostTxt}>Otro horario</Text>
+                      <Text style={s.btnGhostTxt}>No puedo</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -783,13 +848,14 @@ export default function CoachReservasScreen() {
               </TouchableOpacity>
             </View>
             <View style={rm.body}>
-              <Text style={rm.helper}>El usuario recibe un aviso para elegir otro horario disponible u otro profesional</Text>
-              <Text style={rm.label}>Motivo (opcional)</Text>
+              <Text style={rm.helper}>Le avisamos que puede elegir otro horario u otro profesional. Si pagó, se le devuelve todo.</Text>
+              <Text style={rm.label}>Mensaje para la persona (opcional)</Text>
               <TextInput
                 style={rm.input}
                 value={rejectReason}
                 onChangeText={setRejectReason}
-                placeholder="Ej: No tengo disponibilidad ese horario"
+                placeholder="Ej: Esa semana estoy de vacaciones, la siguiente tengo lugar"
+                maxLength={MOTIVO_RECHAZO_MAX}
                 placeholderTextColor="rgba(107,122,86,0.5)"
                 multiline
                 numberOfLines={4}
@@ -810,6 +876,14 @@ export default function CoachReservasScreen() {
 }
 
 const s = StyleSheet.create({
+  falloBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10 },
+  falloTitulo: { fontFamily: ViveFonts.semibold, fontSize: 18, color: FOREST, textAlign: 'center' },
+  falloTxt: { fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 21, color: FOREST_SOFT, textAlign: 'center' },
+  falloBtn: {
+    marginTop: 8, minHeight: 48, paddingHorizontal: 28, borderRadius: 24,
+    backgroundColor: FOREST, alignItems: 'center', justifyContent: 'center',
+  },
+  falloBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#F3EEDF' },
   btnOff: { opacity: 0.4 },
   esperandoPagoTxt: {
     fontFamily: ViveFonts.regular, fontSize: 12, lineHeight: 17,

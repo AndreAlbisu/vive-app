@@ -148,6 +148,12 @@ describe('localEquivalent', () => {
   it('Montevideo ve la misma hora y no cuenta como otra zona', () => {
     expect(deviceIsOffArgentina(Date.parse('2026-08-17T18:00:00Z'), 'America/Montevideo')).toBe(false);
     expect(deviceIsOffArgentina(Date.parse('2026-08-17T18:00:00Z'), 'Europe/Madrid')).toBe(true);
+    // Un instante cualquiera, con segundos y milisegundos: así llega `Date.now()`.
+    const conSegundos = Date.parse('2026-10-02T16:07:42.517Z');
+    expect(deviceIsOffArgentina(conSegundos, 'America/Argentina/Cordoba')).toBe(false);
+    expect(deviceIsOffArgentina(conSegundos, 'America/Buenos_Aires')).toBe(false);
+    expect(deviceIsOffArgentina(conSegundos, 'America/Montevideo')).toBe(false);
+    expect(deviceIsOffArgentina(conSegundos, 'Europe/Madrid')).toBe(true);
   });
 
   it('devuelve null con datos ilegibles', () => {

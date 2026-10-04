@@ -1,0 +1,2 @@
+Origen: https://github.com/pbakaus/impeccable (Apache-2.0 / ver LICENSE), commit 755d2df del 01/10/2026, skill v4.4.0.
+Copiado a mano el 01/10/2026: SOLO SKILL.md y reference/. A propósito NO se copió scripts/ (motor que se descarga de GitHub, edición en vivo, hooks). Ver la nota al principio de SKILL.md.

@@ -138,13 +138,23 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
 }
 
 // Rechaza una solicitud pendiente. Espeja CoachReservasScreen.confirmReject().
-export async function rejectBooking(bookingId: string, coachAuthUserId: string): Promise<boolean> {
-  const { error } = await supabase
+//
+// `motivo`: lo que escribió el profesional en "Motivo (opcional)". Hasta el
+// 02/10/2026 el campo existía y el texto no se mandaba a ningún lado. Va en la
+// notificación de la app (y por eso en el mail), NO en el push: el push se lee
+// en la pantalla bloqueada y el motivo puede decir cualquier cosa. Los datos de
+// contacto se revisan antes, en la pantalla (avisa, no bloquea).
+export const MOTIVO_RECHAZO_MAX = 300;
+
+export async function rejectBooking(bookingId: string, coachAuthUserId: string, motivo?: string): Promise<boolean> {
+  const { data: actualizadas, error } = await supabase
     .from('bookings')
     .update({ status: 'cancelada' })
     .eq('id', bookingId)
-    .select();
-  if (error) return false;
+    .select('id');
+  // Sin filas es que no se guardó (RLS, o ya no estaba): igual que
+  // `confirmBooking`. Antes eso contaba como éxito y se avisaba igual.
+  if (error || !actualizadas?.length) return false;
 
   const { data: booking } = await supabase
     .from('bookings')
@@ -158,6 +168,10 @@ export async function rejectBooking(bookingId: string, coachAuthUserId: string):
 
   const notifTitle = 'Ese horario no está disponible';
   const notifBody = 'Ese horario ya no está disponible. Podés elegir otro horario u otro profesional';
+  const motivoLimpio = (motivo ?? '').trim().slice(0, MOTIVO_RECHAZO_MAX);
+  const bodyEnLaApp = motivoLimpio
+    ? `${notifBody}.\n\nTe dejó este mensaje: "${motivoLimpio}"`
+    : notifBody;
 
   await Promise.all([
     supabase.from('notifications').insert({
@@ -165,7 +179,7 @@ export async function rejectBooking(bookingId: string, coachAuthUserId: string):
       type: 'reserva_rechazada',
       booking_id: bookingId,
       title: notifTitle,
-      body: notifBody,
+      body: bodyEnLaApp,
     }),
     notifyViaServer({ bookingId, recipientId: booking.user_id, title: notifTitle, body: notifBody }),
   ]);

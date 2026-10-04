@@ -280,7 +280,7 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       label: 'Perfil activo',
       done: self.availabilityStatus === 'activo',
       blocking: true,
-      hint: 'Estás en pausa: no aparecés en ninguna búsqueda ni puerta.',
+      hint: 'Estás en pausa: no aparecés en ninguna búsqueda ni tema.',
       route: '/perfil',
     },
     {
@@ -296,7 +296,7 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       label: 'Temas que trabajás',
       done: self.topics.length > 0,
       blocking: true,
-      hint: 'Sin temas no entrás en ninguna puerta. Es la decisión que más mueve la aguja: elegí donde puedas ser visible, no donde haya más coaches.',
+      hint: 'Sin temas no aparecés en la app. Es la decisión que más mueve la aguja: elegí donde puedas ser visible, no donde haya más coaches.',
       route: '/coach-topics',
     },
     {
@@ -482,16 +482,18 @@ export function tituloVisibilidad(st: HomeStanding | null): string {
   return `Entrás al sorteo de «${st.slotLabel}» en ${st.doorLabel}`;
 }
 
+// 02/10/2026: "puerta" es palabra nuestra (el modelo), no del profesional; ya se
+// había sacado del checklist de Inicio por eso. En lo que se lee dice "tema".
 export function bajadaVisibilidad(st: HomeStanding | null): string {
-  if (!st) return 'Mirá en qué lugar entrás en cada puerta y qué te falta para el siguiente.';
+  if (!st) return 'Mirá en qué lugar aparecés en cada tema y qué te falta para el siguiente.';
 
   if (st.kind === 'sin_lugar') {
     // `plural()` antepone el número y acá quedaba "en 1 tu puerta". Con una sola
     // puerta el número no aporta nada, así que no va.
     if (st.detail) return st.detail;
     return st.totalDoors === 1
-      ? 'Mirá qué te falta en tu puerta.'
-      : `Mirá qué te falta en tus ${st.totalDoors} puertas.`;
+      ? 'Mirá qué te falta en tu tema.'
+      : `Mirá qué te falta en tus ${st.totalDoors} temas.`;
   }
 
   if (st.kind === 'rotando') {
@@ -499,6 +501,6 @@ export function bajadaVisibilidad(st: HomeStanding | null): string {
   }
 
   return st.otherDoors > 0
-    ? `Y tenés lugar en ${plural(st.otherDoors, 'puerta más', 'puertas más')}. Mirá qué te falta para el siguiente.`
+    ? `Y tenés lugar en ${plural(st.otherDoors, 'tema más', 'temas más')}. Mirá qué te falta para el siguiente.`
     : 'Mirá qué te falta para el siguiente lugar.';
 }

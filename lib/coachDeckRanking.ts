@@ -219,9 +219,19 @@ export function rankDeck(
   const evaluacion = new Map(ajuste ? eligible.map(c => [c.id, ajuste(c)]) : []);
   const encaja = (c: CachedCoach) => evaluacion.get(c.id)?.encaja ?? false;
 
+  // 02/10/2026: adentro de cada grupo, primero quien tiene un turno libre en
+  // los próximos 7 días. Es otra barra, no un orden: sigue el sorteo, y si
+  // nadie tiene turno pronto sale cualquiera, como antes. El quiz pesa más que
+  // el turno: lo que la persona pidió va primero.
+  const pronto = (c: CachedCoach) => !!c.proximoTurno;
+
   for (const key of SLOT_ORDER) {
     const apto = (c: CachedCoach) => !picked.has(c.id) && isEligibleForSlot(key, c, ctx);
-    const coach = (ajuste ? shuffled.find(c => apto(c) && encaja(c)) : undefined) ?? shuffled.find(apto);
+    const coach =
+      (ajuste ? shuffled.find(c => apto(c) && encaja(c) && pronto(c)) : undefined)
+      ?? (ajuste ? shuffled.find(c => apto(c) && encaja(c)) : undefined)
+      ?? shuffled.find(c => apto(c) && pronto(c))
+      ?? shuffled.find(apto);
     if (!coach) continue;
     picked.add(coach.id);
     // El motivo solo se muestra si encaja: si salió del sorteo general, decir

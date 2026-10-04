@@ -18,6 +18,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { scheduledAtMs, deviceIsOffArgentina, localEquivalent } from '@/lib/time';
+import { CoachAvatar } from '@/components/CoachAvatar';
 import { pedirReagendado, proponerHorarios, contraproponerHorario } from '@/lib/reagendarApi';
 
 const MONTHS_SHORT = [
@@ -58,80 +59,100 @@ export default function BookingScreen_Time() {
   const fueraDeArgentina = useMemo(() => deviceIsOffArgentina(), []);
   const [times, setTimes] = useState<{ label: string; available: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
+  // Sin red, la carga fallaba callada y decía "Sin horarios disponibles para
+  // esta fecha": un error de conexión contado como si el profesional no tuviera
+  // lugar. `intento` vuelve a disparar la carga.
+  const [cargaFallo, setCargaFallo] = useState(false);
+  const [intento, setIntento] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const coachName = params.name ?? '';
-  const specialty = params.specialty ?? 'Coach de vida';
+  // Sin default: "Coach de vida" era un resto del mockup y contradecía la
+  // profesión que muestra el perfil. Si no llega, no se muestra la línea.
+  const specialty = params.specialty ?? '';
   const dateStr = params.date ?? '';
 
   useEffect(() => {
     const coachIdParam = params.coachId;
     if (!coachIdParam || !dateStr) { setLoading(false); return; }
+    setLoading(true);
+    setCargaFallo(false);
+    const fallo = () => { setCargaFallo(true); setLoading(false); };
     (async () => {
-      const { data: coachRow } = await supabase
-        .from('coaches')
-        .select('id')
-        .eq('profile_id', coachIdParam)
-        .maybeSingle();
+      try {
+        // La foto se lee acá y no viaja por la ruta: así aparece también cuando se
+        // llega desde la Sala o Reservas para mover una sesión.
+        const { data: coachRow, error: coachErr } = await supabase
+          .from('coaches')
+          .select('id, profiles(avatar_url)')
+          .eq('profile_id', coachIdParam)
+          .maybeSingle();
 
-      if (!coachRow?.id) { setLoading(false); return; }
-      const coachesId = coachRow.id;
+        if (coachErr) { fallo(); return; }
+        if (!coachRow?.id) { setLoading(false); return; }
+        const coachesId = coachRow.id;
+        setAvatarUrl((coachRow as any).profiles?.avatar_url ?? null);
 
-      const [{ data: slots }, { data: booked }] = await Promise.all([
-        supabase
-          .from('coach_availability')
-          .select('time')
-          .eq('coach_id', coachesId)
-          .eq('blocked', false)
-          .eq('date', dateStr),
-        supabase
-          .from('bookings')
-          .select('scheduled_time, user_id, status, payment_status, preference_id, usdt_amount')
-          .eq('coach_id', coachesId)
-          .eq('scheduled_date', dateStr)
-          .in('status', ['pendiente', 'confirmada']),
-      ]);
+        const [{ data: slots, error: slotsErr }, { data: booked, error: bookedErr }] = await Promise.all([
+          supabase
+            .from('coach_availability')
+            .select('time')
+            .eq('coach_id', coachesId)
+            .eq('blocked', false)
+            .eq('date', dateStr),
+          supabase
+            .from('bookings')
+            .select('scheduled_time, user_id, status, payment_status, preference_id, usdt_amount')
+            .eq('coach_id', coachesId)
+            .eq('scheduled_date', dateStr)
+            .in('status', ['pendiente', 'confirmada']),
+        ]);
+        if (slotsErr || bookedErr) { fallo(); return; }
 
-      // Un horario queda ocupado para todos si ya está 'confirmada' (cualquier
-      // usuario), y ocupado solo para VOS si vos ya tenés una 'pendiente' ahí
-      // — así el mismo usuario no puede mandar dos solicitudes al mismo slot,
-      // pero distintos usuarios sí pueden competir por él (el coach elige a
-      // cuál acepta y las demás se cancelan automáticamente, ver SCHEMA.md).
-      //
-      // 🔴 EXCEPCIÓN: tu propia reserva con un cobro iniciado y sin pagar NO te
-      // bloquea. Abrías el checkout, lo cerrabas sin pagar, y el turno que
-      // acababas de soltar te quedaba vedado a VOS durante media hora, hasta que
-      // `expire_unpaid_checkouts()` cancelara la fila. A nadie más le bloqueaba
-      // nada — el único perjudicado era el que quería reintentar.
-      //
-      // La reserva vieja no se toca: el cron la cancela sola. Quedan dos
-      // pendientes tuyas un rato y no molesta, porque solo una puede pagarse.
-      const abandonada = (b: { payment_status?: string | null; preference_id?: string | null; usdt_amount?: number | null }) =>
-        b.payment_status === 'pendiente' && (b.preference_id != null || b.usdt_amount != null);
+        // Un horario queda ocupado para todos si ya está 'confirmada' (cualquier
+        // usuario), y ocupado solo para VOS si vos ya tenés una 'pendiente' ahí
+        // — así el mismo usuario no puede mandar dos solicitudes al mismo slot,
+        // pero distintos usuarios sí pueden competir por él (el coach elige a
+        // cuál acepta y las demás se cancelan automáticamente, ver SCHEMA.md).
+        //
+        // 🔴 EXCEPCIÓN: tu propia reserva con un cobro iniciado y sin pagar NO te
+        // bloquea. Abrías el checkout, lo cerrabas sin pagar, y el turno que
+        // acababas de soltar te quedaba vedado a VOS durante media hora, hasta que
+        // `expire_unpaid_checkouts()` cancelara la fila. A nadie más le bloqueaba
+        // nada — el único perjudicado era el que quería reintentar.
+        //
+        // La reserva vieja no se toca: el cron la cancela sola. Quedan dos
+        // pendientes tuyas un rato y no molesta, porque solo una puede pagarse.
+        const abandonada = (b: { payment_status?: string | null; preference_id?: string | null; usdt_amount?: number | null }) =>
+          b.payment_status === 'pendiente' && (b.preference_id != null || b.usdt_amount != null);
 
-      const bookedSet = new Set(
-        (booked ?? [])
-          .filter(b => b.status === 'confirmada' || (b.user_id === user?.id && !abandonada(b)))
-          .map(b => b.scheduled_time)
-      );
+        const bookedSet = new Set(
+          (booked ?? [])
+            .filter(b => b.status === 'confirmada' || (b.user_id === user?.id && !abandonada(b)))
+            .map(b => b.scheduled_time)
+        );
 
-      const sorted = [...(slots ?? [])].sort((a, b) => {
-        const [ah, am = 0] = a.time.split(':').map(Number);
-        const [bh, bm = 0] = b.time.split(':').map(Number);
-        return ah * 60 + am - (bh * 60 + bm);
-      });
+        const sorted = [...(slots ?? [])].sort((a, b) => {
+          const [ah, am = 0] = a.time.split(':').map(Number);
+          const [bh, bm = 0] = b.time.split(':').map(Number);
+          return ah * 60 + am - (bh * 60 + bm);
+        });
 
-      // 🔴 Antes esto comparaba el día y los minutos DEL DISPOSITIVO contra una
-      // hora guardada en horario argentino. Desde Madrid a las 22:00 (17:00 en
-      // Argentina) daba por pasados todos los turnos hasta las 22:00 ART: la
-      // persona abría la pantalla y veía casi todo gris, sin ningún motivo
-      // visible. Comparar instantes absolutos resuelve el día y la hora de una.
-      setTimes(sorted.map(s => {
-        const isPast = scheduledAtMs(dateStr, s.time) <= Date.now();
-        return { label: s.time, available: !bookedSet.has(s.time) && !isPast };
-      }));
-      setLoading(false);
+        // 🔴 Antes esto comparaba el día y los minutos DEL DISPOSITIVO contra una
+        // hora guardada en horario argentino. Desde Madrid a las 22:00 (17:00 en
+        // Argentina) daba por pasados todos los turnos hasta las 22:00 ART: la
+        // persona abría la pantalla y veía casi todo gris, sin ningún motivo
+        // visible. Comparar instantes absolutos resuelve el día y la hora de una.
+        setTimes(sorted.map(s => {
+          const isPast = scheduledAtMs(dateStr, s.time) <= Date.now();
+          return { label: s.time, available: !bookedSet.has(s.time) && !isPast };
+        }));
+        setLoading(false);
+      } catch {
+        fallo();
+      }
     })();
-  }, [params.coachId, dateStr, user?.id]);
+  }, [params.coachId, dateStr, user?.id, intento]);
 
   // M15. El mismo botón, otro final: con `reagendar` no se va a pagar nada,
   // porque mover una sesión no toca la plata (es la misma reserva con otra
@@ -247,12 +268,10 @@ export default function BookingScreen_Time() {
         showsVerticalScrollIndicator={false}>
 
         <View style={s.coachReminder}>
-          <View style={s.coachAvatar}>
-            <MaterialIcons name="person" size={30} color="#C0BAB4" />
-          </View>
+          <CoachAvatar uri={avatarUrl} size={52} style={s.coachAvatar} />
           <View style={s.coachInfo}>
             <Text style={s.coachName}>{coachName}</Text>
-            <Text style={s.coachSpecialty}>{specialty}</Text>
+            {specialty ? <Text style={s.coachSpecialty}>{specialty}</Text> : null}
             {dateStr ? (
               <Text style={s.coachDate}>{formatDateShort(dateStr)}</Text>
             ) : null}
@@ -263,6 +282,18 @@ export default function BookingScreen_Time() {
 
         {loading ? (
           <ActivityIndicator color="#565E32" style={{ marginVertical: 24 }} />
+        ) : cargaFallo ? (
+          <View style={s.errorCard}>
+            <Text style={s.errorTitle}>No pudimos cargar los horarios</Text>
+            <Text style={s.errorText}>Revisá tu conexión y probá de nuevo.</Text>
+            <TouchableOpacity
+              style={s.retryBtn}
+              onPress={() => setIntento(i => i + 1)}
+              activeOpacity={0.85}
+              accessibilityRole="button">
+              <Text style={s.retryBtnText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
         ) : times.length === 0 ? (
           <Text style={s.emptyTimes}>Sin horarios disponibles para esta fecha</Text>
         ) : (
@@ -336,7 +367,9 @@ export default function BookingScreen_Time() {
             disabled={!selectedTime || moviendo}
             activeOpacity={0.85}>
             <Text style={s.btnText}>
-              {params.proponer
+              {/* `contra` también manda al tocar: con "Seguimos" la persona
+                  esperaba otro paso y la propuesta ya salía. */}
+              {params.proponer || params.contra
                 ? (moviendo ? 'Enviando…' : 'Proponer este horario')
                 : params.reagendar
                   ? (moviendo ? 'Moviendo…' : 'Mover la sesión')
@@ -387,11 +420,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,248,240,0.55)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.65)', padding: 14,
     marginBottom: 28, ...cardShadow,
   },
-  coachAvatar: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#EDE7E0', alignItems: 'center',
-    justifyContent: 'center', marginRight: 14,
-  },
+  coachAvatar: { marginRight: 14 },
   coachInfo: { flex: 1 },
   coachName: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32', marginBottom: 2 },
   coachSpecialty: { fontFamily: ViveFonts.medium, fontSize: 12, color: ViveColors.primary, marginBottom: 4 },
@@ -417,6 +446,18 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.regular, fontSize: 14,
     color: 'rgba(135,131,92,0.72)', textAlign: 'center', marginVertical: 24,
   },
+  errorCard: {
+    backgroundColor: 'rgba(255,248,240,0.72)', borderRadius: 18,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
+    padding: 16, marginBottom: 24, gap: 8,
+  },
+  errorTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32' },
+  errorText: { fontFamily: ViveFonts.regular, fontSize: 13.5, color: '#566245', lineHeight: 20 },
+  retryBtn: {
+    backgroundColor: '#565E32', borderRadius: 14, marginTop: 4,
+    paddingVertical: 13, alignItems: 'center', justifyContent: 'center', minHeight: 46,
+  },
+  retryBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#F7EFE4' },
   timezoneNote: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tzConversion: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,

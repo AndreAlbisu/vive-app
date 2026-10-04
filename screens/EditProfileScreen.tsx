@@ -22,15 +22,25 @@ import CampoNacionalidad from '@/components/ui/CampoNacionalidad';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import {
+  DIAS_ENTRE_CAMBIOS,
+  cambioCuentaParaElLimite,
+  estadoDelNombre,
+  mensajeDeRechazo,
+} from '@/lib/cambioDeNombre';
 
 const GENDER_OPTIONS = ['Prefiero no decir', 'Masculino', 'Femenino', 'No binario'] as const;
 type Gender = (typeof GENDER_OPTIONS)[number];
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user, refreshProfile } = useAuth();
+  const { user, role, refreshProfile } = useAuth();
 
   const [name, setName] = useState('');
+  // Lo que hay guardado: el nombre solo viaja en el UPDATE si cambió, así
+  // editar la foto o la fecha no choca con el límite de cambios de nombre.
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const [nameChangedAt, setNameChangedAt] = useState<string | null>(null);
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState<Gender>('Prefiero no decir');
   const [nationality, setNationality] = useState('');
@@ -50,12 +60,14 @@ export default function EditProfileScreen() {
     setLoading(true);
     const { data } = await supabase
       .rpc('get_my_profile')
-      .select('name, birth_date, gender, nationality, avatar_url')
+      .select('name, birth_date, gender, nationality, avatar_url, name_changed_at')
       .eq('id', user!.id)
       .single();
 
     if (data) {
       setName(data.name ?? user?.user_metadata?.name ?? '');
+      setSavedName(data.name ?? null);
+      setNameChangedAt(data.name_changed_at ?? null);
       setBirthDate(data.birth_date ?? '');
       setGender((GENDER_OPTIONS as readonly string[]).includes(data.gender ?? '') ? data.gender : 'Prefiero no decir');
       setNationality(data.nationality ?? '');
@@ -148,17 +160,41 @@ export default function EditProfileScreen() {
 
 
 
-  async function handleSave() {
+  const estadoNombre = estadoDelNombre({ role, name: savedName, nameChangedAt });
+
+  function handleSave() {
+    if (!user) return;
+    const nuevo = name.trim();
+    const cambiaNombre = estadoNombre.editable && nuevo !== (savedName ?? '').trim();
+    if (cambiaNombre && !nuevo) {
+      setErrorMsg('Escribí tu nombre');
+      return;
+    }
+    if (cambiaNombre && cambioCuentaParaElLimite(savedName)) {
+      Alert.alert(
+        'Cambiar tu nombre',
+        `Vas a aparecer como "${nuevo}". Después no vas a poder cambiarlo de nuevo por ${DIAS_ENTRE_CAMBIOS} días.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Cambiar', onPress: () => guardar(true) },
+        ],
+      );
+      return;
+    }
+    guardar(cambiaNombre);
+  }
+
+  async function guardar(cambiaNombre: boolean) {
     if (!user) return;
     setSaving(true);
     setSuccessMsg('');
     setErrorMsg('');
 
     const updateData: Record<string, any> = {
-      name: name.trim(),
       gender,
       nationality: nationality.trim(),
     };
+    if (cambiaNombre) updateData.name = name.trim();
 
     // Ya viene en ISO del calendario: no hay formato que validar.
     if (birthDate) updateData.birth_date = birthDate;
@@ -171,8 +207,12 @@ export default function EditProfileScreen() {
     setSaving(false);
 
     if (error) {
-      setErrorMsg('Error al guardar. Intentalo de nuevo');
+      setErrorMsg(mensajeDeRechazo(error) ?? 'Error al guardar. Intentalo de nuevo');
     } else {
+      if (cambiaNombre) {
+        if (cambioCuentaParaElLimite(savedName)) setNameChangedAt(new Date().toISOString());
+        setSavedName(name.trim());
+      }
       setSuccessMsg('✓ Perfil actualizado');
       setTimeout(() => setSuccessMsg(''), 3000);
       // El nombre del saludo del home y del perfil sale del contexto, que solo
@@ -240,14 +280,16 @@ export default function EditProfileScreen() {
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Nombre completo</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, !estadoNombre.editable && styles.inputDisabled]}
                 value={name}
                 onChangeText={setName}
+                editable={estadoNombre.editable}
                 placeholder="Tu nombre"
                 placeholderTextColor="rgba(135,131,92,0.45)"
                 autoCapitalize="words"
                 returnKeyType="next"
               />
+              <Text style={styles.fieldNote}>{estadoNombre.nota}</Text>
             </View>
 
             <View style={styles.fieldDivider} />

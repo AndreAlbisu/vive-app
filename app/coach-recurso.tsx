@@ -33,6 +33,7 @@ import {
 import { AppBg } from '@/components/ui/AppBg';
 import { FormatSurface } from '@/components/FormatSurface';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { anotarSensible } from '@/lib/analytics';
 import { useAuth } from '@/context/AuthContext';
 import { logResourceEvent } from '@/lib/resourceEvents';
 
@@ -808,7 +809,8 @@ export default function CoachRecursoScreen() {
   }
 
   function openRelated(r: Related) {
-    registrarEvento('relacionado_abierto', { origen_id: resourceId, destino_id: r.id }).catch(() => {});
+    // Qué recursos abre alguien es dato de salud: sin consentimiento, sin cuáles.
+    anotarSensible('relacionado_abierto', { origen_id: resourceId, destino_id: r.id }, ['origen_id', 'destino_id']);
     router.push({ pathname: '/coach-recurso', params: { id: r.id } } as any);
   }
 

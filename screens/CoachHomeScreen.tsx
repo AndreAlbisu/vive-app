@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
   RefreshControl,
   Image,
   Share,
@@ -18,7 +19,7 @@ import { getRelationshipNotes } from '@/lib/sessionNotes';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { EMAIL_CONTACTO, escribirnos } from '@/lib/contacto';
 import { SITIO_WEB, linkCompartible, linkDelCoach, mensajeParaCompartir } from '@/lib/linkCoach';
@@ -79,6 +80,10 @@ const CREAM_DEEP = '#EAE2D0';
 const FOREST = '#3F512F';
 const FOREST_SOFT = '#566245';
 const TERRA = '#C06B4A';
+// Terracota para botones CON TEXTO encima: la clara (`TERRA`) da 3,6:1 con el
+// crema, por debajo del mínimo; esta da 4,59. Ver `primaryInk` en el tema.
+// 02/10/2026: "Unirse" y "Proponer horario" pasan a esta.
+const TERRA_INK = ViveColors.primaryInk;
 const TERRA_SOFT = '#EAD3C6';
 const OK_BG = '#DCE5CB';
 const OK_INK = '#42542F';
@@ -186,6 +191,16 @@ export default function CoachHomeScreen() {
   const { preparar } = useLocalSearchParams<{ preparar?: string }>();
   useEffect(() => { if (preparar === '1') setPrepOpen(true); }, [preparar]);
   const [loading, setLoading] = useState(true);
+  // 🔴 02/10/2026 (revisión de UX). Si las consultas fallaban (sin señal), la
+  // pantalla tomaba el error como "no hay datos": a un profesional con meses de
+  // trabajo le mostraba "Antes de tu primera sesión", todo sin tildar y "Sin
+  // esto no aparecés en la app", y abajo "Sin sesiones programadas". Ahora un
+  // error se dice como error, con Reintentar.
+  const [cargaFallo, setCargaFallo] = useState(false);
+  // Con la letra del sistema agrandada, las filas con botón pasan a dos
+  // renglones (ver `caenRow`).
+  const letraGrande = useWindowDimensions().fontScale >= 1.3;
+  const [intento, setIntento] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
@@ -232,8 +247,12 @@ export default function CoachHomeScreen() {
   useEffect(() => {
     if (!user) return;
     supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
-      .then(({ data }) => { if (data) setCoachId(data.id); });
-  }, [user]);
+      .then(({ data, error }) => {
+        if (error) { setCargaFallo(true); setLoading(false); return; }
+        if (data) setCoachId(data.id);
+        else setLoading(false);
+      });
+  }, [user, intento]);
 
   // Badge de notificaciones (campana del header).
   useEffect(() => {
@@ -282,7 +301,10 @@ export default function CoachHomeScreen() {
   }, [coachId]);
 
   const loadData = useCallback(async () => {
-    if (!user || !coachId) { setLoading(false); return; }
+    // Sin `coachId` todavía no se sabe nada: se sigue cargando (lo resuelve el
+    // efecto de arriba). Antes se mostraba la pantalla con todo en cero.
+    if (!user) { setLoading(false); return; }
+    if (!coachId) return;
 
     const now = new Date();
     const todayStr = toDateStr(now);
@@ -294,14 +316,14 @@ export default function CoachHomeScreen() {
     const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
 
     const [
-      { data: profile },
-      { data: confirmed },
-      { data: coachRow },
-      { data: topicRows },
-      { count: recursosCount },
-      { count: bookingsEverCount },
-      { data: pendingRows },
-      { count: horariosCount },
+      { data: profile, error: errProfile },
+      { data: confirmed, error: errConfirmed },
+      { data: coachRow, error: errCoach },
+      { data: topicRows, error: errTopics },
+      { count: recursosCount, error: errRecursos },
+      { count: bookingsEverCount, error: errEver },
+      { data: pendingRows, error: errPending },
+      { count: horariosCount, error: errHorarios },
     ] = await Promise.all([
       supabase.from('profiles').select('name, avatar_url').eq('id', user.id).maybeSingle(),
       supabase
@@ -344,6 +366,15 @@ export default function CoachHomeScreen() {
         .eq('blocked', false)
         .gte('date', todayInAr()),
     ]);
+
+    // Todas alimentan algo que, vacío, se lee como un hecho (sin sesiones,
+    // paso sin hacer, profesional nuevo). Si una falla, no se muestra nada.
+    if (errProfile || errConfirmed || errCoach || errTopics || errRecursos || errEver || errPending || errHorarios) {
+      setCargaFallo(true);
+      setLoading(false);
+      return;
+    }
+    setCargaFallo(false);
 
     if (profile?.name) setCoachName(profile.name.split(' ')[0]);
 
@@ -842,6 +873,31 @@ export default function CoachHomeScreen() {
     );
   }
 
+  if (cargaFallo) {
+    return (
+      <AppBg>
+        <SafeAreaView style={s.safe} edges={['top']}>
+          <View style={s.falloBox}>
+            <Feather name="wifi-off" size={22} color={FOREST} />
+            <Text style={s.falloTitulo}>No pudimos cargar tu inicio</Text>
+            <Text style={s.falloTxt}>Revisá tu conexión y probá de nuevo. Tus sesiones y tu perfil siguen como estaban.</Text>
+            <TouchableOpacity
+              style={s.falloBtn}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              onPress={() => {
+                setLoading(true);
+                setCargaFallo(false);
+                if (coachId) void loadData(); else setIntento(n => n + 1);
+              }}>
+              <Text style={s.falloBtnTxt}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </AppBg>
+    );
+  }
+
   // Ayudas en el momento (24/09/2026): cada una la primera vez que pasa lo que
   // explica, y de a una. Si coinciden, va la más urgente; la otra aparece la
   // próxima vez que entre. Mismo formato que las del cliente
@@ -895,7 +951,7 @@ export default function CoachHomeScreen() {
                 y empujaba los íconos de la derecha fuera de eje. La causa de
                 fondo ya se arregló en `CoachLoginScreen`, esto es defensivo
                 para cualquier nombre real igual de largo. */}
-            <Text style={s.hello} numberOfLines={1} ellipsizeMode="tail">Hola, {coachName || '—'}</Text>
+            <Text style={s.hello} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>Hola, {coachName || '—'}</Text>
             <View style={s.headerRight}>
               <TouchableOpacity onPress={() => router.push('/coach-notifications')} activeOpacity={0.7} hitSlop={8} style={s.bellBtn}>
                 <Feather name="bell" size={22} color={FOREST} />
@@ -1404,7 +1460,7 @@ export default function CoachHomeScreen() {
             <View style={s.caenWrap}>
               <Text style={s.caenTitle}>Hace rato que no los ves</Text>
               {seCaen.map(p => (
-                <View key={p.userId} style={s.caenRow}>
+                <View key={p.userId} style={[s.caenRow, letraGrande && s.caenRowGrande]}>
                   {p.avatarUrl ? (
                     <Image source={{ uri: p.avatarUrl }} style={s.caenAv} />
                   ) : (
@@ -1412,7 +1468,7 @@ export default function CoachHomeScreen() {
                       <Text style={s.caenInitials}>{getInitials(p.name)}</Text>
                     </View>
                   )}
-                  <View style={{ flex: 1 }}>
+                  <View style={s.caenTexto}>
                     <Text style={s.caenName} numberOfLines={1}>{p.name}</Text>
                     <Text style={s.caenMeta} numberOfLines={1}>
                       {haceCuanto(p.diasSinVerse)}
@@ -1424,7 +1480,7 @@ export default function CoachHomeScreen() {
                       reserva, así que si no existe no se ofrece un botón muerto. */}
                   {p.salaId && (
                     <TouchableOpacity
-                      style={s.caenBtn}
+                      style={[s.caenBtn, letraGrande && s.caenBtnGrande]}
                       activeOpacity={0.85}
                       disabled={proponiendo === p.userId}
                       onPress={() => proponerHorario(p)}>
@@ -1533,6 +1589,14 @@ const s = StyleSheet.create({
   sancionQue: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(46,54,36,0.72)', lineHeight: 17 },
   sancionLink: { color: '#9A3412', textDecorationLine: 'underline' },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  falloBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10 },
+  falloTitulo: { fontFamily: ViveFonts.semibold, fontSize: 18, color: FOREST, textAlign: 'center' },
+  falloTxt: { fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 21, color: FOREST_SOFT, textAlign: 'center' },
+  falloBtn: {
+    marginTop: 8, minHeight: 48, paddingHorizontal: 28, borderRadius: 24,
+    backgroundColor: FOREST, alignItems: 'center', justifyContent: 'center',
+  },
+  falloBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 15, color: GREEN_TXT },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   hello: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST, flex: 1 },
@@ -1553,15 +1617,15 @@ const s = StyleSheet.create({
   },
   wd: { alignItems: 'center' },
   wdToday: {},
-  wdAbbr: { fontSize: 10, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+  wdAbbr: { fontSize: 11.5, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
   wdAbbrToday: { color: FOREST, fontFamily: ViveFonts.semibold },
   wdCircle: {
     width: 26, height: 26, borderRadius: 13, marginTop: 5,
     alignItems: 'center', justifyContent: 'center', backgroundColor: CREAM_DEEP,
   },
-  wdCircleHas: { backgroundColor: TERRA },
+  wdCircleHas: { backgroundColor: TERRA_INK },
   wdCircleToday: { borderWidth: 1.5, borderColor: FOREST },
-  wdCount: { fontSize: 10.5, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
+  wdCount: { fontSize: 12, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
 
   // Próxima sesión (verde)
   next: { marginTop: 14, backgroundColor: '#3E4E2C', borderRadius: 24, padding: 17, overflow: 'hidden' },
@@ -1569,27 +1633,29 @@ const s = StyleSheet.create({
     position: 'absolute', right: -40, top: -46, width: 140, height: 140, borderRadius: 70,
     backgroundColor: 'rgba(234,211,198,0.10)',
   },
-  eyebrow: { fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: GREEN_EYEBROW, fontFamily: ViveFonts.medium },
+  eyebrow: { fontSize: 11.5, letterSpacing: 0.8, textTransform: 'uppercase', color: GREEN_EYEBROW, fontFamily: ViveFonts.medium },
   who: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 10 },
   whoAv: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#55663F' },
   whoAvFallback: { alignItems: 'center', justifyContent: 'center' },
   whoAvTxt: { fontFamily: ViveFonts.bold, fontSize: 14, color: '#FFF3E8' },
   whoName: { fontFamily: ViveFonts.titleSemiBold, fontSize: 17, color: GREEN_TXT },
-  whoSub: { fontSize: 11, color: GREEN_EYEBROW, fontFamily: ViveFonts.regular, marginTop: 2 },
+  // Cuándo es la sesión: 13 (era 11). Es el dato que se viene a mirar.
+  whoSub: { fontSize: 13, lineHeight: 18, color: GREEN_EYEBROW, fontFamily: ViveFonts.regular, marginTop: 2 },
   acts: { flexDirection: 'row', gap: 8, marginTop: 13 },
-  actBtn: { flex: 1, borderRadius: 15, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
-  actJoin: { backgroundColor: TERRA },
-  actJoinTxt: { fontSize: 12, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
-  actDisabled: { backgroundColor: 'rgba(192,107,74,0.45)' },
+  actBtn: { flex: 1, borderRadius: 15, paddingVertical: 11, minHeight: 46, alignItems: 'center', justifyContent: 'center' },
+  actJoin: { backgroundColor: TERRA_INK },
+  // Letra de 14 (era 12): es el botón que se toca con la persona esperando.
+  actJoinTxt: { fontSize: 14, fontFamily: ViveFonts.semibold, color: ViveColors.onPrimaryInk },
+  actDisabled: { backgroundColor: 'rgba(162,88,66,0.45)' },
   actPrep: { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
-  actPrepTxt: { fontSize: 12, fontFamily: ViveFonts.semibold, color: GREEN_TXT },
+  actPrepTxt: { fontSize: 14, fontFamily: ViveFonts.semibold, color: GREEN_TXT },
   prep: { marginTop: 11, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 13 },
-  prepLine: { fontSize: 11.5, color: '#E9E4D2', lineHeight: 18, fontFamily: ViveFonts.regular },
-  prepB: { color: GREEN_TXT, fontFamily: ViveFonts.semibold, fontSize: 11.5 },
+  prepLine: { fontSize: 13, color: '#E9E4D2', lineHeight: 19, fontFamily: ViveFonts.regular },
+  prepB: { color: GREEN_TXT, fontFamily: ViveFonts.semibold, fontSize: 13 },
   prepRes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
-  prepOk: { color: '#C9DFA9', fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
+  prepOk: { color: '#C9DFA9', fontSize: 13, fontFamily: ViveFonts.regular, flexShrink: 1 },
   prepSoft: { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT, opacity: 0.85 },
-  prepWarn: { color: TERRA_SOFT, fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
+  prepWarn: { color: TERRA_SOFT, fontSize: 13, fontFamily: ViveFonts.regular, flexShrink: 1 },
 
   nextEmpty: {
     marginTop: 14, backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
@@ -1743,19 +1809,25 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: FOREST,
   },
+  // 02/10/2026, visto en el simulador con letra grande: el botón no se achica
+  // y dejaba los nombres en "J." y "H.". Con letra grande la fila pasa a
+  // envolver y el botón ocupa su propio renglón, abajo del nombre.
   caenRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  caenRowGrande: { flexWrap: 'wrap' },
+  caenTexto: { flex: 1 },
+  caenBtnGrande: { width: '100%', alignItems: 'center' },
   caenAv: { width: 38, height: 38, borderRadius: 19 },
   caenAvFallback: { backgroundColor: CREAM_DEEP, alignItems: 'center', justifyContent: 'center' },
   caenInitials: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },
   caenName: { fontFamily: ViveFonts.semibold, fontSize: 14, color: FOREST },
   caenMeta: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 1 },
   caenBtn: {
-    backgroundColor: TERRA,
+    backgroundColor: TERRA_INK,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  caenBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 12, color: '#F7EFE4' },
+  caenBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.onPrimaryInk },
 
   vis: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12, padding: 15,

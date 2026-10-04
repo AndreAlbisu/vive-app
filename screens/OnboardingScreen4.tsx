@@ -9,7 +9,7 @@ import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { guardarRespuestas, puertaDeCategoria } from '@/lib/onboardingRespuestas';
-import { anotar, cronometro } from '@/lib/analytics';
+import { anotarSensible, cronometro } from '@/lib/analytics';
 
 // La única pregunta que queda después de "¿Qué te trae por acá?" — opción A del
 // brief (`docs/onboarding-bifurcacion-opciones.md`), elegida el 01/09/2026.
@@ -88,7 +88,7 @@ export default function OnboardingScreen4() {
   useEffect(() => {
     // Con esto y el evento de la pantalla anterior se ve dónde se cae la gente
     // entre las dos, y qué universo abandona más.
-    anotar('onboarding_pantalla_vista', { pantalla: 'categoria', universo: u });
+    anotarSensible('onboarding_pantalla_vista', { pantalla: 'categoria', universo: u }, ['universo']);
 
     Animated.stagger(110, [
       Animated.timing(headerAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
@@ -110,13 +110,15 @@ export default function OnboardingScreen4() {
   function handleContinue() {
     if (!selected) return;
 
-    anotar('onboarding_respuesta', {
+    // Universo y categoría ("sexualidad", "sentirme") son dato de salud
+    // declarado: van solo con consentimiento (`anotarSensible`).
+    anotarSensible('onboarding_respuesta', {
       pantalla: 'categoria',
       universo: u,
       respuesta: selected,
       toques: toques.current,
       segundos: medir(),
-    });
+    }, ['universo', 'respuesta']);
 
     // 🔴 Acá se guarda lo que la persona contestó, que antes se tiraba entero.
     // Todavía no hay cuenta, así que se encola local y `AuthContext` lo vuelca
@@ -144,7 +146,7 @@ export default function OnboardingScreen4() {
     // El destino final del recorrido, con la puerta que le sugerimos. Es lo que
     // después deja comparar contra qué puerta abre de verdad
     // (`conexiones_puerta_abierta`, con `sugerida`).
-    anotar('onboarding_fin', { destino: 'conexiones', desde: 'categoria', puerta });
+    anotarSensible('onboarding_fin', { destino: 'conexiones', desde: 'categoria', puerta }, ['puerta']);
     router.replace(
       puerta
         ? ({ pathname: '/(tabs)/conexiones', params: { puerta } } as any)
@@ -208,9 +210,9 @@ export default function OnboardingScreen4() {
                   ]}
                   onPress={() => {
                     toques.current += 1;
-                    anotar('onboarding_opcion_tocada', {
+                    anotarSensible('onboarding_opcion_tocada', {
                       pantalla: 'categoria', universo: u, opcion: sub.id, orden: toques.current,
-                    });
+                    }, ['universo', 'opcion']);
                     setSelected(sub.id);
                   }}
                 >

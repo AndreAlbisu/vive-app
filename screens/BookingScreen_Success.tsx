@@ -13,6 +13,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { CoachAvatar } from '@/components/CoachAvatar';
+import { localEquivalentLabel } from '@/lib/time';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -34,6 +36,7 @@ type Params = {
   time?: string;
   salaId?: string;
   instant?: string;
+  avatar?: string;
 };
 
 export default function BookingScreen_Success() {
@@ -41,7 +44,7 @@ export default function BookingScreen_Success() {
   const params = useLocalSearchParams<Params>();
 
   const coachName = params.name ?? '';
-  const specialty = params.specialty ?? 'Coach de vida';
+  const specialty = params.specialty ?? '';
   const dateStr = params.date ?? '';
   const time = params.time ?? '';
   const salaId = params.salaId ?? '';
@@ -70,6 +73,7 @@ export default function BookingScreen_Success() {
 
   const firstName = coachName.split(' ')[0];
   const formattedDate = formatDate(dateStr);
+  const horaLocal = time ? localEquivalentLabel(dateStr, time) : null;
 
   // Animations
   const checkScale = useRef(new Animated.Value(0)).current;
@@ -131,12 +135,10 @@ export default function BookingScreen_Success() {
           {/* Tarjeta resumen */}
           <Animated.View style={[s.card, { opacity: contentOpacity }]}>
             <View style={s.coachRow}>
-              <View style={s.avatar}>
-                <MaterialIcons name="person" size={28} color="rgba(135,131,92,0.80)" />
-              </View>
+              <CoachAvatar uri={params.avatar} size={44} style={s.avatar} />
               <View style={s.coachInfo}>
                 <Text style={s.coachName}>{coachName}</Text>
-                <Text style={s.coachSpecialty}>{specialty}</Text>
+                {specialty ? <Text style={s.coachSpecialty}>{specialty}</Text> : null}
               </View>
               <MaterialIcons name="verified" size={16} color={ViveColors.accent} />
             </View>
@@ -149,7 +151,12 @@ export default function BookingScreen_Success() {
             </View>
             <View style={[s.detailRow, { marginBottom: 0 }]}>
               <MaterialIcons name="access-time" size={15} color={ViveColors.primary} />
-              <Text style={s.detailText}>{time ? `${time} hs` : '—'}</Text>
+              {/* Decía "18:00 hs" a secas: desde Madrid se leía como hora de
+                  allá. Ahora dice de dónde es y, desde afuera, la equivalencia. */}
+              <Text style={s.detailText}>
+                {time ? `${time} hs, hora de Argentina` : '—'}
+                {horaLocal ? `\n${horaLocal}` : ''}
+              </Text>
             </View>
           </Animated.View>
 

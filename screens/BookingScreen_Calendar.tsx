@@ -78,88 +78,117 @@ export default function BookingScreen_Calendar() {
   const [coachRowId, setCoachRowId] = useState<string | null>(null);
   const [aviso, setAviso] = useState<'nada' | 'pendiente' | 'guardando'>('nada');
   const [avisoError, setAvisoError] = useState(false);
+  // Sin red, la carga fallaba callada y el calendario quedaba todo gris, igual
+  // que un profesional sin lugar. `intento` vuelve a disparar la carga.
+  const [cargaFallo, setCargaFallo] = useState(false);
+  const [intento, setIntento] = useState(0);
+  // El mes en que no había lugar, si el calendario saltó solo al primero que
+  // tiene. Se borra en cuanto la persona cambia de mes a mano.
+  const [mesSinLugar, setMesSinLugar] = useState<number | null>(null);
 
   const weeks = buildCalendar(year, month);
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
 
   useEffect(() => {
     if (!params.coachId) { setLoadingDates(false); return; }
+    setLoadingDates(true);
+    setCargaFallo(false);
+    const fallo = () => { setCargaFallo(true); setLoadingDates(false); };
     (async () => {
-      const { data: coachRow } = await supabase
-        .from('coaches')
-        .select('id')
-        .eq('profile_id', params.coachId)
-        .maybeSingle();
-
-      if (!coachRow?.id) { setLoadingDates(false); return; }
-      const coachesId = coachRow.id;
-      setCoachRowId(coachesId);
-
-      if (user?.id) {
-        const { data: pedido } = await supabase
-          .from('availability_waitlist')
+      try {
+        const { data: coachRow, error: coachErr } = await supabase
+          .from('coaches')
           .select('id')
-          .eq('coach_id', coachesId)
-          .is('resuelta_at', null)
+          .eq('profile_id', params.coachId)
           .maybeSingle();
-        if (pedido) setAviso('pendiente');
-      }
 
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        if (coachErr) { fallo(); return; }
+        if (!coachRow?.id) { setLoadingDates(false); return; }
+        const coachesId = coachRow.id;
+        setCoachRowId(coachesId);
 
-      const [{ data: avail }, { data: booked }] = await Promise.all([
-        supabase
-          .from('coach_availability')
-          .select('date, time')
-          .eq('coach_id', coachesId)
-          .eq('blocked', false)
-          .gte('date', todayStr),
-        supabase
-          .from('bookings')
-          .select('scheduled_date, scheduled_time, user_id, status')
-          .eq('coach_id', coachesId)
-          .in('status', ['pendiente', 'confirmada'])
-          .gte('scheduled_date', todayStr),
-      ]);
+        if (user?.id) {
+          const { data: pedido } = await supabase
+            .from('availability_waitlist')
+            .select('id')
+            .eq('coach_id', coachesId)
+            .is('resuelta_at', null)
+            .maybeSingle();
+          if (pedido) setAviso('pendiente');
+        }
 
-      // Mismo criterio que BookingScreen_Time: 'confirmada' ocupa el slot
-      // para todos, 'pendiente' propia ocupa el slot solo para vos — evita
-      // que mandes 2 solicitudes al mismo horario sin bloquear que otros
-      // usuarios compitan por él.
-      const bookedSet = new Set(
-        (booked ?? [])
-          .filter(b => b.status === 'confirmada' || b.user_id === user?.id)
-          .map(b => `${b.scheduled_date}|${b.scheduled_time}`)
-      );
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      const slotsByDate = new Map<string, string[]>();
-      avail?.forEach(({ date, time }) => {
-        slotsByDate.set(date, [...(slotsByDate.get(date) ?? []), time]);
-      });
+        const [{ data: avail, error: availErr }, { data: booked, error: bookedErr }] = await Promise.all([
+          supabase
+            .from('coach_availability')
+            .select('date, time')
+            .eq('coach_id', coachesId)
+            .eq('blocked', false)
+            .gte('date', todayStr),
+          supabase
+            .from('bookings')
+            .select('scheduled_date, scheduled_time, user_id, status')
+            .eq('coach_id', coachesId)
+            .in('status', ['pendiente', 'confirmada'])
+            .gte('scheduled_date', todayStr),
+        ]);
+        if (availErr || bookedErr) { fallo(); return; }
 
-      const nowMinutes = today.getHours() * 60 + today.getMinutes();
+        // Mismo criterio que BookingScreen_Time: 'confirmada' ocupa el slot
+        // para todos, 'pendiente' propia ocupa el slot solo para vos — evita
+        // que mandes 2 solicitudes al mismo horario sin bloquear que otros
+        // usuarios compitan por él.
+        const bookedSet = new Set(
+          (booked ?? [])
+            .filter(b => b.status === 'confirmada' || b.user_id === user?.id)
+            .map(b => `${b.scheduled_date}|${b.scheduled_time}`)
+        );
 
-      const available = new Set<string>();
-      slotsByDate.forEach((times, date) => {
-        const isToday = date === todayStr;
-        const hasFreeSlot = times.some(t => {
-          if (bookedSet.has(`${date}|${t}`)) return false;
-          if (isToday) {
-            const [th, tm = 0] = t.split(':').map(Number);
-            if (th * 60 + tm <= nowMinutes) return false;
-          }
-          return true;
+        const slotsByDate = new Map<string, string[]>();
+        avail?.forEach(({ date, time }) => {
+          slotsByDate.set(date, [...(slotsByDate.get(date) ?? []), time]);
         });
-        if (hasFreeSlot) available.add(date);
-      });
 
-      setAvailableDates(available);
-      // M6: el día sugerido queda elegido solo si el profesional tiene lugar
-      // ese día. Si no, se marca igual en el calendario pero el cliente elige.
-      if (sugerida && available.has(sugerida)) setSelectedDate(sugerida);
-      setLoadingDates(false);
+        const nowMinutes = today.getHours() * 60 + today.getMinutes();
+
+        const available = new Set<string>();
+        slotsByDate.forEach((times, date) => {
+          const isToday = date === todayStr;
+          const hasFreeSlot = times.some(t => {
+            if (bookedSet.has(`${date}|${t}`)) return false;
+            if (isToday) {
+              const [th, tm = 0] = t.split(':').map(Number);
+              if (th * 60 + tm <= nowMinutes) return false;
+            }
+            return true;
+          });
+          if (hasFreeSlot) available.add(date);
+        });
+
+        setAvailableDates(available);
+        // M6: el día sugerido queda elegido solo si el profesional tiene lugar
+        // ese día. Si no, se marca igual en el calendario pero el cliente elige.
+        if (sugerida && available.has(sugerida)) setSelectedDate(sugerida);
+        // Si este mes no tiene lugar y el próximo sí, abrir en ese: un mes entero
+        // en gris obligaba a adivinar que había que avanzar. Las fechas son
+        // 'YYYY-MM-DD', así que el orden de texto es el orden de calendario.
+        if (!sugerida && available.size > 0) {
+          const primera = [...available].sort()[0];
+          const y = Number(primera.slice(0, 4));
+          const m = Number(primera.slice(5, 7)) - 1;
+          if (y !== today.getFullYear() || m !== today.getMonth()) {
+            setMesSinLugar(today.getMonth());
+            setYear(y);
+            setMonth(m);
+          }
+        }
+        setLoadingDates(false);
+      } catch {
+        fallo();
+      }
     })();
-  }, [params.coachId, user?.id]);
+  }, [params.coachId, user?.id, intento]);
 
   async function pedirAviso() {
     if (!coachRowId) return;
@@ -188,16 +217,18 @@ export default function BookingScreen_Calendar() {
     setAviso(error ? 'pendiente' : 'nada');
   }
 
-  const sinHorarios = !loadingDates && !!coachRowId && availableDates.size === 0;
+  const sinHorarios = !loadingDates && !cargaFallo && !!coachRowId && availableDates.size === 0;
   const nombre = (params.name ?? '').trim().split(' ')[0] || 'Este profesional';
 
   function prevMonth() {
     if (isCurrentMonth) return;
+    setMesSinLugar(null);
     if (month === 0) { setYear(y => y - 1); setMonth(11); }
     else setMonth(m => m - 1);
   }
 
   function nextMonth() {
+    setMesSinLugar(null);
     if (month === 11) { setYear(y => y + 1); setMonth(0); }
     else setMonth(m => m + 1);
   }
@@ -261,7 +292,7 @@ export default function BookingScreen_Calendar() {
             <MaterialIcons
               name="chevron-left"
               size={28}
-              color={isCurrentMonth ? "rgba(135,131,92,0.30)" : "#FFFFFF"}
+              color={isCurrentMonth ? "rgba(135,131,92,0.30)" : "#565E32"}
             />
           </TouchableOpacity>
           <Text style={s.monthLabel}>{MONTH_NAMES[month]} {year}</Text>
@@ -282,6 +313,26 @@ export default function BookingScreen_Calendar() {
             color="#565E32"
             style={{ marginBottom: 12 }}
           />
+        )}
+
+        {cargaFallo && (
+          <View style={s.waitCard}>
+            <Text style={s.waitTitle}>No pudimos cargar los horarios</Text>
+            <Text style={s.waitText}>Revisá tu conexión y probá de nuevo.</Text>
+            <TouchableOpacity
+              style={s.waitBtn}
+              onPress={() => setIntento(i => i + 1)}
+              activeOpacity={0.85}
+              accessibilityRole="button">
+              <Text style={s.waitBtnText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {mesSinLugar !== null && !loadingDates && !cargaFallo && (
+          <Text style={s.sugeridaHint}>
+            {`En ${MONTH_NAMES[mesSinLugar].toLowerCase()} no tiene lugar. Te mostramos el primer mes con horarios.`}
+          </Text>
         )}
 
         {sinHorarios && (

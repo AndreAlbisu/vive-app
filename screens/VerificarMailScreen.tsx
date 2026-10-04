@@ -490,8 +490,13 @@ const s = StyleSheet.create({
     fontSize: 26,
     color: TEXTO,
     textAlign: 'center',
-    // Los dígitos entran de a uno y sin esto la caja se mueve en cada tecla.
-    letterSpacing: 10,
+    // 🔴 02/10/2026: tenía `letterSpacing: 10` y React Native en iOS reutiliza
+    // el campo de texto nativo sin limpiar esa propiedad: después de entrar con
+    // el código, el buscador de Profesionales (y cualquier campo que tocara)
+    // aparecía "B u s c á  u n …" y cortado. Visto en el simulador. Sin
+    // separación, con dígitos de ancho fijo para que la caja no salte al tipear.
+    letterSpacing: 0,
+    fontVariant: ['tabular-nums'],
   },
 
   error: {

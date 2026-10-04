@@ -1,0 +1,2 @@
+Origen: https://github.com/emilkowalski/skill (MIT, Emil Kowalski), commit d16ebe6 del 24/09/2026.
+Copiado a mano el 01/10/2026 después de revisarlo: solo instrucciones en texto, sin scripts ni hooks.

@@ -24,6 +24,8 @@ const CHECK_ESTILO = ['escucha', 'herramientas', 'ambos'];
 const CHECK_ENFOQUES = [
   'psicoanalitico', 'cognitivo_conductual', 'sistemico',
   'gestaltico', 'humanistico', 'integrativo',
+  // scripts/add-enfoques-tercera-ola-emdr-interpersonal.sql (02/10/2026).
+  'tercera_ola', 'emdr', 'interpersonal',
 ];
 // scripts/add-metodologias-coaching-nutricion.sql (25/09/2026).
 const CHECK_COACHING = [

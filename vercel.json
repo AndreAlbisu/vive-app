@@ -37,10 +37,15 @@
       ]
     }
   ],
+  "functions": {
+    "api/c.js": {
+      "includeFiles": "web/c/index.html"
+    }
+  },
   "rewrites": [
     {
       "source": "/c/:slug",
-      "destination": "/c"
+      "destination": "/api/c?slug=:slug"
     }
   ]
 }

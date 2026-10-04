@@ -2,7 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7EFE4">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>Reservá tu sesión — Vita</title>
 
 <!-- 🔴 La vista previa de WhatsApp es parte del producto, no un detalle de SEO.
@@ -11,115 +13,187 @@
      ⚠️ Estas etiquetas son ESTÁTICAS y por lo tanto iguales para todos los
      profesionales: WhatsApp lee el HTML del servidor y no ejecuta JavaScript,
      así que no puede ver el nombre ni la foto que pinta esta página. Para
-     personalizarlas hace falta renderizar del lado del servidor (una función en
-     `/api` que devuelva el HTML con las meta ya resueltas). Queda pendiente;
-     mientras tanto, marca genérica es mucho mejor que nada. -->
+     personalizarlas, `api/c.js` (01/10/2026) devuelve este mismo HTML con
+     título, descripción e imagen del profesional ya resueltos. Estas de acá
+     son las de reserva: las usa si la base no contesta o el slug no existe. -->
 <meta name="description" content="Reservá una sesión online con un profesional del bienestar en Vita.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Vita">
 <meta property="og:title" content="Reservá tu sesión en Vita">
 <meta property="og:description" content="Sesiones online con profesionales del bienestar. Elegís horario y reservás.">
-<meta name="twitter:card" content="summary">
+<meta property="og:url" content="https://www.vitaapp.com.ar/c">
+<meta property="og:image" content="https://www.vitaapp.com.ar/img/og-vita.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: light dark; }
+  /* 01/10/2026: rediseño con la identidad de la landing (misma letra, mismos
+     colores, el isotipo). Antes era letra del sistema y "VITA" en gris: quien
+     llegaba desde la landing o la app sentía que cambiaba de sitio justo antes
+     de pagar. Solo claro, igual que la landing. */
+  :root {
+    color-scheme: light;
+    --cream: #F7EFE4;
+    --paper: #FBF8F1;
+    --olive: #565E32;
+    --soft: #566245;        /* secundario, AA sobre crema */
+    --forest: #2D4A3E;
+    --verde: #42542F;
+    --verde-bg: #DCE5CB;
+    --terra: #C1694F;
+    --terra-ink: #A25842;   /* terracota con texto encima: 4.59:1 */
+    --line: rgba(86, 94, 50, .16);
+    --error: #B3392E;
+  }
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 32px 20px 64px;
-    background: #F7EFE4; color: #3A4F2A;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 16px; line-height: 1.6;
+    margin: 0; background: var(--cream); color: var(--olive);
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+    padding-bottom: 140px;  /* lugar para la barra fija de abajo */
   }
-  main { max-width: 560px; margin: 0 auto; }
-
-  .marca { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; opacity: .55; margin-bottom: 28px; }
-
-  .perfil { display: flex; gap: 16px; align-items: center; margin-bottom: 22px; }
-  .foto { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: rgba(58,79,42,.10); }
-  .iniciales {
-    width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: #C1694F; color: #FFF6EC; font-size: 1.6rem; font-weight: 700;
-  }
-  h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 4px; }
-  .especialidad { margin: 0; font-size: .95rem; opacity: .75; }
-  .meta { margin: 4px 0 0; font-size: .85rem; opacity: .6; }
-
-  .bio { margin: 0 0 24px; }
-
-  .temas { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 26px; }
-  .tema {
-    font-size: .8rem; padding: .3rem .65rem; border-radius: 999px;
-    background: rgba(58,79,42,.08); border: 1px solid rgba(58,79,42,.14);
-  }
-
-  .precio {
-    display: flex; align-items: baseline; gap: 8px;
-    padding: 16px 0; border-top: 1px solid rgba(58,79,42,.15);
-    border-bottom: 1px solid rgba(58,79,42,.15); margin-bottom: 22px;
-  }
-  .precio b { font-size: 1.35rem; }
-  .precio span { font-size: .85rem; opacity: .65; }
-
-  .agenda { margin-bottom: 22px; }
-  .agenda h2 { font-size: .95rem; margin: 0 0 12px; }
-  .dia { margin-bottom: 14px; }
-  .dia-nombre { font-size: .82rem; opacity: .6; margin: 0 0 6px; text-transform: capitalize; }
-  .horas { display: flex; flex-wrap: wrap; gap: 7px; }
-  .hora {
-    font-size: .875rem; padding: .4rem .75rem; border-radius: 10px; cursor: pointer;
-    background: transparent; color: inherit; font-family: inherit;
-    border: 1px solid rgba(58,79,42,.28);
-  }
-  .hora[aria-pressed="true"] { background: #3A4F2A; color: #F7EFE4; border-color: #3A4F2A; }
-  .agenda-vacia { font-size: .9rem; opacity: .65; margin: 0; }
-
-  .paso { margin-bottom: 22px; padding-top: 18px; border-top: 1px solid rgba(58,79,42,.15); }
-  .paso h2 { font-size: .95rem; margin: 0 0 4px; }
-  .paso p.ayuda { font-size: .85rem; opacity: .7; margin: 0 0 12px; }
-  .campo {
-    width: 100%; padding: .7rem .8rem; border-radius: 10px; font-size: 1rem;
-    font-family: inherit; color: inherit; background: transparent;
-    border: 1px solid rgba(58,79,42,.28); margin-bottom: 10px;
-  }
-  .campo:focus { outline: 2px solid #C1694F; outline-offset: 1px; }
-  /* Los campos ya tenían foco; los botones de horario, los CTA y los enlaces
-     del pie no. focus-visible para no pintar el anillo al clickear con mouse. */
-  :focus-visible { outline: 3px solid #A25842; outline-offset: 2px; border-radius: 4px; }
-  .codigo { letter-spacing: .35em; text-align: center; font-size: 1.25rem; }
-  .legales { display: flex; gap: 9px; align-items: flex-start; font-size: .82rem; line-height: 1.45; margin-bottom: 14px; opacity: .85; }
-  .legales input { margin-top: .2rem; flex-shrink: 0; }
-  .legales a { color: #A25842; }   /* #C1694F daba 3.41:1 sobre el crema */
-  .error { font-size: .85rem; color: #B3392E; margin: 0 0 10px; }
-  .ok { font-size: .9rem; margin: 0; }
-
-  .cta {
-    display: block; width: 100%; padding: .85rem 1rem; border: 0; border-radius: 12px;
-    background: #A25842; color: #FFF6EC; font-size: 1rem; font-weight: 700;  /* sobre #C1694F el crema daba 3.64:1 */
-    font-family: inherit; text-align: center; text-decoration: none; cursor: pointer;
-  }
-  .cta[disabled] { opacity: .5; cursor: default; }
-  .cta-nota { margin: 10px 0 0; font-size: .8rem; opacity: .85; text-align: center; }   /* .6 no llegaba a AA */
-
-  .estado { padding: 48px 0; text-align: center; opacity: .7; }
-  .estado h1 { font-size: 1.2rem; margin-bottom: .5rem; }
-
-  /* Mismo caso que en /reserva: opacity .55 multiplicada por una terracota
-     clara dejaba los enlaces legales del pie casi ilegibles. */
-  .pie { margin-top: 40px; font-size: .8rem; opacity: .85; text-align: center; }
-  .pie a { color: #A25842; }
-
+  main { max-width: 600px; margin: 0 auto; padding: 0 20px; }
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+  a, button, summary, label { touch-action: manipulation; }
+  button { -webkit-user-select: none; user-select: none; }
+  :focus-visible { outline: 3px solid var(--terra-ink); outline-offset: 2px; border-radius: 6px; }
   [hidden] { display: none !important; }
 
-  @media (prefers-color-scheme: dark) {
-    body { background: #1A1C16; color: #E4E0D2; }
-    .hora { border-color: rgba(228,224,210,.28); }
-    .hora[aria-pressed="true"] { background: #E4E0D2; color: #1A1C16; border-color: #E4E0D2; }
-    .foto { background: rgba(228,224,210,.08); }
-    .tema { background: rgba(228,224,210,.06); border-color: rgba(228,224,210,.16); }
-    .precio { border-color: rgba(228,224,210,.18); }
-    .pie a, .legales a { color: #C5735A; }
-    :focus-visible { outline-color: #C5735A; }
+  .top { max-width: 600px; margin: 0 auto; padding: 22px 20px 18px; }
+  .wordmark { display: inline-flex; align-items: center; gap: .28em; font-weight: 800; font-size: 26px; letter-spacing: -0.03em; color: var(--olive); text-decoration: none; line-height: 1; }
+  .vmark { width: .95em; height: .95em; fill: none; stroke: currentColor; stroke-width: 7; }
+
+  .aviso-prueba { color: var(--error); font-size: .85rem; margin: 0 0 14px; }
+
+  /* ── Portada ── */
+  .tarjeta { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; padding: 22px 20px; }
+  .perfil { display: flex; gap: 16px; align-items: center; }
+  .foto, .iniciales { width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0; }
+  .foto { object-fit: cover; background: rgba(86,94,50,.10); }
+  .iniciales { display: flex; align-items: center; justify-content: center; background: var(--terra-ink); color: #FFF6EC; font-size: 1.7rem; font-weight: 700; }
+  h1 { font-size: 1.65rem; line-height: 1.15; letter-spacing: -0.03em; font-weight: 800; margin: 0 0 2px; }
+  .profesion { margin: 0; font-weight: 600; color: var(--terra-ink); }
+  .meta { margin: 2px 0 0; font-size: .9rem; color: var(--soft); }
+  .resenas-linea { margin: 6px 0 0; font-size: .9rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+  /* Dorado oscuro: el anterior (#C99A3F) daba 2.4:1 sobre crema. */
+  .estrella { color: #A87A1E; }
+
+  .sellos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .sello { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 700; padding: .35rem .7rem; border-radius: 10px; background: rgba(86,94,50,.08); color: var(--olive); }
+  .sello.pro { background: var(--verde-bg); color: var(--verde); }
+  .sello svg { width: 14px; height: 14px; flex-shrink: 0; }
+  details.encuadre { margin-top: 10px; font-size: .88rem; color: var(--soft); }
+  details.encuadre summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; color: var(--terra-ink); list-style: none; }
+  details.encuadre summary::-webkit-details-marker { display: none; }
+  details.encuadre p { margin: 6px 0 0; }
+
+  .garantia { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: .92rem; color: var(--soft); }
+  .garantia svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; color: var(--forest); }
+  .garantia b { color: var(--forest); }
+  .garantia a { color: var(--terra-ink); font-weight: 700; }
+
+  /* ── Secciones ── */
+  .seccion { padding: 26px 0; border-bottom: 1px solid var(--line); }
+  .seccion h2 { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 12px; }
+  .bio { margin: 0; font-size: 1.02rem; white-space: pre-line; }
+  .rotulo { font-size: .82rem; font-weight: 700; color: var(--terra-ink); margin: 16px 0 8px; }
+  .rotulo:first-of-type { margin-top: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { font-size: .85rem; font-weight: 500; padding: .3rem .75rem; border-radius: 999px; background: rgba(86,94,50,.06); border: 1px solid rgba(86,94,50,.2); }
+  .frases { list-style: none; margin: 0; padding: 0; }
+  .frases li { position: relative; padding-left: 16px; margin-bottom: 6px; }
+  .frases li::before { content: ""; position: absolute; left: 0; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--soft); }
+  .escuela { margin-bottom: 8px; }
+  .escuela b { display: block; }
+  .cred { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .cred b { display: block; font-size: .98rem; }
+  .cred span { display: block; font-size: .88rem; color: var(--soft); }
+  .verif { font-size: .78rem; font-weight: 700; color: var(--verde); white-space: nowrap; }
+  .resena { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+  .resena .estrellas { color: #A87A1E; font-size: .9rem; letter-spacing: 1px; }
+  .resena p { margin: 4px 0 0; }
+
+  /* ── Horarios: días arriba, horas del día abajo ──
+     Antes eran 21 días seguidos con todos sus horarios: ~200 botones y más de
+     3.000 px de scroll en el celular, con el botón para avanzar al final. */
+  .dias { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin: 0 -2px; scrollbar-width: none; }
+  .dias::-webkit-scrollbar { display: none; }
+  .dia { flex: 0 0 auto; min-width: 64px; padding: 8px 10px; border-radius: 14px; border: 1px solid rgba(86,94,50,.25); background: transparent; color: inherit; font: inherit; text-align: center; cursor: pointer; line-height: 1.2; }
+  .dia small { display: block; font-size: .72rem; color: var(--soft); text-transform: capitalize; }
+  .dia b { display: block; font-size: 1.05rem; }
+  .dia[aria-selected="true"] { background: var(--olive); border-color: var(--olive); color: var(--cream); }
+  .dia[aria-selected="true"] small { color: rgba(247,239,228,.85); }
+  .horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; margin-top: 6px; }
+  .hora { padding: .6rem 0; border-radius: 12px; border: 1px solid rgba(86,94,50,.25); background: var(--paper); color: inherit; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
+  /* Elegido = oliva, igual que el día. Antes la hora era terracota y el día
+     verde: dos colores para decir lo mismo. */
+  .hora[aria-pressed="true"] { background: var(--olive); border-color: var(--olive); color: var(--cream); }
+  .zona { font-size: .82rem; color: var(--soft); margin: 10px 0 0; }
+  .agenda-vacia { margin: 0; color: var(--soft); }
+
+  /* ── Identificación (lógica sin cambios) ── */
+  .paso { padding: 26px 0; border-bottom: 1px solid var(--line); }
+  .paso h2 { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 4px; }
+  .paso p.ayuda { font-size: .9rem; color: var(--soft); margin: 0 0 12px; }
+  .etiqueta { display: block; font-size: .85rem; font-weight: 700; margin: 0 0 4px; }
+  .campo { width: 100%; padding: .75rem .85rem; border-radius: 12px; font-size: 1rem; font-family: inherit; color: inherit; background: var(--paper); border: 1px solid rgba(86,94,50,.28); margin-bottom: 10px; }
+  .campo:focus { outline: 2px solid var(--terra-ink); outline-offset: 1px; }
+  .codigo { letter-spacing: .35em; text-align: center; font-size: 1.25rem; }
+  /* Toda la fila se puede tocar (44 px) y la casilla es de 22 px: la del
+     navegador era de 13 px, difícil de acertar con el dedo. */
+  .legales { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: .88rem; line-height: 1.45; margin-bottom: 4px; cursor: pointer; }
+  .legales input { width: 22px; height: 22px; margin: 0; flex-shrink: 0; accent-color: var(--olive); cursor: pointer; }
+  .legales a, .cta-nota a { color: var(--terra-ink); }
+  .error { font-size: .88rem; color: var(--error); margin: 0 0 10px; }
+  .ok { font-size: .95rem; margin: 0; }
+  .cta { display: block; width: 100%; padding: .9rem 1rem; border: 0; border-radius: 999px; background: var(--olive); color: var(--cream); font-size: 1rem; font-weight: 700; font-family: inherit; text-align: center; cursor: pointer; }
+  @media (hover: hover) and (pointer: fine) { .cta:hover:not([disabled]) { background: var(--forest); } }
+  .cta:active:not([disabled]) { transform: scale(.98); }
+  .cta { transition: transform .12s ease, background .2s ease; }
+  .cta[disabled] { opacity: .45; cursor: default; }
+  .cta-nota { margin: 8px 0 0; font-size: .82rem; text-align: center; color: var(--soft); }
+
+  /* ── Barra fija: precio y el paso siguiente ── */
+  .barra { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(247,239,228,.97); border-top: 1px solid var(--line); box-shadow: 0 -6px 18px rgba(0,0,0,.05); padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); z-index: 20; }
+  .barra-in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+  .barra-precio { flex: 1; min-width: 0; white-space: nowrap; }
+  .barra-precio b { font-size: 1.25rem; font-weight: 800; }
+  .barra-precio span { font-size: .88rem; color: var(--soft); }
+  .barra-precio small { display: block; font-size: .78rem; color: var(--soft); }
+  .barra .cta { width: auto; min-width: 150px; max-width: 60%; padding: .8rem 1.3rem; white-space: nowrap; }
+  .barra .cta-nota { text-align: left; margin: 6px auto 0; max-width: 560px; }
+
+  .estado { padding: 48px 0; text-align: center; color: var(--soft); }
+  .estado h1 { font-size: 1.3rem; margin-bottom: .5rem; color: var(--olive); }
+  .pie { margin: 34px 0 0; font-size: .85rem; text-align: center; color: var(--soft); }
+  .pie a { color: var(--terra-ink); }
+
+  /* ── Compu: el perfil a la izquierda, la reserva a la derecha ──
+     En una sola columna de 600 px, en la compu el horario quedaba abajo de
+     todo y los costados vacíos. La columna de la reserva acompaña el scroll
+     cuando entra en la pantalla. */
+  @media (min-width: 980px) {
+    .top, main { max-width: 1080px; }
+    .barra-in, .barra .cta-nota { max-width: 1040px; }
+    #perfil:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 48px; align-items: start; }
+    .lado { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; padding: 4px 24px; }
+    .lado .seccion, .lado .paso { border-bottom: 0; }
+    .lado .paso { border-top: 1px solid var(--line); }
+    .principal > .seccion:last-child { border-bottom: 0; }
+  }
+  @media (min-width: 980px) and (min-height: 820px) {
+    /* Con tope de alto: sin él, con el formulario abierto, el final de la
+       columna quedaba debajo de la barra fija sin forma de llegar. */
+    .lado { position: sticky; top: 24px; max-height: calc(100vh - 150px); overflow-y: auto; overscroll-behavior: contain; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cta { transition: background .2s ease; }
+    .cta:active:not([disabled]) { transform: none; }
   }
 </style>
 <!-- El token de Turnstile para el pedido de código. Ruta ABSOLUTA: esta
@@ -132,9 +206,12 @@
 </head>
 <body>
 
+<header class="top">
+  <a class="wordmark" href="/" aria-label="Vita, ir al inicio"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>vita</a>
+</header>
+
 <main>
-  <p class="marca">Vita</p>
-  <p class="cta-nota" id="avisoPrueba" hidden style="text-align:left;margin:-16px 0 20px;color:#B3392E;opacity:1"></p>
+  <p class="aviso-prueba" id="avisoPrueba" hidden></p>
 
   <div id="cargando" class="estado"><p>Cargando…</p></div>
 
@@ -144,27 +221,81 @@
   </div>
 
   <article id="perfil" hidden>
-    <div class="perfil">
-      <img id="foto" class="foto" alt="" hidden>
-      <div id="iniciales" class="iniciales" aria-hidden="true" hidden></div>
-      <div>
-        <h1 id="nombre"></h1>
-        <p id="especialidad" class="especialidad"></p>
-        <p id="meta" class="meta"></p>
+   <div class="principal">
+    <!-- ── Portada: quién es y por qué confiar ──────────────────────────────
+         Mismo orden que el perfil de la app (ProfesionalScreen): identidad,
+         reseñas, lo que Vita revisó y la garantía. Antes eran nombre, $1 y
+         horarios: nada que le dijera a un cliente nuevo por qué confiar. -->
+    <section class="tarjeta">
+      <div class="perfil">
+        <img id="foto" class="foto" alt="" hidden>
+        <div id="iniciales" class="iniciales" aria-hidden="true" hidden></div>
+        <div>
+          <h1 id="nombre"></h1>
+          <p id="especialidad" class="profesion"></p>
+          <p id="meta" class="meta" hidden></p>
+          <p id="resenasLinea" class="resenas-linea" hidden></p>
+        </div>
       </div>
-    </div>
 
-    <p id="bio" class="bio"></p>
-    <div id="temas" class="temas"></div>
+      <div class="sellos">
+        <span class="sello"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m23 12-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69L23 12zm-12.91 4.72-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48-7.33 7.35z"/></svg>Perfil revisado por Vita</span>
+        <span class="sello" id="encuadre" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg><span id="encuadreTxt"></span></span>
+      </div>
+      <details class="encuadre" id="encuadreInfo" hidden>
+        <summary>¿Qué significa?</summary>
+        <p id="encuadreTexto"></p>
+      </details>
 
-    <div id="precioBloque" class="precio" hidden>
-      <b id="precio"></b>
-      <span>por sesión</span>
-    </div>
+      <!-- Garantía de primera sesión (T&C §9.3). Quien llega por el link no
+           tiene sesión iniciada: para la página es alguien nuevo, igual que en
+           la app sin cuenta. El texto es el mismo de la landing y de la app. -->
+      <p class="garantia">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+        <span><b>Garantía de primera sesión.</b> Si no te convence, te devolvemos lo que pagaste. <a href="/legal/terminos" target="_blank" rel="noopener">Ver condiciones</a></span>
+      </p>
+    </section>
 
-    <section class="agenda" id="agenda" hidden>
+    <section class="seccion" id="sobreMi" hidden>
+      <h2>Sobre mí</h2>
+      <p id="bio" class="bio"></p>
+    </section>
+
+    <section class="seccion" id="comoTrabaja" hidden>
+      <h2>Cómo trabaja</h2>
+      <p class="rotulo" id="temasRotulo" hidden>Temas que acompaña</p>
+      <div id="temas" class="chips"></div>
+      <p class="rotulo" id="frasesRotulo" hidden>Su forma de trabajar</p>
+      <ul id="frases" class="frases"></ul>
+      <p class="rotulo" id="escuelasRotulo" hidden></p>
+      <div id="escuelas"></div>
+    </section>
+
+    <!-- Solo credenciales VERIFICADAS: salen de la vista
+         `coach_credentials_public`, que no devuelve pendientes ni rechazadas ni
+         el documento. El "Verificado" va por credencial, no por sección. -->
+    <section class="seccion" id="formacion" hidden>
+      <h2>Formación</h2>
+      <div id="creds"></div>
+    </section>
+
+    <!-- Reseñas sin nombres: en la web no se pide ni el nombre de quien
+         reseñó. En salud mental, publicarlo cuenta que esa persona va a terapia. -->
+    <section class="seccion" id="resenas" hidden>
+      <h2>Reseñas</h2>
+      <div id="resenasLista"></div>
+    </section>
+
+   </div>
+
+   <!-- La reserva: en el celular sigue debajo del perfil; en la compu es la
+        columna derecha. -->
+   <div class="lado">
+    <section class="seccion" id="agenda" hidden>
       <h2>Elegí un horario</h2>
-      <div id="dias"></div>
+      <div class="dias" id="dias" role="tablist" aria-label="Días con horarios"></div>
+      <div class="horas" id="horas"></div>
+      <p class="zona" id="zona" hidden>Los horarios son de Argentina.</p>
       <p class="agenda-vacia" id="agendaVacia" hidden></p>
     </section>
 
@@ -189,10 +320,14 @@
              getElementById devuelva el <h1>. Con id="nombre" acá, pedirCodigo
              leía `$('nombre').value` sobre el <h1> (value = undefined) y tiraba
              una excepción no atrapada: el botón "no hacía nada". -->
+        <!-- Etiquetas visibles: el texto gris de ejemplo se borra al escribir y
+             un lector de pantalla no lo lee como nombre del campo. -->
+        <label class="etiqueta" for="tuNombre">Tu nombre</label>
         <input class="campo" id="tuNombre" type="text" autocomplete="name"
-               placeholder="Tu nombre" spellcheck="false">
+               placeholder="Como querés que te llamen" spellcheck="false" enterkeyhint="next">
+        <label class="etiqueta" for="mail">Tu mail</label>
         <input class="campo" id="mail" type="email" inputmode="email" autocomplete="email"
-               placeholder="tu@mail.com" spellcheck="false">
+               placeholder="tu@mail.com" spellcheck="false" autocapitalize="none" enterkeyhint="done">
         <!-- Es venta a distancia: los Términos y la privacidad tienen que estar
              accesibles ANTES de pagar, no después. Las dos páginas ya viven en
              este dominio. -->
@@ -216,8 +351,9 @@
 
       <div id="pasoCodigo" hidden>
         <p class="ayuda" id="mandadoA"></p>
+        <label class="etiqueta" for="codigo">Código</label>
         <input class="campo codigo" id="codigo" inputmode="numeric" autocomplete="one-time-code"
-               maxlength="8" placeholder="······">
+               maxlength="8" placeholder="······" enterkeyhint="done">
         <p class="error" id="errorCodigo" hidden></p>
         <button class="cta" id="btnConfirmar">Confirmar</button>
         <p class="cta-nota"><a href="#" id="otroMail">Usar otro mail</a></p>
@@ -227,8 +363,7 @@
     </section>
 
     <p class="error" id="errorPago" hidden></p>
-    <button class="cta" id="cta" disabled>Elegir un horario</button>
-    <p class="cta-nota" id="ctaNota"></p>
+   </div>
   </article>
 
   <p class="pie">
@@ -238,6 +373,22 @@
   </p>
 </main>
 
+<!-- ── Barra fija: precio y el paso siguiente ────────────────────────────────
+     Antes el botón estaba al final de todo, abajo de 21 días de horarios. -->
+<div class="barra" id="barra" hidden>
+  <div class="barra-in">
+    <div class="barra-precio">
+      <b id="precio"></b> <span>la sesión</span>
+      <!-- Solo Mercado Pago: es el único medio de este checkout
+           (`mp-create-payment`). PayPal y USDT se ofrecen desde la app. -->
+      <small>Pagás con Mercado Pago</small>
+    </div>
+    <button class="cta" id="cta">Elegí un horario</button>
+  </div>
+  <p class="cta-nota" id="ctaNota"></p>
+</div>
+
+<script src="/perfil-datos.js"></script>
 <script>
 // ── Configuración ────────────────────────────────────────────────────────────
 // 🔴 Esta clave es PÚBLICA POR DISEÑO: es la misma que viaja dentro de la app
@@ -300,7 +451,11 @@ function precioArs(n) {
 }
 
 // Que nadie confunda una prueba con producción, ni de un lado ni del otro.
-if (CHECKOUT_HABILITADO) {
+// 🔴 01/10/2026: colgaba de `CHECKOUT_HABILITADO`, y desde que esa constante
+// quedó en `true` (21/09) el cartel rojo le salía a TODO cliente real, justo
+// antes de pagar. Ahora sale solo con `?probar=1`, que es quien prueba a
+// propósito. El cobro no cambia: sigue dependiendo de `CHECKOUT_HABILITADO`.
+if (new URLSearchParams(location.search).get('probar') === '1') {
   $('avisoPrueba').textContent = '⚠️ Modo prueba: la reserva y el cobro son REALES.';
   $('avisoPrueba').hidden = false;
 }
@@ -317,8 +472,8 @@ async function cargar() {
   // acá y no en la URL porque el filtro con fecha en PostgREST pide comillas y
   // es frágil; y cae en "no encontrado", cuyo texto ya dice "puede que ya no
   // esté disponible" — sin mencionar ninguna sanción.
-  const campos = 'slug,specialty,profesion,bio,price_per_session,nationality,verified,availability_status,suspendido_hasta,' +
-                 'profiles!inner(name,avatar_url,gender),coach_topics(topic)';
+  const campos = 'id,profile_id,slug,specialty,profesion,bio,price_per_session,nationality,verified,availability_status,suspendido_hasta,' +
+                 'estilo,guia,focos,enfoques,profiles!inner(name,avatar_url,gender),coach_topics(topic)';
   const url = `${SUPABASE_URL}/rest/v1/coaches?slug=eq.${encodeURIComponent(slug)}` +
               `&verified=eq.true&availability_status=eq.activo&select=${campos}&limit=1`;
 
@@ -358,30 +513,127 @@ async function cargar() {
     mostrar('iniciales');
   }
 
+  const genero = perfil && perfil.gender;
+  const VP = window.VitaPerfil;
   $('nombre').textContent = nombre;
-  $('especialidad').textContent = coach.profesion === 'psicologia' ? 'Psicólogo/a'
-    : coach.profesion === 'nutricion' ? 'Nutricionista' : 'Coach';
-  $('meta').textContent = coach.nationality || '';
-  $('bio').textContent = coach.bio || '';
+  // Profesión y nacionalidad con el género, igual que la app ("Psicóloga",
+  // "Argentina"). Los textos salen de `/perfil-datos.js`, generado desde la app.
+  $('especialidad').textContent = VP ? VP.profesion(coach.profesion, genero)
+    : (coach.profesion === 'psicologia' ? 'Psicólogo/a' : coach.profesion === 'nutricion' ? 'Nutricionista' : 'Coach');
+  const nac = VP ? VP.nacionalidad(coach.nationality, genero) : coach.nationality;
+  if (nac) { $('meta').textContent = nac; mostrar('meta'); }
 
+  if (coach.bio) { $('bio').textContent = coach.bio; mostrar('sobreMi'); }
+
+  // ── Cómo trabaja ──
   const temas = (coach.coach_topics || []).map(t => t.topic).filter(Boolean);
+  const frases = VP ? VP.frases(coach.estilo, coach.guia, coach.focos || []) : [];
+  const escuelas = VP ? VP.escuelas(coach.enfoques || []) : [];
   $('temas').innerHTML = '';
-  for (const t of temas.slice(0, 8)) {
+  for (const t of temas) {
     const chip = document.createElement('span');
-    chip.className = 'tema';
+    chip.className = 'chip';
     chip.textContent = t;          // textContent y no innerHTML: el contenido lo escribe el coach.
     $('temas').appendChild(chip);
   }
-
-  if (coach.price_per_session) {
-    $('precio').textContent = precioArs(coach.price_per_session);
-    mostrar('precioBloque');
+  if (temas.length) mostrar('temasRotulo');
+  $('frases').innerHTML = '';
+  for (const f of frases) { const li = document.createElement('li'); li.textContent = f; $('frases').appendChild(li); }
+  if (frases.length) mostrar('frasesRotulo');
+  $('escuelas').innerHTML = '';
+  for (const e of escuelas) {
+    const d = document.createElement('div'); d.className = 'escuela';
+    const t = document.createElement('b'); t.textContent = e.label;
+    const x = document.createElement('span'); x.textContent = e.desc;
+    d.append(t, x); $('escuelas').appendChild(d);
   }
+  if (escuelas.length) { $('escuelasRotulo').textContent = escuelas.length === 1 ? 'Enfoque' : 'Enfoques'; mostrar('escuelasRotulo'); }
+  if (temas.length || frases.length || escuelas.length) mostrar('comoTrabaja');
+
+  if (coach.price_per_session) $('precio').textContent = precioArs(coach.price_per_session);
+  else $('precio').textContent = 'Precio a confirmar';
+  mostrar('barra');
+
+  // Formación y reseñas no frenan la portada: van en paralelo y, si fallan,
+  // la sección simplemente no aparece.
+  cargarFormacion(coach.id);
+  cargarResenas(coach.profile_id);
 
   // Los horarios van DESPUÉS de pintar el perfil y sin `await`: el perfil es lo
   // que la persona vino a ver, y no tiene que esperar a una segunda consulta
   // para aparecer.
   cargarHorarios();
+}
+
+// ── Formación verificada ─────────────────────────────────────────────────────
+// La vista `coach_credentials_public` solo devuelve credenciales verificadas y
+// nunca el documento. Mismo criterio que `encuadreDeSesion` en la app: con una
+// matrícula verificada, "Matrícula verificada"; sin ella, sesiones de
+// acompañamiento. Los textos del "¿Qué significa?" son los de EncuadreSheet.
+async function cargarFormacion(coachId) {
+  let creds = [];
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/coach_credentials_public?coach_id=eq.${encodeURIComponent(coachId)}` +
+      '&select=kind,title,institution,year,registration_number', { headers: { apikey: SUPABASE_ANON_KEY } });
+    if (r.ok) creds = await r.json();
+  } catch (e) { console.error('[formacion]', e); return; }
+
+  const conMatricula = creds.some(c => c.kind === 'matricula');
+  $('encuadre').className = conMatricula ? 'sello pro' : 'sello';
+  $('encuadreTxt').textContent = conMatricula ? 'Matrícula verificada' : 'Sesiones de acompañamiento';
+  $('encuadreTexto').textContent = conMatricula
+    ? 'Vita chequeó su matrícula habilitante. El número está más abajo, en Formación, y podés verificarlo por tu cuenta en el colegio profesional que corresponda.'
+    : 'Vita no verificó una matrícula habilitante para este profesional, así que sus sesiones son de acompañamiento. Más abajo, en Formación, está todo lo que sí verificamos.';
+  mostrar('encuadre'); mostrar('encuadreInfo');
+
+  if (!creds.length) return;
+  $('creds').innerHTML = '';
+  for (const c of creds) {
+    const fila = document.createElement('div'); fila.className = 'cred';
+    const izq = document.createElement('div');
+    const t = document.createElement('b'); t.textContent = c.title;
+    izq.appendChild(t);
+    const linea = [c.institution, c.year].filter(Boolean).join(' · ');
+    if (linea) { const l = document.createElement('span'); l.textContent = linea; izq.appendChild(l); }
+    // El número de matrícula entero: es público y es lo único que la persona
+    // puede ir a verificar por su cuenta.
+    if (c.registration_number) { const n = document.createElement('span'); n.textContent = c.registration_number; izq.appendChild(n); }
+    const v = document.createElement('span'); v.className = 'verif'; v.textContent = '✓ Verificado';
+    fila.append(izq, v); $('creds').appendChild(fila);
+  }
+  mostrar('formacion');
+}
+
+// ── Reseñas ──────────────────────────────────────────────────────────────────
+// Sin `reviewer_id` en el select: la web no necesita saber quién reseñó.
+async function cargarResenas(profileId) {
+  let rs = null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/reviews?reviewed_id=eq.${encodeURIComponent(profileId)}` +
+      '&is_private=eq.false&select=rating,comment&order=created_at.desc', { headers: { apikey: SUPABASE_ANON_KEY } });
+    if (r.ok) rs = await r.json();
+  } catch (e) { console.error('[resenas]', e); }
+  // Si la consulta falló no se dice nada: "Nuevo en Vita" sobre alguien con
+  // veinte reseñas sería falso.
+  if (!rs) return;
+  if (!rs.length) { $('resenasLinea').textContent = 'Nuevo en Vita'; mostrar('resenasLinea'); return; }
+  const prom = rs.reduce((a, r) => a + r.rating, 0) / rs.length;
+  $('resenasLinea').innerHTML = '';
+  const st = document.createElement('span'); st.className = 'estrella'; st.textContent = '★';
+  $('resenasLinea').append(st, ` ${prom.toFixed(1)} · ${rs.length} ${rs.length === 1 ? 'reseña' : 'reseñas'}`);
+  mostrar('resenasLinea');
+  const conTexto = rs.filter(r => r.comment && r.comment.trim()).slice(0, 5);
+  if (!conTexto.length) return;
+  $('resenasLista').innerHTML = '';
+  for (const r of conTexto) {
+    const d = document.createElement('div'); d.className = 'resena';
+    const e = document.createElement('div'); e.className = 'estrellas';
+    e.textContent = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+    e.setAttribute('aria-label', `${r.rating} de 5`);
+    const p = document.createElement('p'); p.textContent = r.comment;
+    d.append(e, p); $('resenasLista').appendChild(d);
+  }
+  mostrar('resenas');
 }
 
 // ── Los horarios libres ──────────────────────────────────────────────────────
@@ -413,7 +665,14 @@ function elegir(btn, fecha, hora) {
   for (const b of document.querySelectorAll('.hora')) b.setAttribute('aria-pressed', 'false');
   btn.setAttribute('aria-pressed', 'true');
   elegido = { fecha, hora };
-  if (CHECKOUT_HABILITADO) mostrar('identificacion');
+  if (CHECKOUT_HABILITADO) {
+    const nueva = $('identificacion').hidden;
+    mostrar('identificacion');
+    // La primera vez, se lleva a la persona al paso siguiente: con la barra
+    // fija el formulario queda fuera de la vista y el botón dice "Confirmá tu
+    // mail" sin que se vea dónde.
+    if (nueva && !sesion) llevarA('identificacion');
+  }
   actualizarCta();
 }
 
@@ -436,50 +695,80 @@ async function cargarHorarios() {
   // acá no puede llevarse puesta la página entera.
   if (slots === null) {
     $('agendaVacia').textContent = 'No pudimos cargar los horarios en este momento.';
-    ocultar('dias'); mostrar('agendaVacia'); mostrar('agenda');
+    ocultar('dias'); ocultar('horas'); mostrar('agendaVacia'); mostrar('agenda');
     return;
   }
   if (slots.length === 0) {
     $('agendaVacia').textContent = 'No hay horarios disponibles por ahora. Volvé a mirar en unos días.';
-    ocultar('dias'); mostrar('agendaVacia'); mostrar('agenda');
+    ocultar('dias'); ocultar('horas'); mostrar('agendaVacia'); mostrar('agenda');
     return;
   }
 
   // La función ya devuelve ordenado por fecha y por hora numérica; acá solo se
   // agrupa, conservando ese orden.
-  const porDia = new Map();
+  porDia = new Map();
   for (const s of slots) {
     if (!porDia.has(s.fecha)) porDia.set(s.fecha, []);
     porDia.get(s.fecha).push(s.hora);
   }
+  // Si el día que estaba elegido ya no tiene horarios (lo tomó otro), se
+  // vuelve al primero.
+  if (!diaVisible || !porDia.has(diaVisible)) diaVisible = porDia.keys().next().value;
 
   const cont = $('dias');
   cont.innerHTML = '';
-  for (const [fecha, horas] of porDia) {
-    const bloque = document.createElement('div');
-    bloque.className = 'dia';
-
-    const titulo = document.createElement('p');
-    titulo.className = 'dia-nombre';
-    titulo.textContent = etiquetaDia(fecha);
-    bloque.appendChild(titulo);
-
-    const fila = document.createElement('div');
-    fila.className = 'horas';
-    for (const hora of horas) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'hora';
-      b.setAttribute('aria-pressed', 'false');
-      b.textContent = hora;
-      b.addEventListener('click', () => elegir(b, fecha, hora));
-      fila.appendChild(b);
-    }
-    bloque.appendChild(fila);
-    cont.appendChild(bloque);
+  for (const fecha of porDia.keys()) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dia';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', String(fecha === diaVisible));
+    const [, m, d] = fecha.split('-').map(Number);
+    const et = etiquetaDia(fecha);
+    const arriba = document.createElement('small');
+    arriba.textContent = et === 'hoy' || et === 'mañana' ? et : et.split(' ')[0].slice(0, 3);
+    const abajo = document.createElement('b');
+    abajo.textContent = `${d} ${MESES[m - 1]}`;
+    b.append(arriba, abajo);
+    b.setAttribute('aria-label', et);
+    b.dataset.fecha = fecha;
+    b.addEventListener('click', () => { diaVisible = fecha; pintarDias(); pintarHoras(); });
+    cont.appendChild(b);
   }
+  pintarHoras();
 
+  // La hora del navegador se compara contra la de Argentina: los horarios están
+  // guardados así, y quien mira desde afuera tiene que saberlo.
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if (!/^America\/(Argentina\/|Buenos_Aires|Cordoba|Catamarca|Jujuy|Mendoza|Rosario)/.test(tz)) mostrar('zona');
+  } catch (e) { /* sin Intl, no se aclara */ }
+
+  mostrar('dias'); mostrar('horas'); ocultar('agendaVacia');
   mostrar('agenda');
+}
+
+let porDia = new Map();
+let diaVisible = null;
+
+function pintarDias() {
+  for (const b of document.querySelectorAll('.dia')) {
+    b.setAttribute('aria-selected', String(b.dataset.fecha === diaVisible));
+  }
+}
+
+function pintarHoras() {
+  const cont = $('horas');
+  cont.innerHTML = '';
+  for (const hora of porDia.get(diaVisible) || []) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'hora';
+    b.setAttribute('aria-pressed', String(!!elegido && elegido.fecha === diaVisible && elegido.hora === hora));
+    b.textContent = hora;
+    b.addEventListener('click', () => elegir(b, diaVisible, hora));
+    cont.appendChild(b);
+  }
 }
 
 // ── Identificación por código ────────────────────────────────────────────────
@@ -765,33 +1054,74 @@ function volverAlMail() {
   $('mail').focus();
 }
 
-// El botón de abajo dice en qué paso está la persona, en vez de estar siempre
-// apagado sin explicar por qué.
+// Lleva a una parte de la página sin taparla con la barra fija, y respeta el
+// movimiento reducido.
+function llevarA(id) {
+  const quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $(id).scrollIntoView({ behavior: quieto ? 'auto' : 'smooth', block: 'start' });
+}
+
+// Fuera de Argentina, la equivalencia en la hora de quien mira, con la misma
+// forma que la app (`lib/time.ts`): "07:00 del martes para vos". Los horarios
+// están guardados en hora de Argentina, que es UTC−3 todo el año.
+function enArgentina() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    return /^America\/(Argentina\/|Buenos_Aires|Cordoba|Catamarca|Jujuy|Mendoza|Rosario)/.test(tz);
+  } catch (e) { return true; }
+}
+function horaParaVos(fecha, hora) {
+  if (enArgentina()) return null;
+  try {
+    const [y, m, d] = fecha.split('-').map(Number);
+    const [h, mi] = hora.split(':').map(Number);
+    const instante = new Date(Date.UTC(y, m - 1, d, h + 3, mi || 0));
+    const hhmm = instante.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const mismoDia = instante.getFullYear() === y && instante.getMonth() === m - 1 && instante.getDate() === d;
+    if (mismoDia) return `${hhmm} para vos`;
+    return `${hhmm} del ${instante.toLocaleDateString('es-AR', { weekday: 'long' })} para vos`;
+  } catch (e) { return null; }
+}
+
+// 🔴 El botón de abajo SIEMPRE hace algo (01/10/2026). Antes estaba gris y
+// apagado diciendo "Elegí un horario" y después "Confirmá tu mail": parecía
+// roto, y abajo de todo había otro botón, el que de verdad servía. Ahora cada
+// texto lleva al paso que nombra; solo paga cuando ya se puede pagar.
+let accionCta = 'agenda';
 function actualizarCta() {
   const cta = $('cta');
-  cta.disabled = true;
+  cta.disabled = false;
 
   if (!elegido) {
-    cta.textContent = 'Elegir un horario';
+    accionCta = 'agenda';
+    cta.textContent = 'Elegí un horario';
     $('ctaNota').textContent = '';
     return;
   }
 
-  const cuando = `${etiquetaDia(elegido.fecha)} a las ${elegido.hora} hs`;
+  const paraVos = horaParaVos(elegido.fecha, elegido.hora);
+  const cuando = `${etiquetaDia(elegido.fecha)} a las ${elegido.hora}` +
+    (paraVos ? ` (hora de Argentina) · ${paraVos}` : '');
 
   // ⚠️ Sin el checkout, la página NO promete una fecha. Decía "se habilita en
   // los próximos días" y eso es un plazo que no controlamos, dicho en una
   // página pública a alguien que vino a reservar. Se dice lo que sí es cierto:
   // que todavía no se reserva desde acá, y que el horario existe.
   if (!CHECKOUT_HABILITADO) {
+    cta.disabled = true;
     cta.textContent = 'Todavía no se reserva desde acá';
     $('ctaNota').textContent = `${cuando} · coordinalo directamente con ${nombreCoach}.`;
     return;
   }
 
-  if (!sesion) { cta.textContent = 'Confirmá tu mail para seguir'; $('ctaNota').textContent = cuando; return; }
+  if (!sesion) {
+    accionCta = 'identificacion';
+    cta.textContent = 'Confirmá tu mail';
+    $('ctaNota').textContent = cuando;
+    return;
+  }
+  accionCta = 'pagar';
   cta.textContent = 'Ir a pagar';
-  cta.disabled = false;
   $('ctaNota').textContent = `${cuando} · vas a pagar en Mercado Pago.`;
 
   // 🔴 M7 desde acá. El precio de arriba es el que fijó el profesional, y si a
@@ -901,7 +1231,15 @@ async function irAPagar() {
   }
 }
 
-$('cta').addEventListener('click', irAPagar);
+$('cta').addEventListener('click', () => {
+  if (accionCta === 'pagar') return irAPagar();
+  llevarA(accionCta);
+  // En el paso del mail, el foco va al primer campo que falta, sin otro salto.
+  if (accionCta === 'identificacion') {
+    const campo = !$('pasoCodigo').hidden ? $('codigo') : ($('tuNombre').value.trim() ? $('mail') : $('tuNombre'));
+    setTimeout(() => campo.focus({ preventScroll: true }), 350);
+  }
+});
 $('btnCodigo').addEventListener('click', pedirCodigo);
 $('btnConfirmar').addEventListener('click', confirmarCodigo);
 $('otroMail').addEventListener('click', (e) => { e.preventDefault(); volverAlMail(); });

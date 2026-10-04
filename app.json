@@ -66,8 +66,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Vita necesita acceso a tus fotos para subir tu video de presentación.",
-          "cameraPermission": "Vita necesita acceso a tu cámara para grabar tu video de presentación.",
+          "photosPermission": "Vita necesita acceso a tus fotos para subir tu foto de perfil, tu video de presentación o las fotos de tu DNI si sos profesional.",
+          "cameraPermission": "Vita necesita acceso a tu cámara para tu foto de perfil, tu video de presentación o las fotos de tu DNI si sos profesional.",
           "microphonePermission": "Vita necesita acceso al micrófono para grabar tu video de presentación."
         }
       ],

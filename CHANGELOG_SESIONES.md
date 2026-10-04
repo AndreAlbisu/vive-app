@@ -1,3 +1,235 @@
+## 2026-10-03 — Andre (Claude · auditoría fase 3, tanda 1: funciones del servidor)
+
+**Tocado:** `supabase/functions/delete-account/index.ts` (v30), `admin-actions/index.ts` (v42), `guarantee-claim/index.ts` (v33), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
+
+**Resumen:**
+- 🗄️ La migración `20261003010000` (endurecimiento de `coach_mp_accounts`, `are_blocked`, `email_es_de_coach`) **ya está en producción**: la corrió Andre, verificada y registrada en `schema_migrations`. SCHEMA.md actualizado.
+- Revisión con `find-bugs` de lo cambiado en `supabase/functions` desde el 24/09: sin críticos ni altos. Cinco arreglos, los tres de función desplegados en prueba y en producción:
+  - **Baja de cuenta:** solo cancela sesiones que todavía no empezaron. Antes, quien hacía su sesión y se daba de baja antes del cron la dejaba cancelada y el profesional (PayPal/USDT) salía de la lista de pagos. Probado con una baja real en `vita-pruebas`.
+  - **Textos:** política y página de eliminar cuenta decían que las sesiones futuras "se reembolsan" siempre; el trigger aplica la regla de las 24 h. Corregido. Cambió `LEGAL_VERSION`.
+  - **Panel de admin:** sin registro de auditoría no se entrega el enlace a fotos de identidad ni a documentos de matrícula. La marca "matrícula verificada" del listado de postulaciones usa la misma regla que la aprobación.
+  - **Garantía:** el aviso interno de abuso ya no viaja en la simulación cuando la pide el cliente.
+
+**Pendiente para la próxima sesión:**
+- Fase 3, tandas siguientes: `lib/`, migraciones nuevas, pantallas, web. Después fases 4 a 6.
+- Lo anterior de hoy sigue abierto: clave para Strix, limpieza de datos de cobro de bajas con pagos abiertos, contracargo tardío.
+
+## 2026-10-03 — Andre (Claude · auditoría fases 1 y 2, tres endurecimientos)
+
+**Tocado:** `supabase/migrations/20261003010000_harden_mp_grants_block_check_email_lookup.sql` (nuevo)
+
+**Resumen:**
+- **Fase 2:** `test:security`, 10 de 10. **Fase 1:** los 50 avisos de `supabase db advisors` clasificados; ninguno explotable. Aceptados: las 4 vistas del catálogo, 9 tablas sin policy y sin grants, las funciones que comprueban quién llama, `pg_net` en public. `npm audit`: 47 altos, todos de Metro, Jest y Expo CLI (no viajan en la app).
+- 🗄️ **Migración escrita y probada en `vita-pruebas`, 🔴 NO aplicada en producción** (el control de permisos del entorno bloquea el SQL de escritura contra producción; la corre Andre): (1) `coach_mp_accounts` pierde los grants de `anon`/`authenticated` (la protegía solo el RLS); (2) `are_blocked` le contesta a un usuario común solo si es una de las dos personas (admins, triggers y service role siguen igual); (3) `email_es_de_coach` con tope de 20 por hora por IP.
+- Probado por la API del proyecto de prueba: un tercero ya no ve el bloqueo ajeno, los dos involucrados y la admin sí, el trigger de mensajes sigue frenando al bloqueado, la consulta 21 de mails rebota.
+
+**Pendiente para la próxima sesión:**
+- Andre: `! supabase db query --linked -f supabase/migrations/20261003010000_harden_mp_grants_block_check_email_lookup.sql`. Después Claude verifica en producción, registra la migración y actualiza SCHEMA.md.
+- Confirmar si la protección de contraseñas filtradas de Supabase existe en el plan gratis.
+- Fase 3 (revisión del código escrito desde el 24/09).
+
+## 2026-10-03 — Andre (Claude · plan de auditoría, proyecto de prueba y Strix)
+
+**Tocado:** nada del código de la app. Fuera del repo: proyecto Supabase `vita-pruebas`, carpeta `~/.config/vita-pruebas/`, Strix instalado.
+
+**Resumen:**
+- Plan de auditoría ordenado en 10 fases (barrido de la base, pruebas propias, `find-bugs` por superficie, checklist de endurecimiento, lógica por rol, **ataque en vivo con Strix**, privacidad comprobable, cuentas y operación, teléfono, cierre). `supabase db advisors` da hoy 50 avisos (el último número anotado era 30).
+- **Proyecto de prueba `vita-pruebas`** (ref `ysplqcskhdkqnhawehuf`, plan gratis): estructura copiada de producción sin datos, con permisos, policies, buckets y funciones del servidor verificados idénticos por huella. Seis cuentas inventadas. Sin claves reales de Mercado Pago, PayPal, mails ni videollamadas. El repo sigue linkeado a producción; el de prueba se usa desde su propia carpeta.
+- **Baja de cuenta probada de punta a punta en el proyecto de prueba** (lo que producción no dejaba probar): la de un cliente vacía mensaje y tema de sus reservas y borra notas, diario y ánimo; la de una profesional con un reintegro en curso conserva sus datos de cobro; un profesional con sesión agendada queda bloqueado.
+- **Strix 1.6.2** instalado aislado (no con su instalador). Leído antes: manda telemetría de uso a PostHog y Scarf salvo `STRIX_TELEMETRY=false`, y monta la carpeta que se le pasa con permiso de escritura, así que corre sobre una copia sin secretos ni referencias a producción.
+
+**Pendiente para la próxima sesión:**
+- Clave de API para Strix (decisión de Andre) y primera corrida corta con tope de gasto.
+- Fases 1 a 5 del plan. Los crons de producción no se copiaron al proyecto de prueba.
+
+## 2026-10-03 — Andre (Claude · privacidad comprobable, a raíz del cierre de CUX)
+
+**Tocado:** `supabase/functions/delete-account/index.ts` (v29 en producción), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `screens/CoachComoFuncionaScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Andre preguntó por qué cerró CUX (falta de capital y de socio tecnológico; antes, rechazo de los colegios de psicólogos y denuncias de que borrar no borraba y de acceso humano a los chats). De ahí salió contrastar lo que promete la Política con lo que hace la baja de cuenta. Lo central estaba bien: 35 bajas en producción sin acceso ni restos de diario, ánimo o cuestionario, y el panel de admin no lee mensajes ni diario.
+- **Baja de cuenta, ahora también borra:** las notas de sesión sobre la persona (antes se conservaban; Andre decidió borrarlas), el registro de qué recursos abrió, y el mensaje al profesional y el tema de cada reserva. Función desplegada (v28) y verificada que responde. La prueba local cubre lo nuevo; de paso se arregló su fixture, que venía rota desde el 01/10 (faltaba el bucket de identidad). 🟡 La prueba contra producción con vuelta atrás la bloqueó el control de permisos: se leyó el trigger `guard_booking_security` y no frena ese cambio, pero **no se vio correr en producción**.
+- **Textos:** Política §8 dice ahora que diario y ánimo no tienen cifrado de punta a punta y que Vita se compromete a no leerlos; §10 y la página de eliminar cuenta nombran lo que se borra y lo que queda (reportes, problemas de sesión). "Cómo funciona" le avisa al profesional que las notas se borran si la persona elimina su cuenta. Cambió `LEGAL_VERSION`.
+- **Baja de un profesional (v29):** ahora también se borran su agenda, el enlace de calendario (seguía respondiendo), país/provincia, sus notas privadas y, **solo si no queda plata en movimiento**, sus datos de cobro y la conexión con Mercado Pago (los reintegros salen con su conexión y lo adeudado se paga con su CBU o billetera). Prueba local con los dos casos. Andre: "no es necesario que Codex sea dueño del área de pagos"; Claude puede tocar pagos.
+- Base de datos: sin cambios de estructura. SCHEMA.md actualizado (sección Baja de cuenta).
+
+**Pendiente para la próxima sesión:**
+- **Datos de cobro de un profesional dado de baja con plata en movimiento:** se conservan y nada los borra después. Hace falta una limpieza automática (o manual) cuando se cierren esos pagos.
+- Un aviso tardío de Mercado Pago (contracargo) sobre un profesional ya dado de baja y sin conexión guardada cae al token de la plataforma, que no puede leer ese pago. Revisar si importa.
+- Probar una baja real con una cuenta de prueba que tenga reserva con mensaje y una nota de sesión.
+- Andre: confirmar que al panel de Supabase entran solo él y Joaquín, con verificación en dos pasos.
+- Después del lanzamiento: cifrar el diario en el teléfono, junto con el cifrado real de mensajes.
+
+## 2026-10-02 — Andre (Claude · turno libre pronto: orden y tarjeta)
+
+**Tocado:** `scripts/add-proximos-turnos.sql`, `lib/coachesCache.ts`, `lib/coachDeckRanking.ts`, `__tests__/deckRanking.test.ts`, `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Andre propuso un filtro "con disponibilidad la próxima semana". Decidido: **ordenar y mostrar, no filtrar** (con pocos profesionales reales al lanzar, un filtro vacía puertas enteras). El filtro queda para cuando haya catálogo.
+- 🗄️ **Base (producción):** `proximos_turnos()`, el primer turno libre de cada profesional en 7 días, con las mismas reglas que `slots_libres`. Verificado. SCHEMA.md actualizado.
+- **Mazo:** adentro de cada grupo sale primero quien tiene turno pronto (lo del quiz pesa más). 3 tests nuevos. **Lista completa:** arriba los que tienen turno, el más cercano primero. Las dos tarjetas muestran "Próximo turno: mañana, 09:00", el mismo texto del perfil.
+- Bug encontrado al verlo: ordenar con `localeCompare` subía a los que no tienen turno (el símbolo de relleno va antes que los números). Arreglado con una comparación explícita. La lista se vio en el simulador; **el mazo no** (en el simulador quedó abierta una cuenta de profesional).
+- Corrección a lo que se le dijo a Andre: `hasSlotThisWeek` no era un criterio del mazo (solo el motivo del quiz y el panel del profesional). Ahora sí ordena.
+- Los "37 profesionales activos" son perfiles de prueba; en el catálogo se ven 3 (los demás no tienen medio de cobro).
+
+**Pendiente para la próxima sesión:**
+- Ver la tarjeta del mazo con "Próximo turno" en el iPhone (Mental → Comunicación tiene a Augusto con turno).
+
+## 2026-10-02 — Andre (Claude · medición de continuidad y fuga)
+
+**Tocado:** `scripts/add-medicion-continuidad.sql`, `SCHEMA.md`
+
+**Resumen:**
+- Charla sobre cómo evita Selia la fuga (no elusión de 12 meses con multa descontada de pagos, paquetes prepagos, continuidad muy trabajada, deja de mandar pacientes a quien no retiene). Conclusión con Andre: no copiar el contrato; Vita ya tiene lo principal del lado del producto. Antes de construir más (paquetes, re-reservar sin volver a pagar desde cero), **medir**.
+- 🗄️ **Base (producción):** dos funciones solo para admins y de solo lectura, `continuidad_resumen()` y `pares_que_dejaron_de_reservar()`. La señal de fuga: pareja con sesiones, más de 30 días sin reservar, y la persona sigue usando Vita sin haber reservado con otro. Verificado (admin ve, no admin rebota, anon sin permiso). SCHEMA.md actualizado. Para verificarlo se simuló la sesión de un admin dentro de la transacción (autorizado por Andre).
+- Sin cambios en la app. Hoy los números son de datos de prueba.
+
+**Pendiente para la próxima sesión:**
+- Cuando haya usuarios reales: correr `select * from continuidad_resumen()` y `pares_que_dejaron_de_reservar()` cada tanto. Si se quiere verlo sin terminal, sumarlo al panel de admin.
+
+## 2026-10-02 — Andre (Claude · tres escuelas más de psicología)
+
+**Tocado:** `lib/enfoque.ts`, `__tests__/enfoque.test.ts`, `web/perfil-datos.js` (generado), `scripts/add-enfoques-tercera-ola-emdr-interpersonal.sql`, `SCHEMA.md`
+
+**Resumen:**
+- Andre preguntó si cubrimos las ramas importantes de la psicología: las seis (cognitivo conductual, psicoanalítico, sistémico, gestáltico, humanístico, integrativo) cubren lo principal en Argentina. Se suman, a pedido de Andre: **tercera ola (ACT, DBT, mindfulness)**, **EMDR** e **interpersonal**. Selia: su blog nombra TCC, psicoanálisis, humanista/Gestalt y sistémico; tercera ola y EMDR aparecen en perfiles de sus psicólogos (texto libre).
+- 🗄️ **Base (producción):** CHECK de `coaches.enfoques` y `trg_enfoques_requieren_matricula` con los tres valores nuevos, solo para psicología. Corrido y verificado con pruebas con rollback. SCHEMA.md actualizado.
+- Tendencias del quiz para las nuevas (cuando el profesional no contestó cómo trabaja): tercera ola = herramientas y presente; EMDR = guía e historia; interpersonal = guía y presente. Son de manual, igual que las demás.
+- Queda abierto (Andre: "lo dejemos así"): la marca "Según tu quiz" en Profesionales no vence por tiempo; solo se apaga si reserva por ese tema.
+
+**Pendiente para la próxima sesión:**
+- Revisar con un profesional (Mónica) la tabla de tendencias, ahora con las tres nuevas. EMDR lo declara cada profesional y no lo verificamos (es una certificación aparte).
+
+## 2026-10-02 — Andre (Claude · reseñas del perfil en tarjetas)
+
+**Tocado:** `screens/ProfesionalScreen.tsx` (solo la sección Reseñas)
+
+**Resumen:**
+- Andre: "esta parte de reseñas está super fea" (con una sola reseña corta, "mid", quedaban cuatro renglones sueltos). Ahora el promedio va a la derecha del título ("★ 4.7 · 3 reseñas") y cada reseña es una tarjeta con el fondo del bloque práctico: nombre en seminegrita y estrellas arriba en la misma línea, comentario debajo. Visto en el simulador con el perfil de ejemplo.
+- En el mismo archivo había cambios sin commitear de otra sesión (botón Reservar, pagos, "Tu primera sesión"): se commiteó solo la sección Reseñas y lo demás quedó como estaba.
+
+**Pendiente para la próxima sesión:**
+- Andre pidió centrar mejor el botón Reservar: la otra sesión ya lo está cambiando (pagos debajo del precio, botón terracota con ícono). Confirmar con Andre si así le cierra.
+
+## 2026-10-02 — Andre (Claude · checkout: "Pagar y reservar" y garantía)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`
+
+**Resumen:**
+- El botón decía "Confirmar reserva" y paga: ahora **"Pagar y reservar"**. En esta pantalla siempre hay cobro (sin checkout no se reserva; si el cobro no arranca, error).
+- **Vuelve la garantía de primera sesión** al checkout, primera en la tarjeta de avisos, con "Ver condiciones" (T&C). Se había sacado el 10/08 porque no había ni política ni mecanismo; hoy están T&C §9.3 y `guarantee_claims`. Misma condición que el perfil: no la usó nunca (`guarantee_claims` pedida/aprobada) y no tuvo sesiones confirmadas o completadas con este profesional; si la consulta falla, no se muestra. La consulta va en su propio efecto que espera la sesión (en la primera versión, dentro del efecto del coach, quedaba apagada si `user` llegaba tarde; se vio en el simulador). Verificado en el simulador.
+
+## 2026-10-02 — Andre (Claude · checkout: avisos debajo del mensaje)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`
+
+**Resumen:**
+- Pedido de Andre: acomodar los párrafos debajo de "Contame brevemente qué te trajo acá". Los tres avisos (cobro, cancelación, ausencias) pasan a una sola tarjeta suave, con el ícono a la altura del primer renglón, texto 13,5 regular en `softInk` y margen a los dos lados (antes: ícono centrado, texto oscuro en negrita media y el segundo párrafo pegado al borde derecho porque le faltaba `flex: 1`). **El texto no cambió** (tiene peso legal, T&C §9).
+- La caja celeste "El pago se procesa a través de Mercado Pago" solo aparece cuando NO hay selector de medio de pago; con selector repetía la opción marcada. Verificado en el simulador.
+
+## 2026-10-02 — Andre (Claude · "Tu primera sesión" en el perfil)
+
+**Tocado:** `screens/ProfesionalScreen.tsx` (solo el bloque nuevo)
+
+**Resumen:**
+- Andre eligió la versión corta: arriba del bloque práctico, "**Tu primera sesión** · Es para conocerse, a tu ritmo. No hace falta llegar con nada preparado." Sale con la misma condición que la garantía (`garantiaDisponible`): si ya tuvo sesiones con ese profesional, no aparece. Verificado en el simulador.
+- ⚠️ Mientras tanto, otra sesión estaba rediseñando el botón Reservar y los medios de pago en el MISMO archivo, sin commitear. Este commit lleva solo el bloque nuevo; sus cambios quedan en el árbol de trabajo para que los commitee esa sesión.
+- La segunda reseña cortada del perfil de ejemplo: Andre dice que ya no importa. Su check-in de hoy lo corrigió él.
+
+## 2026-10-02 — Andre (Claude · perfil del profesional: pasada de espaciado)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:**
+- Correcciones de otra revisión del perfil ("agradable pero estirado"). **Bio:** 4 líneas y "Leer más"/"Leer menos" (se mide la bio entera en una copia invisible: el botón aparece solo si hay algo cortado). **Reseñas:** estrellas, comentario y firma pegados (6 de separación, eran 10 + 10 de relleno) y el "4.7 de 5" junto al título. **Recursos:** filas de 11 de relleno (eran 16) e ícono de 32.
+- **Formación:** título en medium (era semibold) y "Verificado" pasa a ser el último dato de cada credencial, dentro de su columna (antes iba al lado del título).
+- **Barra de abajo:** menos aire propio (pagos 12 → 2 abajo, barra 12/8 → 10/6); el área segura del teléfono se respeta igual.
+- Visto en el simulador con el perfil de ejemplo (sin video ni recursos, así que esas dos partes no se vieron). tsc, eslint y 957 tests OK.
+
+**Pendiente para la próxima sesión:**
+- Ver en un perfil con video y recursos cómo quedan; confirmar en el iPhone que 4 líneas de bio es la medida justa.
+
+## 2026-10-02 — Andre (Claude · Personas y Recursos del profesional)
+
+**Tocado:** `screens/CoachChatsScreen.tsx`, `screens/CoachResourcesScreen.tsx`
+
+**Resumen:**
+- Revisión de Personas y Recursos (código + capturas como coach-prueba). Las dos están bien resueltas; el problema era el mismo de Inicio y Reservas: **sin señal decían "Todavía no atendiste a nadie" y "Todavía no subiste recursos"**. Ahora "No pudimos cargar…" con Reintentar.
+- Recursos: "Ir a Chats" → "Ir a Personas" (la pestaña se llama así); reproducciones y guardados con íconos (`play`, `bookmark`) en vez de ▶ y ◈ de texto ("◈" no se entendía); "Subir" en terracota oscura (contraste). Verificado en el simulador. 957 tests y tsc OK.
+
+**Pendiente para la próxima sesión:**
+- "Recomendar" en un recurso abre un aviso que dice "abrí el chat y tocá +": podría abrir directamente la elección de persona.
+- En Personas aparecen "Usuario" y "Usuario Eliminado" como nombres (datos de prueba; una cuenta borrada sigue como persona con su conversación).
+
+## 2026-10-02 — Andre (Claude · buscador con letras separadas)
+
+**Tocado:** `screens/VerificarMailScreen.tsx`, `app/(tabs)/conexiones.tsx`
+
+**Resumen:**
+- Visto en el simulador: después de pasar por la pantalla del código ("Entrá con un código", también en el alta), el buscador de Profesionales mostraba "B u s c á  u n  p r o f e s i o", cortado. Causa: el campo del código tenía `letterSpacing: 10` y React Native en iOS reutiliza el campo de texto nativo sin limpiar esa propiedad. Confirmado: sin pasar por el código, el buscador se ve bien. El campo del código pasa a separación 0 con dígitos de ancho fijo (`tabular-nums`), y el buscador fija `letterSpacing: 0`. No se volvió a abrir la pantalla del código para verlo (manda un mail real).
+
+## 2026-10-02 — Andre (Claude · check-in sin renglón de confirmación, barra un poco más grande)
+
+**Tocado:** `components/MoodCheckIn.tsx`, `components/ui/IslandTabBar.tsx`
+
+**Resumen:**
+- **Check-in diario:** se sacó el renglón "Registrado: normal · gracias por contarnos" (pedido de Andre). Ocupaba lugar también antes de elegir (alto reservado) y repetía lo que ya muestra la carita elegida.
+- **Barra de pestañas** (sin nombres, ver memoria): íconos 19 → 22, pestañas de 60 × 44 y 56 de alto en total (era 55; una versión intermedia de 62 le pareció alta a Andre). Verificada en el simulador.
+- ⚠️ **Incidente:** probando en el simulador con la cuenta de Andre, un toque mío cambió su check-in real de hoy de "Bajón" a "Normal" (la pantalla no lo mostró hasta reabrir la app) y el intento de volverlo atrás no se registró. Andre lo corrige desde su iPhone. Regla desde ahora: en cuentas reales, en el simulador no se toca nada que guarde datos.
+
+## 2026-10-02 — Andre (Claude · barra de pestañas con nombres y letra en Inicio del profesional)
+
+**Tocado:** `app/(coach)/_layout.tsx`, `screens/CoachHomeScreen.tsx` (y `components/ui/IslandTabBar.tsx`, cambiado y revertido)
+
+**Resumen:**
+- ↩️ **Revertido a pedido de Andre ("prefiero sin los nombres abajo de los botones"):** la barra sigue solo con íconos. Queda la casa en Inicio del profesional. Lo que sigue es cómo había quedado, por si se reconsidera: **la barra tenía nombres** debajo de cada ícono (cliente y profesional, es el mismo componente). Se habían sacado el 20/08 porque el ancho cambiaba al enfocar y la animación se trababa; ahora todas las pestañas miden lo mismo (80 pt, entra "Profesionales") y el nombre hace el mismo fundido de color que el ícono, sin nada de tamaño que animar. Inicio del profesional pasa de ícono de calendario a casa, como el del cliente. Verificado en el simulador: la burbuja viaja alineada.
+- **Inicio del profesional:** "Unirse", "Proponer horario" y los círculos de la semana pasan a la terracota oscura (`primaryInk`, 4,59:1 con el crema; la clara daba 3,6). Letra: fecha y hora de la próxima sesión 11 a 13, botones 12 a 14 (y 46 de alto), "Preparar sesión" 11,5 a 13, días de la semana 10 a 11,5. La tarjeta de la próxima sesión no se pudo ver (coach-prueba no tiene sesiones agendadas). 957 tests y tsc OK.
+
+## 2026-10-02 — Andre (Claude · simulador andando y bug de zona horaria)
+
+**Tocado:** `lib/time.ts`, `__tests__/time.test.ts`, `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`, `lib/coachVisibility.ts`, `__tests__/coachVisibilityHome.test.ts`
+
+**Resumen:**
+- **Simulador:** iPhone 17 con iOS 26 ("Vita iPhone 17 (iOS 26)"), la app compilada con Xcode 27 corre ahí (la exigencia de UIScene es de iOS 27). Toques con **idb** (Meta, Homebrew + `~/.idb-venv`), autorizado por Andre. Sesión abierta con un código de entrada generado con la clave de administrador para `andrealbisu@gmail.com` (autorizado por Andre; no cambia contraseñas).
+- **Recorrido con capturas** (perfil de ejemplo como cliente; Inicio y Reservas como coach-prueba). El bloque práctico, Cómo trabaja y las reseñas se ven bien. Arreglado lo que mostraron:
+  - **Letra grande del sistema** (accesibilidad): en "Hace rato que no los ves" el botón dejaba los nombres en "J." y "H.": con `fontScale >= 1.3` el botón baja a su propio renglón. El saludo "Hola, …" perdía el nombre entero: tope `maxFontSizeMultiplier` 1.3.
+  - Reservas vacío prometía "o propongas otro horario" (no existe para solicitudes): ahora "o le digas que no podés". "Puerta" (jerga nuestra) seguía en la tarjeta de visibilidad y en dos avisos: ahora "tema" (`lib/coachVisibility.ts` + su test).
+  - ⚠️ Sin resolver: en el simulador la 2ª reseña del ejemplo se dibuja en un renglón cortado ("…y fue mu") aunque reserva el alto de dos. No es el contenedor animado ni el `lineBreakStrategyIOS` (probados y revertidos). Sospecha: la app compilada con el SDK de iOS 27 corriendo en el simulador de iOS 26. **Mirarlo en un iPhone real.**
+  - La barra de pestañas del profesional es solo íconos, sin nombres (Inicio, Reservas, Chats, Recursos): anotado para la próxima.
+- 🔴 **Bug encontrado en la primera captura:** `deviceIsOffArgentina` comparaba el huso del teléfono (al minuto) con el de Argentina (con segundos y milisegundos), así que casi nunca daban igual y **todo teléfono en Argentina se tomaba como "de afuera"**: el perfil decía "(hora de Argentina)" y "18:00 para vos", y lo mismo Confirmar y la pantalla final de la reserva. Los tests pasaban porque usaban minutos exactos. Ahora se compara en minutos, con un test con segundos. La web (/c) no tenía el bug: decide por el nombre de la zona.
+
+## 2026-10-02 — Andre (Claude · lado del profesional: revisión de UX de Inicio y Reservas)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`, `lib/coachBookingActions.ts`
+
+**Resumen:**
+- Crítica de Inicio y Reservas del profesional (Impeccable + guías nativas, leyendo código): 23/40. Andre eligió los 3 P1.
+- **Sin señal ya no se muestran estados falsos.** Inicio tomaba los errores como "no hay datos": a un profesional con historia le mostraba "Antes de tu primera sesión", todo sin tildar, "Sin esto no aparecés en la app" y "Sin sesiones programadas"; Reservas decía "Tu agenda está libre". Ahora las dos dicen "No pudimos cargar…" con Reintentar. Inicio además ya no se dibuja con todo en cero antes de saber el `coachId`.
+- **Fallas que eran silenciosas ahora avisan:** confirmar, rechazar y cancelar una confirmada. `rejectBooking` exige que se haya actualizado una fila (antes, sin filas, avisaba al cliente igual), como ya hacía `confirmBooking`. Sin cambios en la base; tsc y 957 tests OK. Sin ver en pantalla.
+- **El mensaje del rechazo ahora llega** (Andre: "mandarlo"). Antes el "Motivo (opcional)" se escribía y no se mandaba. Va en la notificación de la app y en el mail ("Te dejó este mensaje: …"), no en el push (pantalla bloqueada). Hasta 300 caracteres. Datos para cobrar se bloquean y datos de contacto avisan y dejan enviar (`mensaje_contacto_detectado`, canal `motivo_rechazo`), igual que la nota de una recomendación.
+
+**Pendiente para la próxima sesión:**
+- **"Otro horario" en "Por confirmar" pasó a decir "No puedo"** (es lo que hace: rechaza). Andre quiere que algún día proponga horarios, pero `proponer_horarios` exige `status = 'confirmada'` (verificado en producción). Habilitarlo para pendientes toca cobros y reembolsos: decidir con Andre (y ver el área de Codex en pagos).
+- P2 sin hacer: letra de 10 a 12 pt en Inicio y "Unirse" con contraste 3,6:1; cancelar sin decir consecuencias; tarjeta del profesional nuevo larga y con "Estás casi listo" en masculino. Chats y Recursos sin revisar.
+
+## 2026-10-02 — Andre (Claude · perfil del profesional: sellos y carga)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:**
+- Puntos 4 y 5 de la crítica del perfil. **Sellos:** el escudo queda solo para documentos que Vita verificó (etiqueta de matrícula y "Verificado" en Formación). "Perfil revisado por Vita" deja el tilde de "cuenta verificada" y pasa a un ícono de persona revisada; la garantía ya tenía el de devolución. Un solo dorado para las estrellas (#C99A3F; había dos).
+- **Carga:** el perfil se muestra cuando ya están credenciales, temas, reseñas y garantía (antes aparecían de a una y corrían lo que se estaba leyendo). Nada traba: cada consulta que falla termina en vacío. Sin cambios en la base; tsc, eslint y 957 tests OK. Sin ver en pantalla todavía.
+- **Simulador:** Xcode 27 no trae la app Simulator (solo el motor) y **compilada con Xcode 27 la app se cierra al abrir**: "UIScene life cycle is required" (iOS 27 lo exige a lo compilado con su SDK; Expo SDK 54 no lo cumple). Los builds de EAS (Xcode 26) no están afectados. Se está bajando el simulador de iOS 26 para revisar con capturas. Además, `ios/Podfile` local (no va al repo) sube a 15.1 el mínimo de iOS de los pods: Xcode 27 rechaza SDWebImage, RNSVG y AsyncStorage con mínimos viejos.
+
+- **Sensación al tocar** (skill animate-expo): Reservar usa `ScaleCard` (se achica a 0,97, como Pagar en Confirmar) y vibra suave al apoyar el dedo; el corazón hace un "pop" y vibra al guardar (al sacar, solo un tic, sin pop); la explicación de cada enfoque y las reseñas que suma "Ver las N" aparecen con un fundido de 180 ms. Con "reducir movimiento" no hay pop; los fundidos los maneja el sistema. Vibraciones solo en iPhone.
+
+- **Lectura:** reseñas en 15 regular (eran 18 en seminegrita y pesaban más que la bio, 16); en Cómo trabaja se sacaron los títulos que repetían la frase; la etiqueta de matrícula pasa a 12,5 y su área de toque a 44+ pt (también se ve así en Confirmar). **Credenciales:** `listPublicCredentials` devuelve `null` si la consulta falla y el perfil no muestra la etiqueta (ni matrícula ni acompañamiento) en vez de decirle "acompañamiento" a un matriculado.
+
+**Pendiente para la próxima sesión:**
+- 🔴 Antes de que Apple exija compilar con Xcode 27 (suele ser en abril): actualizar Expo a una versión que adopte UIScene, o la app compilada no abre en iOS 27.
+- Capturas en el simulador de iOS 26 de todo lo del perfil (P1 y P2).
+- Con la verificación de identidad nueva (DNI y selfie), definir si "Perfil revisado por Vita" pasa a decir algo de la identidad.
+
 ## 2026-10-01 — Joaquín (tipografía de la animación de inicio)
 
 **Tocado:** `screens/OnboardingScreen1.tsx`.
@@ -8,7 +240,206 @@
 - Space Grotesk queda sin uso en pantallas (sigue definido en `theme.ts`/cargado en `_layout` por si acaso; no se removió para no ampliar el cambio).
 - tsc OK para el archivo tocado. ⚠️ Nota: hay 2 errores de tsc **pre-existentes** en `app/_layout.tsx` y `CoachLoginScreen.tsx` (ruta `/coach-postulacion-estado` sin tipar) — ajenos a este cambio.
 
+## 2026-10-01 — Andre (Claude · verificación de identidad de profesionales)
 
+**Tocado:** `supabase/migrations/20261001030000_coach_identity_verification.sql` (nuevo), `lib/identidad.ts` (nuevo), `__tests__/identidad.test.ts` (nuevo), `screens/CoachApplicationScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `supabase/functions/admin-actions/index.ts`, `supabase/functions/delete-account/index.ts`, `docs/politica-de-privacidad.md` + legales regenerados, `app.json`, `SCHEMA.md`
+
+**Resumen:**
+- Andre: "deberíamos pedir documentos a los profesionales para verificar quiénes son". Decidido: **DNI frente, dorso y selfie con el DNI, obligatorios para aprobar**, revisión manual por ahora. A los aprobados de hoy no se les pide (son de prueba).
+- Las fotos se suben **en el formulario de postulación** (bloque 4, "Tu identidad"), porque al enviarla se cierra la sesión hasta la aprobación. Van a un espacio privado; el admin las abre desde la tarjeta de la postulación (cada apertura queda registrada) y al marcar "identidad verificada" **se borran**: queda solo la constancia.
+- **En la base**: tabla `identity_verifications`, bucket privado `identity-docs`, `enviar_identidad()` y `approve_coach_application` que exige la identidad. **Aplicado y verificado en producción** (10 chequeos con rollback, 0 restos). `admin-actions` **v41** y `delete-account` **v27** deployadas (el código en vivo era idéntico al repo) y responden bien.
+- Política de privacidad §2.6 (qué se pide, que compara una persona y no un sistema de reconocimiento facial, que se borra al verificar) y §10. Textos de permiso de cámara y fotos en `app.json` mencionan el DNI. 957 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- **Recompilar el cliente de desarrollo**: `app.json` cambió los textos de permiso de cámara/fotos (es nativo). La app actual sigue funcionando, con el texto viejo.
+- Probar en el iPhone una postulación completa: sacar las tres fotos (la selfie abre la cámara frontal), enviar, y desde el admin abrir las fotos, verificar, y confirmar que "Aprobar" exige la identidad.
+- Etiquetas de privacidad de las tiendas (`docs/etiquetas-privacidad-tiendas.md`): sumar fotos de documento de identidad para profesionales antes de publicar.
+- Si un día hay volumen, pasar a un servicio automático (Didit, MetaMap, Veriff) que valide contra RENAPER.
+
+## 2026-10-01 — Andre (Claude · límites al cambio de nombre)
+
+**Tocado:** `supabase/migrations/20261001020000_profile_name_change_limits.sql` (nuevo), `lib/cambioDeNombre.ts` (nuevo), `__tests__/cambioDeNombre.test.ts` (nuevo), `screens/EditProfileScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `supabase/functions/admin-actions/index.ts`, `SCHEMA.md`
+
+**Resumen:**
+- Andre: "uno no debería estar cambiándose el nombre todo el tiempo". Hasta hoy usuarios y profesionales cambiaban el nombre sin límite. Decidido: **profesional aprobado no lo cambia** (es el nombre revisado, firma reseñas y acompaña al link `/c/<slug>`, que no sigue al nombre); **usuario, una vez cada 30 días**. Completar el placeholder "Usuario" no cuenta.
+- La regla vive en la base (`trg_limitar_cambio_de_nombre`), no solo en la pantalla. **Aplicada en producción y verificada** con 6 pruebas como usuario real y rollback, 0 filas tocadas. La primera versión fallaba para todos (*permission denied for table coaches*): lo encontró la verificación, se corrigió con `es_profesional_aprobado()`. Detalle en SCHEMA.md (`profiles.name_changed_at`).
+- "Editar perfil": el campo queda fijo con una nota (profesional: "escribinos a vitaappar@gmail.com"; usuario: desde qué fecha puede de nuevo) y pide confirmación antes de cambiarlo. Admin: botón "Corregir el nombre de un profesional" en la pestaña de coaches, con motivo obligatorio; `admin-actions` **v40 deployada** (el código en vivo era idéntico al repo antes del deploy) y responde bien.
+- 953 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone: editar el nombre como usuario (aviso y confirmación), intentarlo de nuevo (campo fijo con fecha), y como profesional (campo fijo).
+- Decisión abierta: verificación de identidad de profesionales (DNI + selfie) antes de publicarlos. Se habló, sin implementar.
+
+## 2026-10-01 — Andre (Claude · perfil del profesional: revisión de diseño y UX, los 3 P1)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `__tests__/perfilProfesional.test.ts`
+
+**Resumen:**
+- Crítica del perfil público con Impeccable (critique), la guía nativa de Expo/iOS y la de Emil, leyendo código y sin capturas (el simulador todavía no estaba): 27/40. Andre eligió arrancar por "decidir y reservar" y hacer los 3 P1.
+- **Bloque nuevo debajo de la portada** con lo práctico: "Sesión de N min por videollamada" (los minutos solo si `coach_weekly_pattern` tiene una única duración), "Próximo horario libre: mañana a las 18:00" (de `slots_libres`, la misma función que /c; desde afuera, "(hora de Argentina)" más la equivalencia) y la **garantía, que estaba al final** después de los recursos. Ahora usa un ícono de devolución y no un escudo, para no confundirla con lo verificado.
+- **"No disponible" ahora dice por qué**, en el lugar del precio: "Bloqueaste a Lucía" (y el botón pasa a "Desbloquear", abre la hoja de bloquear) o "Por ahora no está tomando reservas". Sin cambios en la base. 943 tests, tsc y eslint OK. Verificado contra la base: coach-prueba da 60 min y un horario de hoy.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el simulador o el iPhone: el bloque nuevo, un profesional sin horarios ("Sin horarios libres en las próximas tres semanas"), uno bloqueado y la zona horaria de afuera.
+- Copy de "Tu primera sesión" (bloque escrito por Vita para quien llega con miedo): propuesto a Andre, falta aprobación.
+- Resto de la crítica sin hacer: (4) sellos que se confunden entre sí, (5) la pantalla que se arma de a pedazos, reseñas más fuertes que la bio, títulos repetidos en Cómo trabaja, nombre y compartir en la cabecera, sensación al tocar (Reservar, corazón, enfoques).
+- `slots_libres` también descuenta las reservas *pendientes* de otros y el calendario no: en un caso borde el perfil podría decir "sin horarios" y el calendario mostrar alguno.
+
+## 2026-10-01 — Andre (Claude · web: auditoría de diseño y UX completa, 20 de 21 puntos)
+
+**Tocado:** `web/index.html`, `web/profesionales.html`, `web/c/index.html`, `web/reserva/index.html`, `web/sala/index.html`, `web/tiendas.js`, `scripts/sync-legal.mjs` + `web/legal/*` (regenerados), `api/c.js` (nuevo), `vercel.json`, `web/favicon.svg`, `web/img/og-vita.jpg` y `web/img/og-profesionales.jpg` (nuevos)
+
+**Resumen:**
+- Auditoría de las 10 páginas en producción (playwright con capturas en celular y compu, chequeos de contraste, botones al tocar, desbordes; checklists de Impeccable y mobile-native). 21 puntos; Andre dio "hagamos los 21".
+- **Vista previa en WhatsApp:** `/c/<slug>` ahora pasa por una función de Vercel (`api/c.js`) que devuelve el mismo HTML con nombre, profesión y foto del profesional en las etiquetas `og:`. Si la base no contesta, devuelve la página con la vista previa genérica. Portada y /profesionales tienen imagen propia (1200x630, JPG < 100 KB). Probado en local contra la base real, **no en Vercel**.
+- **/c:** el botón de abajo ya no está gris y muerto: lleva a los horarios o al formulario, y paga solo cuando se puede. Etiquetas visibles en los campos, casillas de 22 px, un solo color para "elegido", sin "hs", y desde afuera de Argentina la equivalencia ("23:00 para vos", probado con zona de Madrid). En la compu, dos columnas (perfil y reserva al costado).
+- **Portada:** el teléfono del principio ya no se rompe en el celular; tarjeta "¿sos profesional?" alineada; "Los mensajes de Sofía son automáticos…". /reserva, /sala y las legales con la identidad de Vita (letra, isotipo, colores; solo modo claro, como /c) y un mail de contacto cuando algo falla. Legales: la URL larga ya no corre la página, "Última actualización" y "Vigencia" en dos líneas (arreglado al dibujar, sin tocar el .md: LEGAL_VERSION sigue en 858b0f80ee26). Favicon en todas, sin destello gris al tocar, hover solo con mouse, movimiento reducido sin apagar los fundidos. Sin cambios en la base; 939 tests y tsc OK.
+
+**Pendiente para la próxima sesión:**
+- Punto 21 sin hacer: `hola@vitaapp.com.ar` no existe (el dominio no tiene registros MX). Cuando Andre cree la casilla, cambiar las menciones de `vitaappar@gmail.com`.
+- ✅ Verificado por Andre después del push: "funciona todo" (/c en producción, vista previa y iPhone). Si algún día la función falla en Vercel, se vuelve atrás con el rewrite de `vercel.json` a `"destination": "/c"`.
+
+## 2026-10-01 — Andre (Claude · flujo de reserva: errores de la revisión de UX)
+
+**Tocado:** `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Success.tsx`, `components/CoachAvatar.tsx` (nuevo)
+
+**Resumen:**
+- Revisión del flujo de reserva con ui-ux-pro-max (leyendo código, sin capturas): 14 puntos. Andre dio "dale" a los errores (1 a 5) más dos que salieron del perfil nuevo (13 y 14).
+- **Arreglado:** la flecha de "mes anterior" era blanca sobre crema; en una contrapropuesta el botón decía "Seguimos" y ya mandaba la propuesta (ahora "Proponer este horario"); sin red, calendario y horarios ya no se ven como "sin lugar": dicen "No pudimos cargar los horarios" con Reintentar; si este mes no hay lugar, el calendario abre en el primer mes que tiene y lo avisa; confirmar y la pantalla final dicen "hora de Argentina" y, desde afuera, la equivalencia ("07:00 del martes para vos").
+- **Foto del profesional** en horario, confirmar y pantalla final (antes un ícono genérico). Se lee de la base en horario y confirmar (así aparece también al mover una sesión desde la Sala) y viaja a la pantalla final por la ruta, solo si es https. `CoachAvatar` usa `Image` de React Native, no expo-image. Se sacó el "Coach de vida" por defecto (resto del mockup). Sin cambios en la base. 939 tests y TypeScript OK; no se probó en pantalla.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone: calendario sin red (modo avión) y con un profesional sin lugar este mes; reservar desde fuera de Argentina (cambiar la zona horaria del teléfono).
+- Puntos de la revisión todavía sin hacer: (6) juntar los cuatro avisos de Confirmar en una tarjeta y sumar la garantía de primera sesión; (7) el error se muestra dos veces; (8) el selector de medio de pago va al contenido, no a la barra fija; (9) el botón dice "Confirmar reserva" pero paga; (11) "Agregar a mi calendario" y vibración en la pantalla final (skill animate-expo); (12) el tilde de verificado sale siempre, sin mirar `coaches.verified`.
+- Simulador de iPhone: Andre tiene que instalar Xcode desde el App Store; después Claude compila el cliente de desarrollo (perfil `development-simulator` de eas.json) y revisa con capturas.
+
+## 2026-10-01 — Andre (Claude · perfil de ejemplo para mostrar la app)
+
+**Tocado:** `lib/perfilEjemplo.ts` (nuevo), `screens/ProfesionalScreen.tsx`, `screens/ProfileOwnScreen.tsx`
+
+**Resumen:**
+- Andre pidió un perfil de prueba completo (descripción, foto, reseñas) para mostrar la app en pitch, a amigos, profesionales e inversores. Se armó **dentro de la app y no en la base**: un perfil ficticio en producción aparecería en el catálogo, en /c/ y en recomendaciones, y una reseña exige inventar una reserva pagada con asistencia en las tablas de pagos.
+- "Lucía Benítez", psicóloga con matrícula (MN 00000 a propósito), bio, temas, cómo trabaja, formación, 3 reseñas firmadas con nombre e inicial, garantía, $18.000 / USD 25. Se abre con `/profesional?profileId=ejemplo`: la pantalla carga datos fijos, no consulta la base (verificado con un render: 0 consultas) y muestra "Perfil de ejemplo · los datos son ilustrativos". Reservar, guardar y reportar avisan que es un ejemplo.
+- Acceso: fila "Perfil de ejemplo" en el menú de tu perfil, solo para admins. Sobre el rediseño de Codex (515d5a46), sin tocar su diseño. 939 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Foto: la de la hermana de Andre, con su permiso, subida a Supabase Storage (`avatars/ejemplo/lucia.jpg`) y no al repo, que es público. Para sacarla, borrar ese archivo. Sin video por ahora (`video_url`).
+
+## 2026-10-01 — Codex · portada circular elegida por Andre
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:** Retrato circular de 180 puntos (adaptable a pantallas angostas), centrado, con nombre en 27 y datos agrupados. Conserva el resto del rediseño Combinada y la ampliación de la foto al tocarla.
+
+**Validación:** TypeScript, ESLint y diff sin errores. La composición anterior con expo-image fue recorrida en el iPhone sin cierre de la app; se comprobó abrir y cerrar enfoques, formación, reseñas y recursos. El cambio circular final queda pendiente de comprobación visual porque la duplicación indica teléfono en uso. Garantía pendiente de visualizar en un perfil elegible.
+
+## 2026-10-01 — Andre (Claude · web: auditoría y rediseño de la página del profesional)
+
+**Tocado:** `web/c/index.html`, `web/perfil-datos.js` (nuevo, generado), `scripts/sync-web-perfil.cjs` (nuevo), `__tests__/webPerfilDatos.test.ts` (nuevo), `lib/perfilProfesional.ts` (exporta `GENTILICIOS`), `package.json` (`sync:web-perfil`)
+
+**Resumen:**
+- Auditoría de la web con Impeccable y playwright-cli (capturas en celular y compu). Landing y /profesionales bien; la comisión del link coincide con T&C 8.3. El problema era `/c/<slug>`, adonde llegan los clientes que manda cada profesional.
+- 🔴 **El cartel "Modo prueba: la reserva y el cobro son REALES" le salía a todo cliente** desde el 21/09 (colgaba de `CHECKOUT_HABILITADO`). Ahora solo con `?probar=1` (commit b1d9dee0). Área de Codex (checkout): anotado en el registro de coordinación.
+- **Rediseño de `/c`** con la identidad de la landing (Plus Jakarta Sans, isotipo, colores). Portada con lo mismo que la app: profesión y nacionalidad según género, reseñas ("Nuevo en Vita" si no hay), "Perfil revisado por Vita", matrícula verificada o sesiones de acompañamiento con su explicación, garantía de primera sesión. Secciones Sobre mí, Cómo trabaja, Formación (solo verificadas) y Reseñas (sin nombres). Horarios: fila de días y horas del día elegido (antes ~200 botones en 3.000 px). Barra fija con precio, "Pagás con Mercado Pago" (único medio del checkout web) y el botón. Identificación y pago sin cambios.
+- **Los textos los genera la app**: `npm run sync:web-perfil` escribe `web/perfil-datos.js` desde `lib/`, y un test compara web y app en todos los países, géneros y combinaciones. 939 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- `! git push` para publicar, y probar una reserva real por `/c/coach-prueba` (identificación con código y pago).
+- ⚠️ Codex está rediseñando `ProfesionalScreen.tsx` en paralelo (sin commitear) y volvió a usar `expo-image`, una de las dos piezas que sacamos cuando la app se cerraba al abrir el perfil. Probar en el iPhone antes de commitearlo.
+
+## 2026-10-01 — Codex · ajuste de Combinada contra capturas
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:** Segunda pasada para acercar la implementación al boceto elegido: retrato alineado arriba (expo-image), identidad más compacta, matrícula centrada mediante un contenedor propio, valoración y revisión en una fila que se adapta al ancho. Cómo trabaja con íconos y títulos derivados de los datos reales; enfoques desplegables con estado accesible. Reseñas con estrellas, texto y firma; resumen compacto, sin avatar ni separadores duplicados. Reserva con precio/unidad separados y pagos en todo el ancho. Cabecera Vita del boceto. Sin textos biográficos, títulos ni reseñas inventados.
+
+**Validación:** TypeScript y ESLint. Recorrido visual completado posteriormente en el iPhone: portada, video compacto, enfoques desplegables, formación, reseñas y recursos. Garantía pendiente de visualizar.
+
+## 2026-10-01 — Codex · perfil Combinada
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:** Aplicada la propuesta Combinada elegida por Andre: foto grande con nombre y datos centrados, sin tarjeta alrededor de toda la portada. Video compacto sin repetir retrato, títulos Plus Jakarta Sans, reseñas y recursos abiertos, garantía al final del recorrido y medios de pago legibles. Se conservan datos reales, condiciones de disponibilidad y garantía, favoritos, credenciales, reproducción, recursos y reserva.
+
+**Validación:** TypeScript y revisión del diff. Revisión visual pendiente: la duplicación del iPhone se detuvo al usarse el teléfono.
+
+## 2026-10-01 — Andre (Claude · perfil del profesional: portada más corta)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `__tests__/perfilProfesional.test.ts`
+
+**Resumen:**
+- Andre sacó de la portada "Por videollamada", los "60 minutos" (hoy toda sesión es así) y "Próximo lugar" (la fecha libre aparece con un toque en Reservar). Se borraron también sus consultas (`coach_weekly_pattern`, `slots_libres`) y sus funciones y tests (`duracionUnica`, `etiquetaProximoLugar`, `primerLugarVigente`): si vuelven, están en el historial de git (commit 3cb24ffa).
+- **Medios de pago**: primero fueron a la barra de abajo, debajo del precio; a Andre se le veía feo y pasaron a la portada como chips, y Andre los prefirió abajo del precio pero mejor resueltos: quedaron en la barra fija como pastillas chicas (una por medio, fondo oliva suave). En el iPhone "USDT" caía solo a una segunda línea: el botón pasó a decir "Reservar" (el precio ya dice "la sesión") con ancho según el texto, y las pastillas se achicaron un poco. 933 tests y TypeScript OK.
+- **Nacionalidad como gentilicio** (Andre pidió "Argentino/a"; se usó el género, como en "Psicóloga"): "Argentina" o "Argentino" según `profiles.gender`, y "De Argentina" sin género o con un país sin gentilicio cargado (`lineaNacionalidad`, 26 países). En la base hay valores sucios de texto libre ("Argentinaa", "Argentino"): el segundo se respeta, el primero se ve como "De Argentinaa".
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone.
+
+## 2026-10-01 — Andre (Claude · perfil del profesional: orden, medios de pago y garantía)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:**
+- Andre pidió subir los medios de pago y definir la lista y el orden de todo el perfil. Orden acordado: quién es (foto, nombre, profesión, nacionalidad, matrícula, reseñas) → cómo sería la sesión (videollamada y duración, próximo lugar, medios de pago, garantía) → Sobre mí y video → Cómo trabaja → Formación → Reseñas → Recursos → reportar. Precio y "Reservar" fijos abajo.
+- **"Pagás con Mercado Pago o PayPal"** sube al bloque de la sesión, solo con los medios que ese profesional acepta (Andre: "los que el coach ofrezca").
+- 🛡️ **Garantía de primera sesión en el perfil** (T&C §9.3), que no estaba en ningún lado. Andre eligió solo la garantía, sin la línea de cancelación. Se muestra **solo a quien todavía la tiene**: sin `guarantee_claims` pedida o aprobada y sin sesión confirmada o completada con ese profesional; si la consulta falla, no se muestra. Toca y abre los términos. Se había sacado del checkout el 10/08 porque no existían ni el texto legal ni el mecanismo; hoy existen los dos. Sin cambios en la base. 937 tests y TypeScript OK; render del perfil probado con jest.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone. El checkout (`BookingScreen_Confirm`) sigue sin mencionar la garantía; reponerla ahí con el mismo criterio de elegibilidad sería lo coherente.
+
+## 2026-10-01 — Andre (Claude · perfil del profesional, segunda pasada con capturas)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `lib/tipoProfesional.ts`, `__tests__/perfilProfesional.test.ts`
+
+**Resumen:**
+- Andre mandó 5 capturas del perfil y pidió analizarlo con las skills instaladas (ui-ux-pro-max y expo-native-ui); después "dale" a los puntos 1 al 9.
+- 🔴 **"Próximo lugar: hoy a las 13:00" a las 13:44**: la consulta estaba bien (a las 13:46 la base daba 14:00), pero el perfil abierto un rato mostraba un horario pasado. Ahora se guardan los próximos 24 y se muestra el primero que no pasó (`primerLugarVigente`).
+- **Cómo trabaja**: "Su estilo: Las dos cosas" no se entendía sin la pregunta. Pasan a frases en tercera persona que se entienden solas (`frasesDeTrabajo`), bajo "Su forma de trabajar"; las escuelas van con el nombre en negrita y su explicación. De siete títulos terracota a tres.
+- **Video**: ya no repite la foto de la portada de fondo; tarjeta oliva con la cara en un círculo y el play. **Barra de abajo**: un solo precio, "$X la sesión" en Argentina y "USD X" desde afuera si cobra en dólares (`precioParaMostrar`). **"Psicóloga"/"Psicólogo"** según `profiles.gender` (sin género o "No binario", sigue "Psicólogo/a"). Nacionalidad en su renglón. El "5.0" grande solo con 3 reseñas o más. El número de matrícula se puede copiar. Sin cambios en la base. 937 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone. Quedan para una pasada de pulido: probar con letra grande del sistema (el botón de reservar tiene ancho fijo), la X del video con el margen seguro, y una vibración suave al reservar y al guardar en favoritos.
+- Pedir un largo mínimo de bio cuando el profesional la carga. Y en la revisión de credenciales: la cuenta de prueba tiene matrícula de 2001 con título de 2022, eso debería frenarse.
+
+## 2026-10-01 — Andre (Claude · perfil del profesional: privacidad, cuándo hay lugar y lectura)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts` (nuevo), `__tests__/perfilProfesional.test.ts` (nuevo)
+
+**Resumen:**
+- Andre pidió un análisis del perfil del profesional y después "hagamos todo". 🔒 **Las reseñas ya no publican el nombre completo** de quien las escribió: firman "Martina G." (o "Alguien de Vita" si no hay nombre). En salud mental, el nombre completo contaba en público que esa persona va a terapia. **Un error de red ya no dice "Este perfil ya no está disponible"**: dice "No pudimos cargar el perfil", con Reintentar (el mismo bug que tuvo el catálogo hasta el 26/09).
+- **La portada dice qué es la sesión y cuándo hay lugar**: "Por videollamada, 60 minutos" (la duración sale de `coach_weekly_pattern`, solo si es una sola) y "Próximo lugar: mañana a las 18:00" (de `slots_libres`, la función de la página web; con la hora de quien lee si está fuera de Argentina). Sin horarios: "Podés pedir que te avise". El precio pierde el "Desde", porque cada profesional tiene un solo precio.
+- **El video va grande debajo de "Sobre mí"** (Andre lo pidió así después de verlo en la portada como tarjeta chica), con la foto del profesional de fondo, play al centro y una franja oscura con el texto. 🔴 La primera versión generaba un cuadro del video (`generateThumbnailsAsync`) y lo pintaba con expo-image (primer uso en la app): **la app se cerraba al entrar al perfil** en el iPhone de Andre. Un render del perfil con jest pasaba, así que el problema estaba en la parte nativa; se sacaron las dos piezas. ✅ Andre confirmó que el perfil abre. No se aisló cuál de las dos era: antes de volver a usar expo-image, probarla sola en el iPhone. Sin reseñas, la portada dice "Nuevo en Vita" y la sección de reseñas no aparece; con más de 3, "Ver las N reseñas". Nuevo orden: portada, Sobre mí, Cómo trabaja (con los temas adentro), Formación, Reseñas, Recursos. Los medios de pago pasan al final.
+- **Lectura:** la biografía va en 16 px y las reseñas en 15. Los cinco olivas escritos a mano pasan a `ViveColors.text` y `softInk` (#87835C daba 3.6:1, debajo de AA). Sin cambios en la base; SCHEMA.md no cambia. 933 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Probarlo en el iPhone: perfil con video, con y sin horarios (`coach-prueba` tiene, casi todos los demás no), y en modo avión.
+- Los nombres completos de quienes reseñan igual viajan al teléfono (se acortan en la pantalla). Para cerrarlo del todo haría falta una vista o función que devuelva la reseña ya firmada. Es un cambio en la base, para decidir.
+
+## 2026-10-01 — Andre (Claude · la base exige el consentimiento para dato de bienestar)
+
+**Tocado:** `supabase/migrations/20261001010000_wellbeing_writes_require_consent.sql` (nueva, aplicada), `scripts/prueba-consentimiento-bienestar.sql` (nueva), `SCHEMA.md`
+
+**Resumen:**
+- 🔒 Andre: "dale con la migración". **Base de datos cambiada:** función `tiene_consentimiento_bienestar()` y las policies de INSERT/UPDATE de `mood_entries`, `journal_entries`, `gratitude_entries`, `user_quiz_answers`, `resource_events` y `resource_completions` exigen el consentimiento de datos sensibles. Ver y borrar lo propio sigue sin exigirlo. Hasta hoy el control era solo de la app. SCHEMA.md actualizado.
+- El control de permisos del entorno bloqueó que Claude corriera SQL en producción, incluso la prueba con rollback. **La prueba y la migración las corrió Andre** desde su Terminal; la prueba dio lo esperado (con permiso OK en las seis tablas; sin permiso 42501 en las seis, lectura sin error). Claude verificó después, solo lectura: las 19 policies, la función no ejecutable por `anon` y la migración registrada en `schema_migrations`.
+
+**Pendiente para la próxima sesión:**
+- 📱 En el iPhone: hacer un check-in con una cuenta que dio el permiso (tiene que guardar) y revocarlo desde el Perfil (el diario anterior se tiene que seguir viendo).
+- Si Claude tiene que volver a correr SQL en producción, hace falta que Andre lo habilite en los permisos; si no, el flujo es el de hoy: Claude prepara el archivo con su prueba y Andre lo corre.
+
+## 2026-10-01 — Andre (Claude · analítica sin dato de salud sin consentimiento)
+
+**Tocado:** `lib/analytics.ts`, `lib/resourceEvents.ts`, `screens/OnboardingScreen2.tsx`, `screens/OnboardingScreen4.tsx`, tests (`analytics`, `resourceCompletions`)
+
+**Resumen:**
+- Andre: "hagamos los cambios" (los dos pendientes de la sesión anterior). **Analítica:** nueva `anotarSensible`. Sin el consentimiento de datos sensibles, los eventos del onboarding salen sin el eje, la categoría ni la puerta, y los de recursos sin cuál recurso; llevan `detalle_omitido: true` y el embudo sigue contando los pasos. Antes del registro tampoco viajan, porque `enlazarConCuenta` ata ese recorrido a la cuenta después. 927 tests y TypeScript OK.
+- Después de que Andre commiteó el rediseño de Profesionales (`9b4f794e`), pasaron también a `anotarSensible` `conexiones_puerta_abierta` (qué tema abre en Profesionales) y `relacionado_abierto` (`app/coach-recurso.tsx`). Revisados los demás eventos: ninguno más lleva tema ni recurso del cliente.
+- **Control en la base: NO aplicado.** La migración que hace que las policies de `mood_entries`, `journal_entries`, `gratitude_entries`, `user_quiz_answers`, `resource_events` y `resource_completions` exijan el consentimiento para INSERT/UPDATE fue bloqueada por el control de permisos del entorno (la clasifica como despliegue a producción). Queda esperando que Andre la autorice. SCHEMA.md no cambia.
+
+**Pendiente para la próxima sesión:**
+- La migración de consentimiento en la base, con la autorización de Andre.
+
+## 2026-09-26 — Andre (Claude · auditoría de Codex, segunda tanda: consentimiento y comisión)
 
 **Tocado:** `lib/consent.ts`, `lib/consentRules.ts`, `lib/quizPendiente.ts`, `lib/resourceEvents.ts`, `lib/resourceCompletions.ts`, `hooks/useConsent.ts`, `hooks/useRecursoAbierto.ts`, `hooks/useRecommendedResource.ts`, `screens/QuizScreen.tsx`, `docs/politica-de-privacidad.md`, `docs/terminos-y-condiciones.md`, legales generados, tests, `docs/problemas-abiertos.md`
 

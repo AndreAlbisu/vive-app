@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { encuadreDesdeFlag } from '@/lib/credentialRules';
@@ -32,7 +33,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { logError, logWarn, esTopeDeIntentos, TEXTO_TOPE } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
 import { ensureMeetingRoom } from '@/lib/meetingRoom';
-import { observedTz, enArgentina } from '@/lib/time';
+import { observedTz, enArgentina, localEquivalentLabel } from '@/lib/time';
+import { CoachAvatar } from '@/components/CoachAvatar';
 import { DESCUENTO_REFERIDO_PCT } from '@/lib/referidos';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -83,7 +85,14 @@ export default function BookingScreen_Confirm() {
   const [internacionalDisponible, setInternacionalDisponible] = useState(false);
   const [aceptaPaypal, setAceptaPaypal] = useState(false);
   const [aceptaUsdt, setAceptaUsdt] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [priceUsd, setPriceUsd] = useState<number | null>(null);
+  // Garantía de primera sesión (T&C §9.3). Misma condición que el perfil
+  // (`ProfesionalScreen`): no la usó nunca y no tuvo sesiones con este
+  // profesional. `false` mientras no se sabe o si la consulta falla: ante la
+  // duda, no se promete (art. 8 Ley 24.240).
+  const [garantiaDisponible, setGarantiaDisponible] = useState(false);
+  const [coachRowIdGarantia, setCoachRowIdGarantia] = useState<string | null>(null);
   const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt' | 'paypal'>('mp');
   // Pago abierto FUERA de la app (app nativa de Mercado Pago, o el browser con
   // PayPal). Guarda la URL del checkout, no solo un booleano, para poder
@@ -130,9 +139,10 @@ export default function BookingScreen_Confirm() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('instant_booking, has_matricula, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session')
+        .select('id, instant_booking, has_matricula, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session, profiles(avatar_url)')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
+      setAvatarUrl((data as any)?.profiles?.avatar_url ?? null);
       setInstantBooking(!!data?.instant_booking);
       setHasMatricula(!!data?.has_matricula);
       // Los medios internacionales (USDT y PayPal) solo existen si el coach
@@ -159,8 +169,28 @@ export default function BookingScreen_Confirm() {
         const { data: tiene } = await supabase.rpc('tiene_descuento_referido', { p_user: user.id });
         setDescuentoRef(tiene === true);
       }
+      setCoachRowIdGarantia((data as any)?.id ?? null);
     })();
   }, [coachProfileIdParam]);
+
+  // Aparte del efecto de arriba porque depende de la sesión: si `user` todavía
+  // no estaba cuando corrió aquel, la garantía quedaba apagada para siempre.
+  useEffect(() => {
+    if (!user || !coachRowIdGarantia) return;
+    let vivo = true;
+    void Promise.all([
+      supabase.from('guarantee_claims').select('id')
+        .eq('user_id', user.id).in('status', ['pedida', 'aprobada']).limit(1),
+      supabase.from('bookings').select('id')
+        .eq('user_id', user.id).eq('coach_id', coachRowIdGarantia)
+        .in('status', ['confirmada', 'completada']).limit(1),
+    ]).then(([claims, sesiones]) => {
+      if (!vivo) return;
+      setGarantiaDisponible(!claims.error && !sesiones.error
+        && (claims.data ?? []).length === 0 && (sesiones.data ?? []).length === 0);
+    });
+    return () => { vivo = false; };
+  }, [user?.id, coachRowIdGarantia]);
 
   // Ver la declaración de `loadingLong` más arriba. El timer se limpia si
   // `loading` se apaga antes de los 3.5s (caso normal) y también al
@@ -890,6 +920,7 @@ export default function BookingScreen_Confirm() {
           specialty,
           date: dateStr,
           time,
+          ...(avatarUrl && { avatar: avatarUrl }),
           bookingId: booking.id,
           roomUrl,
           salaId,
@@ -940,9 +971,7 @@ export default function BookingScreen_Confirm() {
 
           {/* Coach */}
           <View style={s.coachRow}>
-            <View style={s.coachAvatar}>
-              <MaterialIcons name="person" size={34} color="rgba(135,131,92,0.80)" />
-            </View>
+            <CoachAvatar uri={avatarUrl} size={54} style={s.coachAvatar} />
             <View style={s.coachInfo}>
               <View style={s.coachNameRow}>
                 <Text style={s.coachName}>{coachName}</Text>
@@ -986,6 +1015,12 @@ export default function BookingScreen_Confirm() {
             <View style={s.detailText}>
               <Text style={s.detailLabel}>HORA</Text>
               <Text style={s.detailValue}>{time} hs (horario Argentina)</Text>
+              {/* Desde afuera, la cuenta la hacemos nosotros: el día es lo que
+                  más se corre ("07:00 del martes para vos"). */}
+              {(() => {
+                const local = localEquivalentLabel(dateStr, time);
+                return local ? <Text style={s.detailValueRef}>{`Son las ${local}`}</Text> : null;
+              })()}
             </View>
           </View>
 
@@ -1105,8 +1140,28 @@ export default function BookingScreen_Confirm() {
             que es lo que los T&C §8.2 ya describían bien. Si el coach no tiene MP
             conectado no hay checkout y no se cobra nada; el texto sigue siendo
             válido ahí (no promete un cobro, describe cuándo ocurre). */}
+        {/* 02/10/2026 (pedido de Andre): los tres avisos juntos en una tarjeta,
+            con el ícono a la altura del primer renglón y el texto más liviano.
+            Antes eran tres párrafos sueltos, oscuros, con el ícono centrado y
+            el texto pegado al borde derecho. El contenido no cambió. */}
+        <View style={s.avisos}>
+        {garantiaDisponible && (
+          <TouchableOpacity
+            style={s.noticeRow}
+            activeOpacity={0.7}
+            onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
+            accessibilityRole="link"
+            accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
+            <MaterialCommunityIcons name="cash-refund" size={17} color={ViveColors.accent} style={{ marginTop: 1 }} />
+            <Text style={s.noticeText}>
+              <Text style={s.noticeStrong}>Garantía de primera sesión.</Text>
+              {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
+              <Text style={s.noticeLink}>Ver condiciones</Text>
+            </Text>
+          </TouchableOpacity>
+        )}
         <View style={s.noticeRow}>
-          <MaterialIcons name="shield" size={15} color={ViveColors.accent} />
+          <MaterialIcons name="shield" size={16} color={ViveColors.accent} style={{ marginTop: 2 }} />
           <Text style={s.noticeText}>
             {/* Con USDT NO es "al instante": la transferencia la confirma el cron
                 cuando la ve en la red. Prometer inmediatez acá sería el mismo
@@ -1131,7 +1186,7 @@ export default function BookingScreen_Confirm() {
             se puede, lo que no hay es reembolso. Era además lo que hacía que §9.1
             contradijera al derecho de revocación de §9.4. */}
         <View style={s.noticeRow}>
-          <MaterialIcons name="event-busy" size={15} color={ViveColors.accent} />
+          <MaterialIcons name="event-busy" size={16} color={ViveColors.accent} style={{ marginTop: 2 }} />
           <Text style={s.noticeText}>
             Podés cancelar cuando quieras. Hasta 24hs antes te devolvemos todo;
             después de esa hora la sesión se cancela igual pero sin reembolso
@@ -1144,11 +1199,12 @@ export default function BookingScreen_Confirm() {
             advertencia. Van las dos mitades —la que protege al cliente y la que
             protege al profesional—; si cambian los umbrales (10 / 20), cambia acá. */}
         <View style={s.noticeRow}>
-          <MaterialIcons name="schedule" size={15} color={ViveColors.accent} />
+          <MaterialIcons name="schedule" size={16} color={ViveColors.accent} style={{ marginTop: 2 }} />
           <Text style={s.noticeText}>
             Si tu profesional no llega en los primeros 10 minutos, no pagás la sesión.
             Si llegás más de 20 minutos tarde, se cobra igual
           </Text>
+        </View>
         </View>
 
         {/* Error */}
@@ -1159,7 +1215,9 @@ export default function BookingScreen_Confirm() {
           </View>
         )}
 
-        {/* Pago */}
+        {/* Pago. Solo cuando NO hay selector de medio abajo: con selector,
+            "se procesa a través de Mercado Pago" repetía la opción marcada. */}
+        {!internacionalDisponible && (
         <View style={s.paymentSection}>
           <View style={s.paymentInfoRow}>
             <MaterialIcons name="account-balance-wallet" size={18} color="#009EE3" />
@@ -1174,6 +1232,7 @@ export default function BookingScreen_Confirm() {
             </Text>
           </View>
         </View>
+        )}
 
       </ScrollView>
 
@@ -1241,11 +1300,17 @@ export default function BookingScreen_Confirm() {
                 <Text style={s.btnText}>Reservando…</Text>
               </View>
             ) : (
-              <Text style={s.btnText}>Confirmar reserva</Text>
+              // Siempre hay cobro en este paso (sin checkout no se reserva):
+              // "Confirmar reserva" escondía que el botón paga.
+              <Text style={s.btnText}>Pagar y reservar</Text>
             )}
           </ScaleCard>
 
-          {/* Acá iba "Garantía de primera sesión — si no quedás conforme, te
+          {/* ↩️ 02/10/2026: la garantía VOLVIÓ, arriba en la tarjeta de avisos,
+              con la condición del perfil (`garantiaDisponible`). Lo de abajo es
+              por qué se había sacado; hoy existen T&C §9.3 y el pedido de
+              garantía (`guarantee_claims`).
+              Acá iba "Garantía de primera sesión — si no quedás conforme, te
               devolvemos el dinero". Se sacó el 10/08/2026: es una promesa
               incondicional en el punto de venta (art. 8 Ley 24.240: las
               precisiones publicitarias obligan e integran el contrato) contra la
@@ -1414,15 +1479,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 18,
   },
-  coachAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: 'rgba(255,248,240,0.62)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
+  coachAvatar: { marginRight: 14 },
   coachInfo: { flex: 1 },
   coachNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   encuadreRow: { marginTop: 6 },
@@ -1495,17 +1552,27 @@ const s = StyleSheet.create({
     lineHeight: 19,
   },
 
+  avisos: {
+    backgroundColor: 'rgba(86,94,50,0.06)',
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    padding: 14,
+    gap: 12,
+    marginBottom: 16,
+  },
   noticeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 4,
-    marginBottom: 14,
+    alignItems: 'flex-start',
+    gap: 10,
   },
+  noticeStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
+  noticeLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
   noticeText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: ViveColors.accent,
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: ViveColors.softInk,
   },
 
   messageSection: {

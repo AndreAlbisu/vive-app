@@ -16,6 +16,11 @@
 //   · SE ANONIMIZA lo que pertenece también a un tercero o hay que conservar:
 //     reservas (fiscal), reseñas (reputación del coach) y mensajes (la
 //     conversación también es del otro). Pasan a mostrar "Usuario eliminado".
+//     De la reserva queda solo lo de la transacción: lo que la persona le
+//     escribió al profesional al reservar y el tema por el que llegó se vacían.
+//   · LAS NOTAS DE SESIÓN sobre la persona SE BORRAN (Andre, 03/10/2026; antes
+//     se conservaban). La política promete suprimir el contenido de bienestar y
+//     una nota sobre alguien que pidió la baja es exactamente eso.
 //   · La fila de `profiles` NO se borra: queda como LÁPIDA vaciada de datos
 //     personales. Además hoy no podría borrarse — reviews/messages/salas/
 //     journal_entries/saved_resources la referencian con NO ACTION.
@@ -50,6 +55,17 @@ function hoyEnArgentina(): string {
   return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10)
 }
 
+/**
+ * ¿La sesión todavía no empezó? `scheduled_date` y `scheduled_time` están en
+ * horario argentino, sin zona ("9:00" y "09:00" son la misma hora). Si la hora
+ * no se puede leer se trata como futura: se cancela, que es lo que hacía antes.
+ */
+function todaviaNoEmpezo(fecha: string, hora: string, ahora = Date.now()): boolean {
+  const [h, m] = String(hora ?? '').split(':')
+  const inicio = Date.parse(`${fecha}T${(h ?? '').padStart(2, '0')}:${(m ?? '00').padStart(2, '0')}:00-03:00`)
+  return !Number.isFinite(inicio) || inicio > ahora
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
@@ -70,14 +86,18 @@ const PERSONAL_TABLES: { table: string; column: string }[] = [
   { table: 'resource_feedback',  column: 'user_id' },
   { table: 'favorite_coaches',   column: 'user_id' },
   { table: 'notifications',      column: 'recipient_id' },
+  // La constancia de identidad lleva el nombre verificado (01/10/2026).
+  { table: 'identity_verifications', column: 'profile_id' },
+  // Qué recursos abrió: dato de bienestar según nuestro propio consentimiento
+  // (Política §3). Cuelga de `profiles`, que sobrevive como lápida, así que el
+  // CASCADE nunca se dispara.
+  { table: 'resource_events',    column: 'user_id' },
+  // Lo que un profesional anotó sobre esta persona, privado o compartido.
+  { table: 'session_notes',      column: 'user_id' },
 ]
 // NO están acá a propósito, y conviene saber por qué:
 //   · bookings / reviews / messages / salas → se conservan anonimizadas.
-//   · session_notes → son el registro del profesional sobre sus sesiones, mismo
-//     criterio que los mensajes (decisión de Andre). ⚠️ A confirmar con abogado:
-//     contienen información sensible sobre una persona que pidió su baja, y bajo
-//     la Ley 25.326 podría corresponder suprimirlas. Del otro lado, un/a
-//     psicólogo/a puede tener obligación profesional de conservar registros.
+//   · reports / session_issues → quedan para moderación, atados a la lápida.
 //   · analytics_events / user_events → quedan sin identidad (SET NULL / cascade).
 
 serve(async (req) => {
@@ -134,19 +154,26 @@ serve(async (req) => {
 
     // ── 2. Cancelar sesiones futuras del usuario (dispara reembolso) ─────────
     // El trigger trg_mark_refund_on_cancel pasa a 'reembolso_pendiente' los
-    // pagos aprobados, y el cron mp-process-refunds los procesa. `cancelled_late`
-    // NO se marca a propósito: una baja de cuenta no es una cancelación tardía,
-    // el usuario no debería perder el reembolso por darse de baja.
+    // pagos aprobados, y el cron mp-process-refunds los procesa. La tardanza la
+    // calcula ese trigger, no esta función: con menos de 24 h para la sesión,
+    // la baja NO reembolsa, igual que cualquier cancelación del cliente.
+    //
+    // 🔴 Solo las que TODAVÍA NO EMPEZARON (03/10/2026). Antes entraban todas
+    // las de hoy: quien hacía su sesión y se daba de baja antes de que el cron
+    // la marcara completada la dejaba 'cancelada', y el profesional desaparecía
+    // de la lista de pagos (PayPal/USDT) por una sesión que sí dio. Una sesión
+    // ya empezada queda como está y la cierra `complete_confirmed_sessions`.
     const today = hoyEnArgentina()
-    const { data: futuras, error: futurasErr } = await admin
+    const { data: deHoyEnAdelante, error: futurasErr } = await admin
       .from('bookings')
-      .select('id')
+      .select('id, scheduled_date, scheduled_time')
       .eq('user_id', userId)
       .in('status', ['pendiente', 'confirmada'])
       .gte('scheduled_date', today)
     if (futurasErr) return json({ error: 'No se pudieron consultar las sesiones futuras', detail: futurasErr.message }, 500)
+    const futuras = (deHoyEnAdelante ?? []).filter(b => todaviaNoEmpezo(b.scheduled_date, b.scheduled_time))
 
-    if (futuras?.length) {
+    if (futuras.length) {
       const { error } = await admin
         .from('bookings')
         .update({ status: 'cancelada', cancelled_by: 'usuario' })
@@ -154,6 +181,15 @@ serve(async (req) => {
       if (error) return json({ error: 'No se pudieron cancelar las sesiones futuras', detail: error.message }, 500)
       steps.push(`${futuras.length} sesión(es) futura(s) cancelada(s)`)
     }
+
+    // De la reserva se conserva la transacción (Política §10), no lo que la
+    // persona contó: el mensaje al profesional y el tema por el que llegó
+    // ("Ansiedad y estrés") no son datos fiscales.
+    const { error: scrubBookingsErr } = await admin
+      .from('bookings')
+      .update({ user_message: null, tema_origen: null })
+      .eq('user_id', userId)
+    if (scrubBookingsErr) return json({ error: 'No se pudo vaciar el texto de las reservas', detail: scrubBookingsErr.message }, 500)
 
     // ── 3. Expediente profesional y archivos ────────────────────────────────
     // El documento es privado, pero su vista textual verificada es pública;
@@ -203,10 +239,63 @@ serve(async (req) => {
         has_matricula: false,
         price_per_session: null,
         price_usd: null,
+        pais_atencion: null,
+        provincia_atencion: null,
+        respuesta_riesgo: null,
         slug: `deleted-${coachRow.id}`,
       }).eq('id', coachRow.id)
       if (scrubErr) return json({ error: 'No se pudo anonimizar el perfil profesional', detail: scrubErr.message }, 500)
+
+      // Agenda y enlace de calendario: la fila de `coaches` sobrevive, así que
+      // su CASCADE no corre. El token del calendario seguiría respondiendo.
+      for (const table of ['coach_calendar_feeds', 'coach_availability', 'coach_weekly_pattern']) {
+        const { error } = await admin.from(table).delete().eq('coach_id', coachRow.id)
+        if (error) return json({ error: `No se pudo borrar ${table}`, detail: error.message }, 500)
+      }
+
+      // Notas privadas que escribió: nadie más las puede leer. Las compartidas
+      // se quedan, porque también son de la persona que las recibió.
+      const { error: notesErr } = await admin.from('session_notes')
+        .delete().eq('coach_id', userId).eq('shared', false)
+      if (notesErr) return json({ error: 'No se pudieron borrar las notas privadas', detail: notesErr.message }, 500)
       steps.push('expediente profesional y archivos borrados')
+
+      // ── 3b. Datos de cobro ────────────────────────────────────────────────
+      // CBU, alias, PayPal, billetera y la conexión con Mercado Pago. Se borran
+      // SOLO si no queda plata en movimiento: `mp-process-refunds` reembolsa con
+      // el token del profesional y el panel le paga lo adeudado con sus datos
+      // de cobro. Borrarlos antes dejaría un reintegro o un pago sin camino.
+      const hace3Dias = new Date(Date.now() - (3 * 24 + 3) * 60 * 60 * 1000).toISOString().slice(0, 10)
+      const abiertos = await Promise.all([
+        // cobros o reintegros en curso
+        admin.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachRow.id).in('payment_status', ['pendiente', 'reembolso_pendiente']),
+        // sesiones cobradas todavía dentro de la ventana de la garantía (48 h)
+        admin.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachRow.id).eq('payment_status', 'aprobado').gte('scheduled_date', hace3Dias),
+        // sesiones cobradas por PayPal o USDT que Vita todavía no le transfirió
+        admin.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachRow.id).eq('status', 'completada').eq('payment_status', 'aprobado')
+          .in('payment_provider', ['paypal', 'usdt']).is('paid_out_at', null),
+        // reclamos de garantía sin resolver
+        admin.from('guarantee_claims').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachRow.id).is('resolved_at', null),
+      ])
+      const fallo = abiertos.find(r => r.error)
+      if (fallo?.error) return json({ error: 'No se pudo comprobar si quedan pagos abiertos', detail: fallo.error.message }, 500)
+
+      if (abiertos.every(r => (r.count ?? 0) === 0)) {
+        for (const table of ['coach_payout_accounts', 'coach_mp_accounts']) {
+          const { error } = await admin.from(table).delete().eq('coach_id', coachRow.id)
+          if (error) return json({ error: `No se pudo borrar ${table}`, detail: error.message }, 500)
+        }
+        const { error: mpFlagErr } = await admin.from('coaches').update({ mp_connected: false }).eq('id', coachRow.id)
+        if (mpFlagErr) return json({ error: 'No se pudo desconectar Mercado Pago', detail: mpFlagErr.message }, 500)
+        steps.push('datos de cobro borrados')
+      } else {
+        // ⚠️ Nada los borra después: hoy es una limpieza manual (ver CHANGELOG 03/10).
+        steps.push('datos de cobro conservados: quedan pagos o reintegros abiertos')
+      }
     }
 
     // ── 4. Borrar contenido personal ────────────────────────────────────────
@@ -221,6 +310,13 @@ serve(async (req) => {
     // ── 5. Avatar del storage ───────────────────────────────────────────────
     const { error: storageErr } = await admin.storage.from('avatars').remove([`${userId}/avatar.jpg`])
     if (storageErr) return json({ error: 'No se pudo borrar el avatar', detail: storageErr.message }, 500)
+
+    // Fotos de la verificación de identidad (DNI y selfie). Para cualquier
+    // cuenta y no solo coaches: una postulación abandonada antes de enviarse
+    // también se borra por acá (`useCerrarSesionAlSalir`) y pudo haberlas subido.
+    const { error: identityErr } = await admin.storage.from('identity-docs')
+      .remove(['dni-frente', 'dni-dorso', 'selfie'].map(f => `${userId}/${f}.jpg`))
+    if (identityErr) return json({ error: 'No se pudieron borrar las fotos de identidad', detail: identityErr.message }, 500)
 
     // ── 6. Lápida en profiles ───────────────────────────────────────────────
     // Reservas, reseñas, mensajes y salas siguen apuntando acá; por eso la fila

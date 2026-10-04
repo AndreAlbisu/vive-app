@@ -28,6 +28,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { topicOptionsFrom } from '@/constants/conexionesDoors';
 import { supabase } from '@/lib/supabase';
 import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { lineaProximoLugar } from '@/lib/perfilProfesional';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { normalizarTexto, tipoProfesional, etiquetaProfesionalPublica } from '@/lib/tipoProfesional';
 
@@ -93,6 +94,18 @@ const shadow = Platform.select({
 });
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
+/** Para ordenar: el turno más cercano primero; sin turno, al final. Sin
+ *  `localeCompare`: en la comparación por idioma un símbolo queda antes que
+ *  los números, y los que no tienen turno subían arriba. */
+function porTurno(a: CachedCoach, b: CachedCoach): number {
+  const ka = a.proximoTurno ? `${a.proximoTurno.fecha} ${a.proximoTurno.hora.padStart(5, '0')}` : null;
+  const kb = b.proximoTurno ? `${b.proximoTurno.fecha} ${b.proximoTurno.hora.padStart(5, '0')}` : null;
+  if (ka === kb) return 0;
+  if (ka === null) return 1;
+  if (kb === null) return -1;
+  return ka < kb ? -1 : 1;
+}
+
 export default function SearchScreen3() {
   const router = useRouter();
   const { topic, label, query } = useLocalSearchParams<{ topic?: string; label?: string; query?: string }>();
@@ -144,6 +157,13 @@ export default function SearchScreen3() {
     }
 
     setLoadingCoaches(true);
+    // Los turnos van aparte y en paralelo, como en `coachesCache`; si fallan,
+    // la lista sale igual, sin ordenar por turno.
+    const turnos = supabase.rpc('proximos_turnos', { p_dias: 7 }).then(({ data }) => {
+      const m: Record<string, { fecha: string; hora: string }> = {};
+      ((data ?? []) as any[]).forEach(r => { m[r.coach_id] = { fecha: r.fecha, hora: r.hora }; });
+      return m;
+    }, () => ({} as Record<string, { fecha: string; hora: string }>));
     supabase
       .from('coaches')
       .select('id, specialty, bio, price_per_session, nationality, has_matricula, profesion, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
@@ -158,7 +178,8 @@ export default function SearchScreen3() {
       .or(`suspendido_hasta.is.null,suspendido_hasta.lt.${new Date().toISOString()}`)
       .order('created_at', { ascending: true })
       .limit(200)
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
+        const turnoPorCoach = await turnos;
         if (cancelled) return;
         if (error) console.error('[Search3] coaches fetch:', error.message);
         const all: CachedCoach[] = (data ?? []).map((c: any) => {
@@ -181,6 +202,8 @@ export default function SearchScreen3() {
             // sin precio en dólares el checkout rechaza estos rieles.
             acceptsPaypal: !!c.accepts_paypal && c.price_usd != null,
             acceptsUsdt: !!c.accepts_usdt && c.price_usd != null,
+            proximoTurno: turnoPorCoach[c.id] ?? null,
+            hasSlotThisWeek: !!turnoPorCoach[c.id],
           };
         });
         applyAndSet(all);
@@ -260,6 +283,9 @@ export default function SearchScreen3() {
     closeSheet();
   }
 
+  // 02/10/2026: primero quien tiene un turno libre en los próximos 7 días, el
+  // más cercano arriba; después el resto en el orden de siempre. Ordena, no
+  // filtra. (`sort` es estable: entre los que no tienen turno no cambia nada.)
   const results = visibleCoaches.filter(p => {
     if (filters.topics.length > 0) {
       const wanted = filters.topics.map(normalize);
@@ -275,7 +301,7 @@ export default function SearchScreen3() {
     if (filters.payment === 'paypal' && !p.acceptsPaypal) return false;
     if (filters.payment === 'usdt' && !p.acceptsUsdt) return false;
     return true;
-  });
+  }).sort(porTurno);
 
   // Opciones del filtro derivadas de los coaches que existen, no de la
   // taxonomía. El porqué —y por qué se calcula sobre el universo completo y no
@@ -427,6 +453,14 @@ export default function SearchScreen3() {
                     YES`, sin default, y el alta de coach no exige precio. O sea
                     que el guard es NECESARIO y no decorativo: sacarlo deja un
                     crash esperando al primer coach sin precio cargado. */}
+                {!!p.proximoTurno && (
+                  <View style={s.turnoRow}>
+                    <MaterialIcons name="schedule" size={13} color="#5F7A44" />
+                    <Text style={s.turnoText} numberOfLines={1}>
+                      {lineaProximoLugar(p.proximoTurno.fecha, p.proximoTurno.hora).texto}
+                    </Text>
+                  </View>
+                )}
                 <Text style={s.cardPrice}>
                   {p.priceFrom != null
                     ? <>Desde ${p.priceFrom.toLocaleString('es-AR')}<Text style={s.cardPriceUnit}> · por sesión</Text></>
@@ -764,6 +798,8 @@ const s = StyleSheet.create({
   newPillText: { fontFamily: ViveFonts.semibold, fontSize: 10.5, color: ViveColors.primary },
   cardSpecialty: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: ViveColors.primary, flexShrink: 1 },
   specialtyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  turnoRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  turnoText: { fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST, flexShrink: 1 },
   cardPrice: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST, marginTop: 2 },
   cardPriceUnit: { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 1 },

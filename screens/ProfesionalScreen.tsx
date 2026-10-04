@@ -20,22 +20,34 @@ import {
   StyleSheet,
   Platform,
   StatusBar,
-  Image,
   Modal,
   ActivityIndicator,
+  Alert,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
+import Animated, {
+  FadeIn, FadeOut, Easing, useReducedMotion, useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring,
+} from 'react-native-reanimated';
+import { ScaleCard } from '@/components/ScaleCard';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { opcionesGuardadas, etiquetaEstilo, etiquetasEnfoques, etiquetaGuia, etiquetasFocos } from '@/lib/enfoque';
-import { PaymentBadges } from '@/components/PaymentBadges';
+import { opcionesGuardadas } from '@/lib/enfoque';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
+import { esPerfilEjemplo, PERFIL_EJEMPLO, CREDENCIALES_EJEMPLO, RESENAS_EJEMPLO, AVISO_EJEMPLO } from '@/lib/perfilEjemplo';
+import {
+  firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad,
+  duracionUnica, lineaSesion, lineaProximoLugar, motivoSinReserva,
+} from '@/lib/perfilProfesional';
+import { enArgentina, todayInAr } from '@/lib/time';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 // 🔴 Sin datos inventados. Esto arrancaba con 'Laura Méndez', 'Coach de vida' y
@@ -50,9 +62,8 @@ import { estaSuspendido } from '@/lib/coachVisibility';
 const DEFAULT_PROFESIONAL = {
   name: '',
   specialty: '',
-  age: '',
   nationality: '',
-  gender: '',
+  genero: null as string | null,
   topics: [] as string[],
   estilo: null as string | null,
   enfoques: [] as string[],
@@ -94,6 +105,13 @@ const RESOURCE_TYPE_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> =
   gratitud: 'favorite-border',
 };
 
+// Un solo dorado para las estrellas (eran dos: #E8C547 en las reseñas y
+// #C99A3F en la portada). Queda el más oscuro, que se ve sobre el crema.
+// Líneas de la bio antes de "Leer más": un párrafo corto, no media pantalla.
+const BIO_LINEAS = 4;
+
+const DORADO = '#C99A3F';
+
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
@@ -103,20 +121,26 @@ function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
           key={i}
           name={i <= Math.round(rating) ? 'star' : 'star-border'}
           size={size}
-          color="#E8C547"
+          color={DORADO}
         />
       ))}
     </View>
   );
 }
 
-function ReviewAvatar({ name }: { name: string }) {
-  const initial = name.charAt(0).toUpperCase();
-  return (
-    <View style={s.reviewAvatar}>
-      <Text style={s.reviewAvatarText}>{initial}</Text>
-    </View>
-  );
+// Movimiento (skill animate-expo, 02/10/2026). Lo que se abre aparece con un
+// fundido corto en vez de saltar; el corazón hace un "pop" solo al guardar.
+// Las vibraciones van una por acción y siempre junto a un cambio visible.
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const APARECE = FadeIn.duration(180).easing(EASE_OUT);
+const DESAPARECE = FadeOut.duration(120);
+
+function vibrar(fuerte: boolean) {
+  if (Platform.OS !== 'ios') return;
+  (fuerte
+    ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    : Haptics.selectionAsync()
+  ).catch(() => {});
 }
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
@@ -136,13 +160,38 @@ export default function ProfesionalScreen() {
     tema?: string;
   }>();
   const profileId = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
+  // Perfil de ejemplo (`lib/perfilEjemplo.ts`): datos fijos, sin consultas y
+  // sin acciones que escriban en la base.
+  const esEjemplo = esPerfilEjemplo(profileId);
+  const avisarEjemplo = () => Alert.alert(AVISO_EJEMPLO.titulo, AVISO_EJEMPLO.texto);
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
   const saved = !!profileId && favoriteIds.has(profileId);
+  const reducirMovimiento = useReducedMotion();
+  const corazon = useSharedValue(1);
+  const corazonStyle = useAnimatedStyle(() => ({ transform: [{ scale: corazon.get() }] }));
   const [fetchedData, setFetchedData] = useState<Partial<typeof DEFAULT_PROFESIONAL> | null>(null);
-  const [profileState, setProfileState] = useState<{ id: string; status: 'available' | 'unavailable' } | null>(null);
+  // 'error' es "no se pudo preguntar" (sin señal, timeout), distinto de
+  // 'unavailable', que es "el perfil no está". Ver `motivoSinPerfil`.
+  const [profileState, setProfileState] = useState<{ id: string; status: 'available' | 'unavailable' | 'error' } | null>(null);
+  const [intento, setIntento] = useState(0);
+  const [todasLasResenas, setTodasLasResenas] = useState(false);
+  // La bio entera ocupaba casi una pantalla y corría el video y los temas
+  // hacia abajo: se muestran las primeras líneas y "Leer más" abre el resto.
+  // `bioLineas` sale de medir la bio completa en una copia invisible, así el
+  // "Leer más" aparece solo si de verdad hay algo cortado.
+  const [bioAbierta, setBioAbierta] = useState(false);
+  const [bioLineas, setBioLineas] = useState(0);
+  // `coaches.id` (no `profile_id`): es la clave de `bookings.coach_id`.
+  const [coachRowId, setCoachRowId] = useState<string | null>(null);
+  // undefined = todavía no se sabe; mientras tanto no se muestra.
+  const [garantiaDisponible, setGarantiaDisponible] = useState<boolean | undefined>(undefined);
   const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
+  // Terminó la consulta de reseñas, haya salido bien o mal. `reviewsLoaded`
+  // queda en false si falló (ver abajo); esto solo sirve para no mostrar el
+  // perfil hasta saberlo, y que el renglón de la portada no aparezca después.
+  const [resenasConsultadas, setResenasConsultadas] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -155,13 +204,19 @@ export default function ProfesionalScreen() {
   const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
   const [encuadreOpen, setEncuadreOpen] = useState(false);
   const [fotoAmpliada, setFotoAmpliada] = useState(false);
+  const [enfoquesAbiertos, setEnfoquesAbiertos] = useState<string[]>([]);
+  // Lo práctico para decidir, debajo de la portada. `undefined` = todavía no
+  // se sabe; el renglón ya está y solo cambia el texto, así no salta nada.
+  const [coachSlug, setCoachSlug] = useState<string | null>(null);
+  const [duracion, setDuracion] = useState<number | null | undefined>(undefined);
+  const [proximo, setProximo] = useState<{ fecha: string; hora: string } | 'ninguno' | 'error' | undefined>(undefined);
 
   // Acá alcanza con el cache propio (a diferencia de la Sala, donde hacen falta
   // las dos direcciones): a este perfil se llega desde el catálogo, y el
   // catálogo ya filtra a los que bloqueé. Lo que resta es que el perfil sepa
   // mostrar "Desbloquear" si se llegó por un link viejo o un favorito.
   useEffect(() => {
-    if (!user || !profileId) return;
+    if (!user || !profileId || esPerfilEjemplo(profileId)) return;
     let mounted = true;
     const sync = () => { if (mounted) setBlocked(isBlocked(profileId)); };
     void loadBlockedIds(user.id).then(sync);
@@ -174,6 +229,9 @@ export default function ProfesionalScreen() {
   // `file_path` —el path del documento— porque RLS filtra filas, no columnas.
   // El documento en sí no llega nunca hasta acá; lo que se muestra es el dato.
   const [credenciales, setCredenciales] = useState<PublicCredential[]>([]);
+  // false si no se pudieron leer: ahí no se dice ni "matrícula verificada" ni
+  // "acompañamiento", porque cualquiera de las dos podría ser falsa.
+  const [credencialesSabidas, setCredencialesSabidas] = useState(true);
   // `coach_credentials_public` ya filtra por `verificada`, así que basta con que
   // exista una de tipo matrícula: la vista no devuelve pendientes ni rechazadas.
   const encuadre = encuadreDeSesion(credenciales);
@@ -181,25 +239,35 @@ export default function ProfesionalScreen() {
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
     if (!pid) return;
+    if (esPerfilEjemplo(pid)) {
+      const { profesion, ...datos } = PERFIL_EJEMPLO;
+      setProfileState({ id: pid, status: 'available' });
+      setCredenciales(CREDENCIALES_EJEMPLO);
+      setFetchedData({ ...datos, specialty: etiquetaProfesionalPublica({ profesion }, datos.genero) });
+      return;
+    }
     supabase
       .from('coaches')
-      .select('id, verified, availability_status, specialty, profesion, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url)')
+      .select('id, slug, verified, availability_status, specialty, profesion, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url, gender)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
+        if (error && motivoSinPerfil(error) === 'error_red') {
+          setProfileState({ id: pid, status: 'error' });
+          return;
+        }
         if (error || !data || !(data as any).verified || (data as any).availability_status !== 'activo') {
           setProfileState({ id: pid, status: 'unavailable' });
           return;
         }
-        setProfileState({ id: pid, status: 'available' });
+        setCoachRowId((data as any).id);
+        setCoachSlug((data as any).slug ?? null);
         setNoDisponible(estaSuspendido({ suspendidoHasta: (data as any).suspendido_hasta ?? null }));
-        // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
-        // apunta al PK de coaches, igual que `bookings.coach_id`.
-        void listPublicCredentials((data as any).id).then(setCredenciales);
         setFetchedData({
           name: (data as any).profiles.name,
-          specialty: etiquetaProfesionalPublica(data as any),
+          specialty: etiquetaProfesionalPublica(data as any, (data as any).profiles.gender),
           nationality: (data as any).nationality ?? DEFAULT_PROFESIONAL.nationality,
+          genero: (data as any).profiles.gender ?? null,
           priceFrom: (data as any).price_per_session,
           video_url: (data as any).video_url ?? null,
           avatar_url: (data as any).profiles.avatar_url ?? null,
@@ -230,28 +298,105 @@ export default function ProfesionalScreen() {
           acceptsUsdt: !!(data as any).accepts_usdt && (data as any).price_usd != null,
         });
 
-        supabase
-          .from('coach_topics')
-          .select('topic')
-          .eq('coach_id', (data as any).id)
-          .then(({ data: topicRows }) => {
-            setFetchedData(prev => ({ ...prev, topics: (topicRows ?? []).map(t => t.topic as string) }));
-          });
+        // 01/10/2026 (revisión de UX): credenciales y temas llegaban cada uno
+        // por su lado DESPUÉS de mostrar el perfil, y la etiqueta de matrícula,
+        // los temas y Formación aparecían de a uno empujando lo que se estaba
+        // leyendo. Ahora el perfil se muestra cuando están las dos. Ninguna
+        // traba: las dos terminan en una lista vacía si fallan.
+        // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
+        // apunta al PK de coaches, igual que `bookings.coach_id`.
+        void Promise.all([
+          listPublicCredentials((data as any).id),
+          supabase.from('coach_topics').select('topic').eq('coach_id', (data as any).id)
+            .then(({ data: topicRows }) => (topicRows ?? []).map(t => t.topic as string)),
+        ]).then(([creds, topics]) => {
+          setCredenciales(creds ?? []);
+          setCredencialesSabidas(creds !== null);
+          setFetchedData(prev => ({ ...prev, topics }));
+          setProfileState({ id: pid, status: 'available' });
+        });
       });
-  }, [params.profileId]);
+  }, [params.profileId, intento]);
+
+  // ── Duración y próximo horario libre ────────────────────────────────────
+  // Antes había que tocar Reservar para saber si el profesional tenía lugar, y
+  // la duración no aparecía en ningún lado antes de pagar. El horario sale de
+  // `slots_libres`, la misma función que usa la página pública `/c`: ya
+  // descuenta los turnos reservados sin que la app tenga que leer reservas
+  // ajenas, y cuenta "hoy" en hora argentina.
+  useEffect(() => {
+    if (esPerfilEjemplo(profileId)) {
+      setDuracion(50);
+      setProximo({ fecha: todayInAr(Date.now() + 86_400_000), hora: '18:00' });
+      return;
+    }
+    if (!coachRowId) return;
+    let vivo = true;
+    void supabase.from('coach_weekly_pattern').select('slot_duration_minutes').eq('coach_id', coachRowId)
+      .then(({ data, error }) => {
+        if (!vivo) return;
+        setDuracion(error ? null : duracionUnica((data ?? []).map(r => (r as any).slot_duration_minutes)));
+      });
+    if (!coachSlug) { setProximo('error'); return () => { vivo = false; }; }
+    void supabase.rpc('slots_libres', { p_slug: coachSlug, p_dias: 21 })
+      .then(({ data, error }) => {
+        if (!vivo) return;
+        if (error) { setProximo('error'); return; }
+        const primero = (data as { fecha: string; hora: string }[] | null)?.[0];
+        setProximo(primero ? { fecha: primero.fecha, hora: primero.hora } : 'ninguno');
+      });
+    return () => { vivo = false; };
+  }, [coachRowId, coachSlug, profileId, intento]);
+
+  // ── Garantía de primera sesión (T&C §9.3) ──────────────────────────────
+  // Se muestra solo a quien todavía la tiene: vale una vez por persona en toda
+  // la app y para la primera sesión con cada profesional. Mostrársela a quien
+  // ya la usó sería una promesa en el punto de venta que no se cumple (art. 8
+  // Ley 24.240: lo que se anuncia integra el contrato). Por eso se la había
+  // sacado del checkout en agosto, cuando todavía no existía el mecanismo.
+  // Sin sesión iniciada no hay historia: la tiene. Si la consulta falla, no se
+  // muestra: ante la duda, no prometer.
+  useEffect(() => {
+    if (!user || esPerfilEjemplo(profileId)) { setGarantiaDisponible(true); return; }
+    if (!coachRowId) return;
+    let vivo = true;
+    void Promise.all([
+      supabase.from('guarantee_claims').select('id')
+        .eq('user_id', user.id).in('status', ['pedida', 'aprobada']).limit(1),
+      supabase.from('bookings').select('id')
+        .eq('user_id', user.id).eq('coach_id', coachRowId)
+        .in('status', ['confirmada', 'completada']).limit(1),
+    ]).then(([claims, sesiones]) => {
+      if (!vivo) return;
+      if (claims.error || sesiones.error) { setGarantiaDisponible(false); return; }
+      setGarantiaDisponible((claims.data ?? []).length === 0 && (sesiones.data ?? []).length === 0);
+    });
+    return () => { vivo = false; };
+  }, [user, coachRowId, profileId]);
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
     if (!pid) return;
+    if (esPerfilEjemplo(pid)) {
+      const avg = RESENAS_EJEMPLO.reduce((a, r) => a + r.rating, 0) / RESENAS_EJEMPLO.length;
+      setLiveAvgRating(Math.round(avg * 10) / 10);
+      setLiveReviews(RESENAS_EJEMPLO);
+      setReviewsLoaded(true);
+      setResenasConsultadas(true);
+      return;
+    }
 
     async function loadReviews() {
-      const { data: reviewRows } = await supabase
+      const { data: reviewRows, error: reviewsError } = await supabase
         .from('reviews')
         .select('rating, comment, reviewer_id')
         .eq('reviewed_id', pid!)
         .eq('is_private', false)
         .order('created_at', { ascending: false });
 
+      // Si la consulta falló no sabemos si hay reseñas: no se marca como cargado,
+      // así no aparece "Nuevo en Vita" sobre alguien que tiene veinte.
+      if (reviewsError) return;
       if (!reviewRows || reviewRows.length === 0) {
         setReviewsLoaded(true);
         return;
@@ -264,24 +409,24 @@ export default function ProfesionalScreen() {
         .in('id', reviewerIds);
 
       const nameMap: Record<string, string> = {};
-      profileRows?.forEach(p => { nameMap[p.id] = p.name ?? 'Usuario'; });
+      profileRows?.forEach(p => { if (p.name) nameMap[p.id] = p.name; });
 
       const avg = reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length;
       setLiveAvgRating(Math.round(avg * 10) / 10);
       setLiveReviews(reviewRows.map(r => ({
         rating: r.rating,
         comment: r.comment,
-        reviewerName: nameMap[r.reviewer_id] ?? 'Usuario',
+        reviewerName: firmaDeResena(nameMap[r.reviewer_id]),
       })));
       setReviewsLoaded(true);
     }
 
-    loadReviews();
-  }, [params.profileId]);
+    void loadReviews().finally(() => setResenasConsultadas(true));
+  }, [params.profileId, intento]);
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
-    if (!pid) return;
+    if (!pid || esPerfilEjemplo(pid)) return;
 
     supabase
       .from('resources')
@@ -300,37 +445,65 @@ export default function ProfesionalScreen() {
     ...(params.priceFrom && { priceFrom: parseInt(params.priceFrom, 10) }),
     ...fetchedData,
   };
+  const { width } = useWindowDimensions();
+  const photoSize = Math.min(180, Math.max(120, width - 80));
+  const paymentMethods = [
+    prof.acceptsMp && 'Mercado Pago',
+    prof.acceptsPaypal && 'PayPal',
+    prof.acceptsUsdt && 'USDT',
+  ].filter(Boolean) as string[];
 
   const displayRating = liveAvgRating ?? (params.rating ? parseFloat(params.rating) : null);
   const displayReviewCount = reviewsLoaded ? liveReviews.length : (params.reviewCount ? parseInt(params.reviewCount, 10) : 0);
 
   const videoPlayer = useVideoPlayer(prof.video_url, p => { p.loop = false; });
 
-  // 🔴 La foto arranca en y = 0 a propósito —es una portada a sangre, el patrón
-  // de siempre para esto— pero el scroll no está adentro de ningún SafeArea, así
-  // que en un teléfono con notch o isla los primeros ~60pt de la imagen quedan
-  // TAPADOS: en un retrato eso es media cara. Se compensa haciendo el contenedor
-  // más alto por exactamente lo que mide el recorte, así queda visible la misma
-  // foto de 300 que en un teléfono sin notch en vez de 240 mal cortados.
-  //
-  // ⚠️ No alcanza con un `paddingTop`: eso empujaría la imagen y dejaría una
-  // banda vacía arriba, que es perder la portada para arreglar el recorte.
-  const insets = useSafeAreaInsets();
+  const primerNombre = prof.name.split(' ')[0];
+  const puedeReservar = !blocked && !noDisponible;
+  const motivo = motivoSinReserva({ bloqueado: blocked, suspendido: noDisponible }, primerNombre);
+  const proximoTexto = proximo === undefined ? { texto: 'Buscando el próximo horario libre…', paraVos: null }
+    : proximo === 'ninguno' ? { texto: 'Sin horarios libres en las próximas tres semanas', paraVos: null }
+    : proximo === 'error' ? { texto: 'Vas a ver los horarios al reservar', paraVos: null }
+    : lineaProximoLugar(proximo.fecha, proximo.hora);
+  const hayResenas = reviewsLoaded && displayRating !== null && displayReviewCount > 0;
+  const resenasVisibles = todasLasResenas ? liveReviews : liveReviews.slice(0, 3);
+  const frases = frasesDeTrabajo(prof.estilo, prof.guia, prof.focos);
+  const escuelas = opcionesGuardadas(prof.enfoques);
+  const hayComoTrabaja = prof.topics.length > 0 || frases.length > 0 || escuelas.length > 0;
+  const precio = precioParaMostrar(
+    { ars: prof.priceFrom, usd: prof.priceUsd, cobraExterior: prof.acceptsInternational },
+    enArgentina(),
+  );
 
   // Un enlace viejo o un favorito puede abrir esta ruta sin pasar por el
   // catálogo. No se debe mostrar un perfil despublicado, ni siquiera usando
   // nombre/precio que hayan quedado en los parámetros de navegación.
-  if (!profileId || profileState?.id !== profileId || profileState?.status === 'unavailable') {
-    const loadingProfile = !!profileId && profileState?.id !== profileId;
+  // Lo que va en la portada y en el bloque práctico tiene que estar antes de
+  // mostrar: si no, aparece tarde y corre todo hacia abajo.
+  const portadaLista = resenasConsultadas && garantiaDisponible !== undefined;
+  if (!profileId || profileState?.id !== profileId || profileState?.status !== 'available' || !portadaLista) {
+    const loadingProfile = !!profileId && (profileState?.id !== profileId || (profileState?.status === 'available' && !portadaLista));
+    const errorRed = profileState?.id === profileId && profileState?.status === 'error';
     return (
       <AppBg>
-        <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <SafeAreaView style={[s.page, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
           {loadingProfile ? <ActivityIndicator color={ViveColors.primary} /> : (
             <>
-              <Text style={{ color: ViveColors.text, fontFamily: ViveFonts.semibold, fontSize: 22, textAlign: 'center' }}>
-                Este perfil ya no está disponible
+              <Text style={s.estadoTitulo}>
+                {errorRed ? 'No pudimos cargar el perfil' : 'Este perfil ya no está disponible'}
               </Text>
-              <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20, padding: 12 }}>
+              {errorRed && (
+                <>
+                  <Text style={s.estadoTexto}>Revisá tu conexión y probá de nuevo.</Text>
+                  <TouchableOpacity
+                    onPress={() => { setProfileState(null); setIntento(n => n + 1); }}
+                    style={s.estadoBtn}
+                    accessibilityRole="button">
+                    <Text style={s.estadoBtnTxt}>Reintentar</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 12, padding: 12 }}>
                 <Text style={{ color: ViveColors.primaryInk, fontFamily: ViveFonts.medium }}>Volver</Text>
               </TouchableOpacity>
             </>
@@ -343,18 +516,49 @@ export default function ProfesionalScreen() {
   return (
     <AppBg>
       <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={s.safe} edges={['top']}>
-
-        {/* ── Botón atrás flotante ─────────────────────────────────────── */}
+      <SafeAreaView style={s.page} edges={['top']}>
+      <View style={s.header}>
         <TouchableOpacity
           style={s.backBtn}
           onPress={() => router.back()}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Volver"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <MaterialIcons name="arrow-back-ios" size={18} color="#565E32" />
+          <MaterialIcons name="arrow-back-ios" size={19} color={ViveColors.text} />
         </TouchableOpacity>
+        <Text style={s.headerTitle} accessibilityLabel="Vita">vita</Text>
+        <TouchableOpacity
+          style={s.favoriteBtn}
+          onPress={() => {
+            if (esEjemplo) { avisarEjemplo(); return; }
+            if (!isLoggedIn) { requestAuth('guardar_profesional'); return; }
+            if (!profileId) return;
+            // Guardar es el momento que vale un gesto; sacarlo, solo el tic.
+            vibrar(!saved);
+            if (!saved && !reducirMovimiento) {
+              corazon.set(withSequence(
+                withTiming(1.22, { duration: 110, easing: EASE_OUT }),
+                withSpring(1, { duration: 300, dampingRatio: 0.6 }),
+              ));
+            }
+            toggleFavorite(profileId);
+          }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Quitar de favoritos' : 'Guardar en favoritos'}>
+          <Animated.View style={corazonStyle}>
+            <MaterialIcons name={saved ? 'favorite' : 'favorite-border'} size={24} color={saved ? ViveColors.primaryInk : ViveColors.text} />
+          </Animated.View>
+        </TouchableOpacity>
+      </View>
 
-      </SafeAreaView>
+      {esEjemplo && (
+        <TouchableOpacity style={s.ejemploBanner} onPress={avisarEjemplo} activeOpacity={0.8} accessibilityRole="button">
+          <MaterialIcons name="info-outline" size={15} color={ViveColors.text} />
+          <Text style={s.ejemploBannerTxt}>Perfil de ejemplo · los datos son ilustrativos</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Scroll ───────────────────────────────────────────────────────── */}
       <ScrollView
@@ -362,29 +566,51 @@ export default function ProfesionalScreen() {
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}>
 
-        {/* ── Foto grande ──────────────────────────────────────────────── */}
-        <View style={[s.photoContainer, { height: 300 + insets.top }]}>
+        <View style={s.heroCard}>
+        <View style={[s.photoContainer, { width: photoSize, height: photoSize, borderRadius: photoSize / 2 }]}>
           {prof.avatar_url ? (
-            // La portada recorta a sangre, así que de un retrato se ve una
-            // franja. Tocarla la abre entera — es lo que espera cualquiera que
-            // ve una foto de alguien a quien está por elegir, y hasta ahora la
-            // única forma de verle bien la cara era no haberla recortado.
-            //
-            // 🔴 Sin `Pressable` cuando no hay foto: el placeholder es un ícono
-            // genérico, y abrirlo en grande sería prometer algo que no hay.
             <Pressable
               onPress={() => setFotoAmpliada(true)}
               accessibilityRole="imagebutton"
               accessibilityLabel={`Foto de ${prof.name}. Tocá para verla en grande.`}
               style={s.photoImage}
             >
-              <Image source={{ uri: prof.avatar_url }} style={s.photoImage} />
+              <Image source={{ uri: prof.avatar_url }} style={s.photoImage} contentFit="cover" contentPosition="top" />
             </Pressable>
           ) : (
             <View style={s.photoPlaceholder}>
-              <MaterialIcons name="person" size={90} color="rgba(135,131,92,0.65)" />
+              <MaterialIcons name="person" size={64} color="rgba(86,98,69,0.45)" />
             </View>
           )}
+        </View>
+
+        <View style={s.infoSection}>
+          <Text style={s.name}>{prof.name}</Text>
+          <Text style={s.specialty}>{prof.specialty}</Text>
+          {/* La nacionalidad va con quién es, dicha como se dice de una
+              persona ("Argentina", "Uruguayo"), y no como dato de formulario.
+              Ver `lineaNacionalidad`. */}
+          {!!lineaNacionalidad(prof.nationality, prof.genero) && (
+            <Text style={s.nacionalidad}>{lineaNacionalidad(prof.nationality, prof.genero)}</Text>
+          )}
+
+          {/* Sin reseñas todavía se dice "Nuevo en Vita" y no "no hay reseñas":
+              al lanzar es el caso de todos, y dicho en negativo se lee como un
+              punto en contra de alguien que recién empieza. */}
+          <View style={s.identityMeta}>
+          {hayResenas ? (
+            <View style={s.ratingInline}>
+              <MaterialIcons name="star" size={17} color={DORADO} />
+              <Text style={s.ratingInlineText}>
+                {displayRating!.toFixed(1)} · {displayReviewCount} {displayReviewCount === 1 ? 'reseña' : 'reseñas'}
+              </Text>
+            </View>
+          ) : reviewsLoaded ? (
+            <View style={s.ratingInline}>
+              <MaterialCommunityIcons name="sprout-outline" size={16} color={ViveColors.softInk} />
+              <Text style={s.ratingInlineText}>Nuevo en Vita</Text>
+            </View>
+          ) : null}
 
           {/* 🔴 23/09/2026: decía "Verificado por Vita", que sobre la foto se
               leía como que Vita responde por todo lo que hay en el perfil. Lo
@@ -392,76 +618,187 @@ export default function ProfesionalScreen() {
               verificó de cada título o matrícula está marcado uno por uno, en
               Formación. Ver docs/investigacion-producto-2026-09-23.md, punto 1. */}
           <View style={s.verifiedBadge}>
-            <MaterialIcons name="verified" size={14} color="#565E32" />
+            {/* Ícono de persona revisada y no el tilde de "cuenta verificada"
+                ni un escudo: los escudos del perfil son de documentos que Vita
+                verificó (matrícula, títulos), y esto es otra cosa. */}
+            <MaterialCommunityIcons name="account-check-outline" size={15} color={ViveColors.text} />
             <Text style={s.verifiedText}>Perfil revisado por Vita</Text>
           </View>
-        </View>
 
-        {/* ── Info básica ──────────────────────────────────────────────── */}
-        <View style={s.infoSection}>
-          <Text style={s.name}>{prof.name}</Text>
-          <Text style={s.specialty}>{prof.specialty}</Text>
+          </View>
 
           {/* El encuadre va acá, pegado a la especialidad, y no en un bloque
               propio más abajo: dice de qué TIPO es lo que esta persona ofrece,
               así que pertenece al renglón que dice qué ofrece. Ver
               `EncuadrePill` para por qué las dos variantes pesan igual. */}
           <View style={s.encuadreRow}>
-            <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />
+            <View style={s.encuadreCentered}>
+              {credencialesSabidas && <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />}
+            </View>
           </View>
 
-          <Text style={s.metaLine}>
-            {prof.age} · {prof.nationality} · {prof.gender}
-          </Text>
+        </View>
+        </View>
 
-          {/* Presentación */}
-          {!!prof.bio && (
-            <Text style={s.bio}>{prof.bio}</Text>
-          )}
-
-          {/* Chips de temas */}
-          {prof.topics.length > 0 && (
-            <View style={s.chipsRow}>
-              {prof.topics.map(topic => (
-                <View key={topic} style={s.chip}>
-                  <Text style={s.chipText}>{topic}</Text>
-                </View>
-              ))}
+        {/* ── Lo práctico, antes de leer el resto ───────────────────────────
+            01/10/2026 (revisión de UX): duración, modalidad y cuándo hay lugar
+            no aparecían en ninguna parte del perfil, y la garantía estaba al
+            final, después de los recursos, donde casi nadie llega. Es lo que
+            más tranquiliza a quien está por pagar su primera sesión, así que va
+            acá, junto a lo demás que se necesita para decidir. */}
+        <View style={s.practico}>
+          {/* "Tu primera sesión" (texto elegido por Andre, 02/10/2026): para
+              quien llega con miedo a empezar. Misma condición que la garantía
+              (`garantiaDisponible`): si ya tuvo sesiones con este profesional,
+              no es su primera y no se dice. */}
+          {garantiaDisponible && puedeReservar && (
+            <View style={s.primera}>
+              <Text style={s.primeraTitulo}>Tu primera sesión</Text>
+              <Text style={s.primeraTexto}>Es para conocerse, a tu ritmo. No hace falta llegar con nada preparado.</Text>
             </View>
+          )}
+          <View style={s.practicoRow}>
+            <MaterialCommunityIcons name="video-outline" size={19} color={ViveColors.text} style={s.practicoIcon} />
+            <Text style={s.practicoText}>{lineaSesion(duracion ?? null)}</Text>
+          </View>
+          {puedeReservar && (
+            <View style={s.practicoRow}>
+              <MaterialCommunityIcons name="calendar-clock-outline" size={19} color={ViveColors.text} style={s.practicoIcon} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.practicoText}>{proximoTexto.texto}</Text>
+                {!!proximoTexto.paraVos && <Text style={s.practicoSub}>{proximoTexto.paraVos}</Text>}
+              </View>
+            </View>
+          )}
+          {garantiaDisponible && puedeReservar && (
+            <TouchableOpacity
+              style={s.practicoRow}
+              activeOpacity={0.7}
+              onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
+              accessibilityRole="link"
+              accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
+              {/* Ícono de devolución y no un escudo: los escudos del perfil
+                  dicen "esto lo verificó Vita", y la garantía es otra cosa. */}
+              <MaterialCommunityIcons name="cash-refund" size={19} color={ViveColors.accent} style={s.practicoIcon} />
+              <Text style={s.practicoText}>
+                <Text style={s.factStrong}>Garantía de primera sesión.</Text>
+                {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
+                <Text style={s.factLink}>Ver condiciones</Text>
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* ── Cómo trabaja (M14) ────────────────────────────────────────────
-            El estilo va primero y en castellano común, porque es lo que se le
-            preguntó a la persona en el quiz. El enfoque va después, con el
-            nombre de la escuela y su explicación de una línea: quien no lo
-            conoce igual entiende qué significa. Si el profesional no contestó
-            ninguna de las dos, la sección no existe. */}
-        {(etiquetaEstilo(prof.estilo) || etiquetaGuia(prof.guia) || etiquetasFocos(prof.focos).length > 0
-          || etiquetasEnfoques(prof.enfoques).length > 0) && (
+        {/* Biografía seguida del video compacto de presentación. */}
+        {(!!prof.bio || !!prof.video_url) && (
           <View style={s.section}>
-            <Text style={s.sectionTitle}>Cómo trabaja</Text>
-            {!!etiquetaEstilo(prof.estilo) && (
-              <Text style={s.comoTrabajaEstilo}>{etiquetaEstilo(prof.estilo)}</Text>
+            <Text accessibilityRole="header" style={s.sectionTitle}>Sobre mí</Text>
+            {!!prof.bio && (
+              <View>
+                <Text
+                  style={[s.bio, s.bioMedida]}
+                  aria-hidden
+                  importantForAccessibility="no-hide-descendants"
+                  onTextLayout={e => setBioLineas(e.nativeEvent.lines.length)}>
+                  {prof.bio}
+                </Text>
+                <Text style={s.bio} numberOfLines={bioAbierta ? undefined : BIO_LINEAS}>
+                  {prof.bio}
+                </Text>
+                {bioLineas > BIO_LINEAS && (
+                  <TouchableOpacity
+                    onPress={() => setBioAbierta(v => !v)}
+                    style={s.leerMas}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button">
+                    <Text style={s.verMasTxt}>{bioAbierta ? 'Leer menos' : 'Leer más'}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-            {/* M14 ampliado (21/09/2026): cuánto guía y sobre qué trabaja, en
-                primera persona como el estilo, porque son sus respuestas. */}
-            {!!etiquetaGuia(prof.guia) && (
-              <Text style={s.comoTrabajaEstilo}>{etiquetaGuia(prof.guia)}</Text>
-            )}
-            {etiquetasFocos(prof.focos).length > 0 && (
-              <Text style={s.comoTrabajaEstilo}>
-                Trabajo sobre {listarY(etiquetasFocos(prof.focos).map(f => f.toLowerCase()))}
-              </Text>
-            )}
-            {opcionesGuardadas(prof.enfoques).map(e => {
-              return (
-                <View key={e.id} style={s.comoTrabajaFila}>
-                  <Text style={s.comoTrabajaLabel}>{e.label}</Text>
-                  <Text style={s.comoTrabajaDesc}>{e.desc}</Text>
+            {!!prof.video_url && (
+              <TouchableOpacity
+                style={[s.videoCard, !!prof.bio && { marginTop: 18 }]}
+                activeOpacity={0.88}
+                accessibilityRole="button"
+                accessibilityLabel={`Ver el video de presentación de ${primerNombre}`}
+                onPress={() => { setIsPlayingVideo(true); videoPlayer.play(); }}>
+                <View style={s.playBtn}>
+                  <MaterialIcons name="play-arrow" size={26} color={ViveColors.onPrimaryInk} />
                 </View>
-              );
-            })}
+                <View style={s.videoCopy}>
+                  <Text style={s.videoTitle}>Conocé a {primerNombre}</Text>
+                  <Text style={s.videoCaption}>Mirá su video de presentación</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* ── Cómo trabaja (M14) ────────────────────────────────────────────
+            01/10/2026, después de verlo en el iPhone: eran siete títulos en
+            terracota uno abajo del otro, y "Su estilo: Las dos cosas" no se
+            entendía sin la pregunta. Ahora son tres bloques: los temas, cómo
+            trabaja en frases que se entienden solas (`frasesDeTrabajo`) y las
+            escuelas con su explicación. Si no hay nada, la sección no existe. */}
+        {hayComoTrabaja && (
+          <View style={s.section}>
+            <Text accessibilityRole="header" style={s.sectionTitle}>Cómo trabaja</Text>
+            {prof.topics.length > 0 && (
+              <View style={[s.workBlock, s.topicsBlock]}>
+                <View style={s.chipsRow}>
+                  {prof.topics.map(topic => (
+                    <View key={topic} style={s.chip}>
+                      <Text style={s.chipText}>{topic}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+            {frases.length > 0 && (
+              <View style={s.workBlock}>
+                {frases.map(f => {
+                  // Sin título arriba de cada frase: repetía la frase misma
+                  // ("Escucha y herramientas" sobre "Escucha y da herramientas…").
+                  const esFoco = f.startsWith('Trabaja sobre');
+                  const esEscucha = f.startsWith('Escucha');
+                  const esHerramientas = f.startsWith('Da herramientas');
+                  return (
+                    <View key={f} style={s.fraseRow}>
+                      <MaterialCommunityIcons
+                        name={esFoco ? 'sprout-outline' : esEscucha ? 'ear-hearing' : esHerramientas ? 'tools' : 'routes'}
+                        size={20} color={ViveColors.primaryInk} style={{ marginTop: 1 }} />
+                      <Text style={[s.workText, s.workCopy]}>{f}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            {escuelas.length > 0 && (
+              <View style={s.enfoquesList}>
+                {escuelas.map(e => {
+                  const expanded = enfoquesAbiertos.includes(e.id);
+                  return (
+                    <View key={e.id}>
+                      <TouchableOpacity
+                        style={s.enfoqueToggle}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded }}
+                        accessibilityLabel={`Enfoque ${e.label}. ${expanded ? 'Ocultar' : 'Ver'} explicación`}
+                        onPress={() => setEnfoquesAbiertos(prev => expanded
+                          ? prev.filter(id => id !== e.id) : [...prev, e.id])}>
+                        <Text style={s.enfoqueLabel}>{e.label}</Text>
+                        <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={20} color={ViveColors.primaryInk} />
+                      </TouchableOpacity>
+                      {expanded && (
+                        <Animated.Text entering={APARECE} exiting={DESAPARECE} style={s.enfoqueDesc}>{e.desc}</Animated.Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
         )}
 
@@ -494,7 +831,7 @@ export default function ProfesionalScreen() {
                 todas las filas de esta lista lo son. Sin escudo de sección no
                 hay sobreafirmación, y sin sobreafirmación el cartel no tiene
                 nada que compensar. */}
-            <Text style={s.sectionTitle}>Formación</Text>
+            <Text accessibilityRole="header" style={s.sectionTitle}>Formación</Text>
 
             <View style={s.credList}>
               {credenciales.map(c => {
@@ -505,20 +842,11 @@ export default function ProfesionalScreen() {
                     <MaterialCommunityIcons
                       name={c.kind === 'matricula' ? 'card-account-details-outline' : 'school-outline'}
                       size={18}
-                      color="#566245"
+                      color={ViveColors.softInk}
                       style={{ marginTop: 1 }}
                     />
                     <View style={{ flex: 1 }}>
-                      {/* El "Verificado" va en la línea del título y no debajo:
-                          es lo que califica a ESA credencial, y separado de
-                          ella volvería a flotar sobre toda la fila. */}
-                      <View style={s.credTitleRow}>
-                        <Text style={s.credTitle}>{c.title}</Text>
-                        <View style={s.credVerif}>
-                          <MaterialCommunityIcons name="shield-check" size={11} color="#42542F" />
-                          <Text style={s.credVerifTxt}>Verificado</Text>
-                        </View>
-                      </View>
+                      <Text style={s.credTitle}>{c.title}</Text>
                       {/* De qué profesión es la matrícula lo decidió quien miró
                           el documento, no el texto del perfil. */}
                       {!!deQue && <Text style={s.credMeta}>{deQue}</Text>}
@@ -528,34 +856,24 @@ export default function ProfesionalScreen() {
                           sección que un usuario puede ir a verificar por su
                           cuenta. Ocultarlo le sacaría todo el valor. */}
                       {!!c.registrationNumber && (
-                        <Text style={s.credNumber}>
+                        <Text style={s.credNumber} selectable>
                           {KIND_LABEL[c.kind] === 'Matrícula' ? '' : `${KIND_LABEL[c.kind]} `}
                           {c.registrationNumber}
                         </Text>
                       )}
+                      {/* "Verificado" cierra cada credencial, dentro de su
+                          columna: sigue calificando a ESA y no a toda la
+                          sección. En la línea del título pesaba de más junto a
+                          títulos largos (02/10/2026). */}
+                      <View style={s.credVerif}>
+                        <MaterialCommunityIcons name="shield-check" size={11} color="#42542F" />
+                        <Text style={s.credVerifTxt}>Verificado</Text>
+                      </View>
                     </View>
                   </View>
                 );
               })}
             </View>
-          </View>
-        )}
-
-        {/* ── Video de introducción ─────────────────────────────────────── */}
-        {prof.video_url && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Video de introducción</Text>
-            <TouchableOpacity
-              style={s.videoPlaceholder}
-              activeOpacity={0.8}
-              onPress={() => { setIsPlayingVideo(true); videoPlayer.play(); }}>
-              <View style={s.playBtn}>
-                <MaterialIcons name="play-arrow" size={32} color={ViveColors.primary} />
-              </View>
-              <Text style={s.videoCaption}>
-                Conocé a {prof.name.split(' ')[0]} en 1 minuto
-              </Text>
-            </TouchableOpacity>
           </View>
         )}
 
@@ -573,6 +891,8 @@ export default function ProfesionalScreen() {
             />
             <TouchableOpacity
               style={s.videoModalCloseBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar video de presentación"
               onPress={() => { videoPlayer.pause(); setIsPlayingVideo(false); }}
               hitSlop={12}>
               <MaterialIcons name="close" size={26} color="#fff" />
@@ -580,15 +900,66 @@ export default function ProfesionalScreen() {
           </View>
         </Modal>
 
+        {/* ── Reseñas ──────────────────────────────────────────────────────
+            Solo si hay. Sin reseñas, la portada ya dice "Nuevo en Vita"; una
+            sección vacía al final repetía lo mismo en negativo. */}
+        {hayResenas && (
+          <View style={s.section}>
+            {/* El promedio va en la línea del título y cada reseña es una
+                tarjeta con quién y cuántas estrellas arriba: antes eran cuatro
+                renglones sueltos (promedio, estrellas, texto, nombre) y una
+                reseña corta quedaba perdida en el medio (02/10/2026). */}
+            <View style={s.reviewsHeader}>
+              <Text accessibilityRole="header" style={[s.sectionTitle, { marginBottom: 0 }]}>Reseñas</Text>
+              <View
+                style={s.ratingSummary}
+                accessible
+                accessibilityLabel={`${displayRating!.toFixed(1)} de 5, ${displayReviewCount} ${displayReviewCount === 1 ? 'reseña' : 'reseñas'}`}>
+                <MaterialIcons name="star" size={16} color={DORADO} />
+                <Text style={s.ratingValue}>{displayRating!.toFixed(1)}</Text>
+                <Text style={s.ratingCount}>
+                  · {displayReviewCount} {displayReviewCount === 1 ? 'reseña' : 'reseñas'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={s.reviewsList}>
+              {resenasVisibles.map((review, i) => (
+                // Las tres primeras ya están; las que suma "Ver las N" aparecen
+                // con el fundido, no de golpe.
+                <Animated.View key={i} entering={i >= 3 ? APARECE : undefined} style={s.reviewCard}>
+                  <View style={s.reviewTop}>
+                    <Text style={s.reviewName} numberOfLines={1}>{review.reviewerName}</Text>
+                    <Stars rating={review.rating} size={13} />
+                  </View>
+                  {!!review.comment && (
+                    <Text style={s.reviewText}>{review.comment}</Text>
+                  )}
+                </Animated.View>
+              ))}
+            </View>
+            {liveReviews.length > 3 && (
+              <TouchableOpacity
+                onPress={() => setTodasLasResenas(v => !v)}
+                style={s.verMas}
+                accessibilityRole="button">
+                <Text style={s.verMasTxt}>
+                  {todasLasResenas ? 'Ver menos' : `Ver las ${liveReviews.length} reseñas`}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* ── Recursos de este coach ────────────────────────────────────── */}
         {coachResources.length > 0 && (
           <View style={s.section}>
-            <Text style={s.sectionTitle}>Recursos de {prof.name.split(' ')[0]}</Text>
+            <Text accessibilityRole="header" style={s.sectionTitle}>Recursos de {primerNombre}</Text>
             <View style={s.resourcesList}>
               {coachResources.map(resource => (
                 <TouchableOpacity
                   key={resource.id}
-                  style={s.resourceCard}
+                  style={[s.resourceCard, resource.id === coachResources[coachResources.length - 1]?.id && s.resourceLast]}
                   activeOpacity={0.85}
                   onPress={() => router.push({ pathname: '/recurso', params: { id: resource.id } })}
                 >
@@ -610,7 +981,7 @@ export default function ProfesionalScreen() {
                     <MaterialIcons
                       name="chevron-right"
                       size={22}
-                      color="rgba(135,131,92,0.58)"
+                      color={ViveColors.softInk}
                     />
                   </View>
                 </TouchableOpacity>
@@ -619,104 +990,63 @@ export default function ProfesionalScreen() {
           </View>
         )}
 
-        {/* ── Reviews ──────────────────────────────────────────────────── */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Reseñas</Text>
-
-          {reviewsLoaded && displayRating !== null && displayReviewCount > 0 ? (
-            <>
-              {/* Rating general */}
-              <View style={s.ratingOverall}>
-                <Text style={s.ratingNumber}>{displayRating.toFixed(1)}</Text>
-                <View style={s.ratingRight}>
-                  <Stars rating={displayRating} size={18} />
-                  <Text style={s.ratingCount}>{displayReviewCount} {displayReviewCount === 1 ? 'reseña' : 'reseñas'}</Text>
-                </View>
-              </View>
-
-              {/* Lista de reviews */}
-              <View style={s.reviewsList}>
-                {liveReviews.slice(0, 5).map((review, i) => (
-                  <View key={i} style={s.reviewCard}>
-                    <View style={s.reviewHeader}>
-                      <ReviewAvatar name={review.reviewerName} />
-                      <View style={s.reviewMeta}>
-                        <Text style={s.reviewName}>{review.reviewerName}</Text>
-                        <Stars rating={review.rating} size={12} />
-                      </View>
-                    </View>
-                    {!!review.comment && (
-                      <Text style={s.reviewText}>{review.comment}</Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : reviewsLoaded ? (
-            <View style={s.noReviews}>
-              <Text style={s.noReviewsText}>Todavía no hay reseñas para este profesional</Text>
-            </View>
-          ) : null}
-        </View>
-
         {/* Reportar / bloquear (oculto en el propio perfil) */}
         {user?.id !== profileId && (
           <TouchableOpacity
             style={s.reportLink}
             onPress={() => {
+              if (esEjemplo) { avisarEjemplo(); return; }
               if (!isLoggedIn) { requestAuth('reportar_profesional'); return; }
               setActionsOpen(true);
             }}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <MaterialIcons name="outlined-flag" size={15} color="rgba(135,131,92,0.75)" />
-            <Text style={s.reportLinkText}>Reportar o bloquear a {prof.name.split(' ')[0]}</Text>
+            <MaterialIcons name="outlined-flag" size={15} color={ViveColors.softInk} />
+            <Text style={s.reportLinkText}>Reportar o bloquear a {primerNombre}</Text>
           </TouchableOpacity>
         )}
 
-        {/* Espaciador para el footer sticky */}
-        <View style={{ height: 108 }} />
       </ScrollView>
 
       {/* ── Footer sticky ────────────────────────────────────────────────── */}
       <SafeAreaView style={s.footerSafe} edges={['bottom']}>
         <View style={s.footer}>
           <View style={s.footerTop}>
-            <Text style={s.price}>
-              {prof.priceFrom != null
-                ? `Desde $${prof.priceFrom.toLocaleString('es-AR')} por sesión`
-                : 'Cargando precio…'}
-            </Text>
-            {/* La única superficie del perfil que habla del exterior. Había
-                además un cartel "Atiende desde el exterior" pegado al de
-                verificado, y se sacó: decía la lectura equivocada de las dos
-                que SCHEMA.md separa —que el PROFESIONAL está afuera— cuando el
-                hecho es que el cliente puede estarlo, y con el estilo del badge
-                de verificado se leía como un atributo de la persona. El precio
-                en dólares dice lo mismo sin ambigüedad: quien está afuera
-                necesita el número, no la etiqueta. */}
-            {prof.acceptsInternational && prof.priceUsd != null && (
-              <Text style={s.priceIntl}>
-                Desde el exterior: USD {prof.priceUsd}
-              </Text>
+            {/* Un solo precio, el que le sirve a quien mira: pesos en
+                Argentina, dólares desde afuera si los cobra. Antes eran tres
+                renglones ("$1 / por sesión / Exterior: USD 50") y la barra se
+                comía un sexto de la pantalla. Sin "Desde": el precio es uno. */}
+            {/* Sin reserva posible se dice por qué en el lugar del precio:
+                un precio de algo que no se puede comprar no le sirve a nadie. */}
+            {motivo ? (
+              <Text style={s.motivo}>{motivo}</Text>
+            ) : (
+              <>
+                <Text style={s.price}>{precio ?? 'Precio por confirmar'}</Text>
+                {!!precio && <Text style={s.priceUnit}>por sesión</Text>}
+              </>
             )}
-            {/* Sin `compact`: acá hay ancho de sobra (el footer apila precio y
-                botones), así que se muestran los tres si acepta los tres. En la
-                card del deck van recortados porque la fila se parte. */}
-            <View style={s.payRow}>
-              <PaymentBadges
-                mp={prof.acceptsMp}
-                paypal={prof.acceptsPaypal}
-                usdt={prof.acceptsUsdt}
-              />
-            </View>
+
+            {puedeReservar && paymentMethods.length > 0 && (
+              <View style={s.pagosRow} accessible accessibilityLabel={`Acepta ${paymentMethods.join(', ')}`}>
+                {paymentMethods.map((m, i) => (
+                  <Text key={m} style={s.pagoTagTxt}>{i > 0 ? '·  ' : ''}{m}</Text>
+                ))}
+              </View>
+            )}
           </View>
-          <View style={s.footerButtons}>
-            <TouchableOpacity
-              style={[s.btnPrimary, (blocked || noDisponible) && s.btnPrimaryDisabled]}
-              activeOpacity={0.85}
-              disabled={blocked || noDisponible}
+            <ScaleCard
+              style={[s.btnPrimary, noDisponible && s.btnPrimaryDisabled]}
+              activeOpacity={0.9}
+              disabled={noDisponible}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: noDisponible }}
+              onPressIn={() => vibrar(true)}
               onPress={() => {
+                if (esEjemplo) { avisarEjemplo(); return; }
+                // Bloqueado por vos: el botón deshace el bloqueo, con la
+                // misma hoja de "Reportar o bloquear", donde se elige hacerlo.
+                if (blocked) { setActionsOpen(true); return; }
                 // El motivo de más valor de todos: es la rama que monetiza.
                 if (!isLoggedIn) { requestAuth('reservar_sesion'); return; }
                 const resourceId = Array.isArray(params.resourceId) ? params.resourceId[0] : params.resourceId;
@@ -732,30 +1062,20 @@ export default function ProfesionalScreen() {
                   },
                 });
               }}>
-              <Text style={s.btnPrimaryText}>
-                {/* "No disponible" y no nada más específico: la persona no
-                    tiene por qué enterarse de una sanción (T&C 10.4). */}
-                {blocked ? 'Bloqueado' : noDisponible ? 'No disponible por ahora' : 'Reservar sesión'}
+              {!noDisponible && (
+                <MaterialCommunityIcons
+                  name={blocked ? 'lock-open-outline' : 'calendar-blank-outline'}
+                  size={20}
+                  color={ViveColors.onPrimaryInk}
+                  accessible={false}
+                />
+              )}
+              <Text style={[s.btnPrimaryText, noDisponible && s.btnPrimaryTextDisabled]}>
+                {noDisponible ? 'No disponible' : blocked ? 'Desbloquear' : 'Reservar'}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.btnSecondary, saved && s.btnSecondaryActive]}
-              onPress={() => {
-                if (!isLoggedIn) { requestAuth('guardar_profesional'); return; }
-                if (profileId) toggleFavorite(profileId);
-              }}
-              activeOpacity={0.8}>
-              <MaterialIcons
-                name={saved ? 'favorite' : 'favorite-border'}
-                size={18}
-                color={ViveColors.primary}
-              />
-              <Text style={s.btnSecondaryText}>
-                {saved ? 'Guardado' : 'Guardar en favoritos'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </ScaleCard>
         </View>
+      </SafeAreaView>
       </SafeAreaView>
 
       <UserActionsSheet
@@ -789,271 +1109,137 @@ export default function ProfesionalScreen() {
   );
 }
 
-/** "a, b y c" */
-function listarY(xs: string[]): string {
-  return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`;
-}
 
-// ─── Sombra ──────────────────────────────────────────────────────────────────
-const shadow = Platform.select({
-  ios: {
-    shadowColor: 'rgba(0,0,0,0.5)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-  },
-  android: { elevation: 3 },
-});
 
 // ─── Estilos ─────────────────────────────────────────────────────────────────
-const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  safe: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  backBtn: {
-    margin: 16,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,248,240,0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
+// 01/10/2026: los cinco olivas escritos a mano (#565E32, #87835C, #726F57,
+// #566245 y transparencias) pasan a los dos tokens del tema: `text` para lo
+// principal y `softInk` para lo secundario. #87835C daba 3.6:1 sobre el crema,
+// por debajo del 4.5 de AA, y era el color de las reseñas y los metadatos.
+// La biografía sube a 16 px (el mínimo de la guía): es lo que más se lee.
+const BORDE = 'rgba(86,94,50,0.14)';
 
-  // ── Foto ──────────────────────────────────────────────────────────────
-  photoContainer: {
-    width: '100%',
-    // La altura real la pone el render sumándole el alto del notch. 300 es el
-    // piso —lo que se ve en un teléfono sin recorte— y el valor que usan las
-    // medidas de abajo (el badge de verificado va anclado al pie, no al alto).
-    height: 300,
+const s = StyleSheet.create({
+  ejemploBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    alignSelf: 'center', marginBottom: 6,
+    paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999,
+    backgroundColor: 'rgba(86,94,50,0.09)',
   },
+  ejemploBannerTxt: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: ViveColors.text },
+  page: { flex: 1 },
+  header: {
+    height: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontFamily: ViveFonts.wordmark, fontSize: 25, color: ViveColors.text, letterSpacing: -1 },
+  favoriteBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 28 },
+
+  // ── Estados sin perfil ────────────────────────────────────────────────
+  estadoTitulo: { color: ViveColors.text, fontFamily: ViveFonts.semibold, fontSize: 22, textAlign: 'center' },
+  estadoTexto: {
+    color: ViveColors.softInk, fontFamily: ViveFonts.regular, fontSize: 15,
+    textAlign: 'center', marginTop: 8,
+  },
+  estadoBtn: {
+    marginTop: 20, minHeight: 48, paddingHorizontal: 28, borderRadius: 24,
+    backgroundColor: ViveColors.text, alignItems: 'center', justifyContent: 'center',
+  },
+  estadoBtnTxt: { color: ViveColors.onPrimaryInk, fontFamily: ViveFonts.semibold, fontSize: 15 },
+
+  // ── Portada ───────────────────────────────────────────────────────────
+  heroCard: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  photoContainer: { alignSelf: 'center', overflow: 'hidden', backgroundColor: 'rgba(86,94,50,0.12)' },
   photoPlaceholder: {
     flex: 1,
     backgroundColor: 'rgba(86,94,50,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photoImage: {
-    width: '100%',
-    height: '100%',
-  },
+  photoImage: { width: '100%', height: '100%' },
   verifiedBadge: {
-    position: 'absolute',
-    bottom: 16,
-    left: 20,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ViveColors.accent,
+    backgroundColor: 'transparent',
     borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
     gap: 5,
   },
-  verifiedText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 12,
-    color: '#565E32',
-    letterSpacing: 0.2,
-  },
+  verifiedText: { fontFamily: ViveFonts.semibold, fontSize: 12, color: ViveColors.text, letterSpacing: 0.2 },
 
-  // ── Info básica ────────────────────────────────────────────────────────
-  infoSection: {
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 8,
-  },
+  infoSection: { paddingHorizontal: 8, paddingTop: 18, paddingBottom: 18 },
+  identityMeta: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', columnGap: 12, rowGap: 8, marginTop: 12 },
   name: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 28,
-    color: '#565E32',
-    lineHeight: 36,
+    fontFamily: ViveFonts.title,
+    fontSize: 27,
+    textAlign: 'center',
+    color: ViveColors.text,
+    lineHeight: 34,
     letterSpacing: -0.3,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  specialty: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 16,
-    color: ViveColors.primary,
-    marginBottom: 8,
-  },
-  metaLine: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-    marginBottom: 14,
-  },
-  bio: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 14,
-    color: '#565E32',
-    lineHeight: 21,
-    marginBottom: 14,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    borderWidth: 1.5,
-    borderColor: ViveColors.primary,
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
-  chipText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: ViveColors.primary,
-  },
-
-  // ── Sección genérica ──────────────────────────────────────────────────
-  section: {
-    paddingHorizontal: 20,
-    paddingTop: 28,
-  },
-  sectionTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: '#565E32',
-    marginBottom: 14,
-  },
-
-  // ── Cómo trabaja (M14) ──────────────────────────────────────────────
-  comoTrabajaEstilo: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-    marginBottom: 12,
-  },
-  comoTrabajaFila: { marginBottom: 10 },
-  comoTrabajaLabel: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
-  comoTrabajaDesc: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: 'rgba(135,131,92,0.85)',
-    lineHeight: 19,
-    marginTop: 2,
-  },
-
-  // ── Formación ───────────────────────────────────────────────────────
+  specialty: { fontFamily: ViveFonts.medium, fontSize: 16, color: ViveColors.primaryInk, textAlign: 'center', marginTop: 6 },
+  ratingInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 5 },
+  ratingInlineText: { fontFamily: ViveFonts.medium, fontSize: 14, color: ViveColors.text },
   // El estado sin matrícula NO va en rojo ni con ícono de alerta: no es una
   // advertencia contra el coach, es información sobre qué tipo de sesión es.
   // Pintarlo de peligro sería castigar a alguien que no hizo nada mal.
-  encuadreRow: { marginTop: 8, marginBottom: 2 },
+  encuadreRow: { marginTop: 12, alignItems: 'center' },
+  encuadreCentered: { alignSelf: 'center', maxWidth: '100%' },
 
-  credList: { gap: 12, marginTop: 12 },
-  credRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  credTitleRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', gap: 8,
+  practico: {
+    marginHorizontal: 20,
+    marginBottom: 4,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    borderRadius: 15,
+    borderCurve: 'continuous',
+    backgroundColor: '#EDEADD',
+    gap: 9,
   },
-  // Verde de la marca y no ámbar, y sin caja: es la constatación de un hecho,
-  // no una alerta. `flexShrink: 0` para que un título largo lo corte a él y no
-  // al revés — el que se acorta con "…" tiene que ser el nombre, que sigue
-  // legible, y no la palabra que califica la credencial.
-  credVerif: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
-  credVerifTxt: {
-    fontFamily: ViveFonts.semibold, fontSize: 10.5,
-    color: '#42542F', letterSpacing: 0.2,
-  },
-  credTitle: {
-    fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#565E32',
-    lineHeight: 20, flexShrink: 1,
-  },
-  credMeta: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#87835C', marginTop: 1 },
-  credNumber: {
-    fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#566245', marginTop: 3,
-  },
+  practicoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  primera: { gap: 3, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(86,94,50,0.12)' },
+  primeraTitulo: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text },
+  primeraTexto: { fontFamily: ViveFonts.regular, fontSize: 14.5, lineHeight: 21, color: ViveColors.text },
+  practicoIcon: { marginTop: 1 },
+  practicoText: { flexShrink: 1, fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 20, color: ViveColors.text },
+  practicoSub: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: ViveColors.softInk, marginTop: 2 },
+  motivo: { fontFamily: ViveFonts.medium, fontSize: 15, lineHeight: 21, color: ViveColors.text },
+  factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
+  factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
+  // Abajo ya está el área segura del teléfono (la raya de inicio): no hace
+  // falta sumarle aire propio.
+  pagosRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 6, rowGap: 2, paddingTop: 6 },
+  pagoTagTxt: { fontFamily: ViveFonts.regular, fontSize: 11, lineHeight: 16, color: ViveColors.softInk },
+  nacionalidad: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 4, textAlign: 'center' },
 
-  // ── Recursos del coach ──────────────────────────────────────────────
-  resourcesList: { gap: 10 },
-  resourceCard: {
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-    padding: 14,
-  },
-  resourceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  resourceIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(232,116,59,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resourceHeaderText: { flex: 1 },
-  resourceTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: '#565E32',
-  },
-  resourceMeta: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-    marginTop: 2,
-  },
-
-  // ── Video ─────────────────────────────────────────────────────────────
-  videoPlaceholder: {
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-    height: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    ...shadow,
+  // Presentación compacta: el retrato aparece una sola vez en la portada.
+  videoCard: {
+    width: '100%', borderRadius: 18, borderCurve: 'continuous',
+    backgroundColor: ViveColors.text, flexDirection: 'row', alignItems: 'center',
+    padding: 18, gap: 14,
   },
   playBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(232,197,71,0.18)',
-    borderWidth: 2,
-    borderColor: ViveColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 52, height: 52, borderRadius: 26, borderWidth: 1,
+    borderColor: 'rgba(247,239,228,0.5)', alignItems: 'center', justifyContent: 'center',
   },
-  videoCaption: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-  },
-  videoModalBg: {
-    flex: 1,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  videoModalPlayer: {
-    width: '100%',
-    height: '100%',
-  },
+  videoCopy: { flex: 1 },
+  videoTitle: { fontFamily: ViveFonts.semibold, fontSize: 17, color: ViveColors.onPrimaryInk },
+  videoCaption: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.onPrimaryInk, marginTop: 4 },
+  videoModalBg: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  videoModalPlayer: { width: '100%', height: '100%' },
   videoModalCloseBtn: {
     position: 'absolute',
     top: 56,
@@ -1066,106 +1252,100 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ── Rating general ────────────────────────────────────────────────────
-  ratingOverall: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-    padding: 16,
-    marginBottom: 14,
-    gap: 14,
-    ...shadow,
+  // ── Sección genérica ──────────────────────────────────────────────────
+  section: {
+    marginHorizontal: 20,
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDE,
   },
-  ratingNumber: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 40,
-    color: '#565E32',
-    lineHeight: 48,
+  sectionTitle: { fontFamily: ViveFonts.title, fontSize: 20, color: ViveColors.text, marginBottom: 14 },
+  bio: { fontFamily: ViveFonts.regular, fontSize: 16, color: ViveColors.text, lineHeight: 25 },
+  bioMedida: { position: 'absolute', left: 0, right: 0, opacity: 0 },
+  leerMas: { alignSelf: 'flex-start', marginTop: 6, paddingVertical: 6 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  chip: {
+    backgroundColor: '#E5E7D9',
+    borderRadius: 11,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
   },
-  ratingRight: {
-    gap: 4,
-  },
-  ratingCount: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: 'rgba(135,131,92,0.80)',
-  },
+  chipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.text },
 
-  // ── Reviews ───────────────────────────────────────────────────────────
-  noReviews: {
-    backgroundColor: 'rgba(255,248,240,0.32)',
-    borderRadius: 14,
-    padding: 16,
+  // ── Cómo trabaja (M14) ──────────────────────────────────────────────
+  workBlock: { marginBottom: 18, gap: 14 },
+  topicsBlock: { marginBottom: 30 },
+  fraseRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  workCopy: { flex: 1 },
+  enfoquesList: { gap: 4 },
+  enfoqueToggle: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  enfoqueLabel: { flex: 1, fontFamily: ViveFonts.medium, fontSize: 14, color: ViveColors.primaryInk },
+  enfoqueDesc: { fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 22, color: ViveColors.softInk, paddingBottom: 12 },
+  workText: { fontFamily: ViveFonts.regular, fontSize: 15, lineHeight: 22, color: ViveColors.text },
+
+  // ── Formación ───────────────────────────────────────────────────────
+  credList: { gap: 18, marginTop: 2 },
+  credRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  // Verde de la marca y no ámbar, y sin caja: es la constatación de un hecho,
+  // no una alerta. `flexShrink: 0` para que un título largo lo corte a él y no
+  // al revés — el que se acorta con "…" tiene que ser el nombre, que sigue
+  // legible, y no la palabra que califica la credencial.
+  credVerif: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
+  credVerifTxt: { fontFamily: ViveFonts.medium, fontSize: 12, color: '#42542F', letterSpacing: 0.2 },
+  credTitle: { fontFamily: ViveFonts.medium, fontSize: 15, color: ViveColors.text, lineHeight: 21, flexShrink: 1 },
+  credMeta: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 1 },
+  credNumber: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.softInk, marginTop: 3 },
+
+  // ── Reseñas ─────────────────────────────────────────────────────────
+  reviewsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  ratingSummary: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ratingValue: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text },
+  ratingCount: { fontFamily: ViveFonts.regular, fontSize: 14, color: ViveColors.softInk },
+  reviewsList: { gap: 10, marginTop: 16 },
+  // Mismo fondo que el bloque práctico de arriba: una tarjeta por reseña.
+  reviewCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 15,
+    borderCurve: 'continuous',
+    backgroundColor: '#EDEADD',
+    gap: 6,
+  },
+  reviewTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  reviewName: { flexShrink: 1, fontFamily: ViveFonts.semibold, fontSize: 14, color: ViveColors.text },
+  // Más bajo que la bio (16): las palabras del profesional van primero. Antes
+  // eran 18 en seminegrita y las reseñas pesaban más que su propia voz.
+  reviewText: { fontFamily: ViveFonts.regular, fontSize: 15, color: ViveColors.text, lineHeight: 23 },
+  verMas: { alignSelf: 'center', marginTop: 14, paddingVertical: 10, paddingHorizontal: 16 },
+  verMasTxt: { fontFamily: ViveFonts.semibold, fontSize: 14, color: ViveColors.primaryInk },
+
+  // ── Recursos del coach ──────────────────────────────────────────────
+  resourcesList: { gap: 0 },
+  resourceLast: { borderBottomWidth: 0 },
+  resourceCard: { paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: BORDE },
+  resourceHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  resourceIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(232,116,59,0.14)',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  noReviewsText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: 'rgba(135,131,92,0.65)',
-    textAlign: 'center',
-  },
+  resourceHeaderText: { flex: 1 },
+  resourceTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text },
+  resourceMeta: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 2 },
+
+  // ── Pie ─────────────────────────────────────────────────────────────
   reportLink: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 22,
+    marginTop: 24,
     paddingVertical: 8,
   },
-  reportLinkText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: 'rgba(135,131,92,0.75)',
-  },
-  reviewsList: {
-    gap: 12,
-  },
-  reviewCard: {
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.60)',
-    padding: 14,
-    ...shadow,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  reviewAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,248,240,0.62)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.60)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reviewAvatarText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-  },
-  reviewMeta: {
-    gap: 3,
-  },
-  reviewName: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: '#565E32',
-  },
-  reviewText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-    lineHeight: 20,
-  },
+  reportLinkText: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.softInk },
 
   // ── Footer sticky ─────────────────────────────────────────────────────
   footerSafe: {
@@ -1185,55 +1365,27 @@ const s = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingTop: 14,
-    paddingBottom: 8,
-    gap: 10,
-  },
-  footerTop: {},
-  price: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-  },
-  payRow: { marginTop: 6 },
-  priceIntl: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12.5,
-    color: 'rgba(135,131,92,0.95)',
-    marginTop: 2,
-  },
-  footerButtons: {
-    gap: 10,
-  },
-  btnPrimary: {
-    backgroundColor: '#565E32',
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnPrimaryDisabled: { backgroundColor: 'rgba(86,94,50,0.35)' },
-  btnPrimaryText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 16,
-    color: '#F7EFE4',
-    letterSpacing: 0.2,
-  },
-  btnSecondary: {
+    paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: ViveColors.primary,
+    gap: 12,
+  },
+  footerTop: { flex: 1, minWidth: 0 },
+  price: { fontFamily: ViveFonts.title, fontSize: 22, color: ViveColors.text },
+  priceUnit: { fontFamily: ViveFonts.regular, fontSize: 14, color: ViveColors.softInk },
+  btnPrimary: {
+    backgroundColor: ViveColors.primaryInk,
+    borderRadius: 16,
+    minWidth: 148,
+    minHeight: 52,
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    gap: 8,
+    flexDirection: 'row',
+    gap: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  btnSecondaryActive: {
-    backgroundColor: 'rgba(232,197,71,0.15)',
-  },
-  btnSecondaryText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: ViveColors.primary,
-  },
+  btnPrimaryDisabled: { backgroundColor: 'rgba(86,94,50,0.10)' },
+  btnPrimaryText: { fontFamily: ViveFonts.titleSemiBold, fontSize: 15, color: ViveColors.onPrimaryInk, textAlign: 'center', flexShrink: 1 },
+  btnPrimaryTextDisabled: { color: ViveColors.softInk },
 });

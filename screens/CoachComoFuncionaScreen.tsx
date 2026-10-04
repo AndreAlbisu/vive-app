@@ -167,6 +167,7 @@ const BLOQUES: Bloque[] = [
     parrafos: [
       'Vita no graba ni escucha las sesiones. De la videollamada solo guardamos quién entró y cuánto tiempo estuvo.',
       'Las notas privadas las ves solo vos; las compartidas también las ve la persona. Lo que te cuenta está alcanzado por tu deber de confidencialidad.',
+      'Si la persona elimina su cuenta de Vita, las notas que escribiste sobre ella se borran. Si necesitás conservar un registro propio, llevalo fuera de la app.',
       'Podés bloquear a alguien desde el chat. No se le avisa, y las sesiones ya agendadas siguen en pie.',
     ],
   },

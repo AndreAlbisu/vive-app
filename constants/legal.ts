@@ -246,8 +246,8 @@ Ante consultas sobre estos Términos: vitaappar@gmail.com. Andre Albisu Lamberti
 
 export const PRIVACY_MD = `# Política de Privacidad de Vita
 
-**Última actualización:** 25 de septiembre de 2026
-**Vigencia a partir de:** 25 de septiembre de 2026
+**Última actualización:** 3 de octubre de 2026
+**Vigencia a partir de:** 1 de octubre de 2026
 
 Esta Política describe cómo Vita, operada por Andre Albisu Lambertini, CUIT 20-46034087-0, con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
 
@@ -260,7 +260,7 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 ## 2. Qué Datos Recolectamos
 
 **2.1. Datos que el Usuario proporciona:**
-- **Registro y perfil:** nombre, correo electrónico y, según el caso, fecha de nacimiento, género, nacionalidad, foto de perfil; para Profesionales: especialidad, presentación, precio, video, temas, credenciales que decida cargar.
+- **Registro y perfil:** nombre, correo electrónico y, según el caso, fecha de nacimiento, género, nacionalidad, foto de perfil; para Profesionales: especialidad, presentación, precio, video, temas, credenciales que decida cargar y las imágenes para verificar su identidad (ver 2.6).
 - **Contenido de bienestar (datos sensibles):** registros de estado de ánimo (check-in), entradas de diario, ejercicios de gratitud y similares.
 - **Comunicaciones:** mensajes intercambiados con Profesionales dentro de una Sesión; reseñas; reportes; notas de sesión (en el caso de Profesionales).
 
@@ -272,11 +272,13 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 - Identificadores de dispositivo y **token de notificaciones push**; datos de uso y eventos de la aplicación (analítica); datos técnicos de conexión.
 
 **2.4. Accesos al dispositivo que la aplicación solicita.** En todos los casos el sistema operativo pide autorización previa, el Usuario puede negarla o revocarla en cualquier momento desde los ajustes del dispositivo, y la aplicación sigue funcionando sin ellos (solo deja de estar disponible la función asociada):
-- **Fotos y cámara:** para subir la foto de perfil y, en el caso de Profesionales, el video de presentación. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.
+- **Fotos y cámara:** para subir la foto de perfil y, en el caso de Profesionales, el video de presentación y las imágenes de verificación de identidad. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.
 - **Micrófono:** únicamente durante la grabación del video de presentación y durante las videollamadas de las Sesiones.
 - **Calendario:** solo para *escribir* el evento de una Sesión que el Usuario decide agendar. Vita **no lee** los eventos existentes del calendario.
 
 **2.5. Lista de espera del sitio web.** Quien deja su correo en vitaapp.com.ar para que le avisemos cuando Vita esté disponible nos proporciona ese correo, si se anota como persona o como Profesional y, si llegó por un enlace de invitación, su código; registramos además la fecha. Lo usamos solo para avisarle del lanzamiento y, si se anotó como Profesional, para contarle cómo postularse. No lo compartimos con terceros ni lo usamos con fines publicitarios.
+
+**2.6. Verificación de identidad de Profesionales.** Al postularse, el Profesional aporta una imagen del frente y del dorso de su documento de identidad y una fotografía de su rostro sosteniendo ese documento. La finalidad es una sola: confirmar que quien ofrece Sesiones es la persona que dice ser, antes de habilitarlo. La comparación la hace **una persona del equipo de Vita**, a simple vista; **Vita no utiliza sistemas automáticos de reconocimiento facial** ni extrae plantillas biométricas. Las imágenes se guardan en un espacio de almacenamiento privado, al que solo accede el equipo de Vita, que **registra quién las abre**; no se muestran en el perfil ni se comparten con otros Usuarios. **Se suprimen apenas se confirma la identidad.** Vita conserva únicamente la constancia: que la identidad fue verificada, la fecha, quién la verificó y el nombre confirmado. Si la postulación no avanza, las imágenes se suprimen al darse de baja la cuenta, o antes si el Profesional lo pide escribiendo a vitaappar@gmail.com.
 
 ## 3. Datos Sensibles y Consentimiento Explícito
 
@@ -346,6 +348,8 @@ Brasil y los Estados Unidos no integran la nómina de países con nivel adecuado
 
 8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.
 
+**Sobre el diario y los registros de bienestar:** las entradas de diario, de gratitud y de estado de ánimo se almacenan con controles de acceso que impiden que otros Usuarios, incluidos los Profesionales, accedan a ellas, salvo lo que el propio Usuario decida compartir conforme a la sección 3.4. **Tampoco cuentan con cifrado de extremo a extremo**, por lo que quienes administran la infraestructura de Vita podrían técnicamente acceder a su contenido. Vita se compromete a no hacerlo salvo que resulte indispensable para resolver una falla a pedido del Usuario, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar ese contenido con fines comerciales. La aplicación no ofrece al equipo de Vita ninguna función para leerlos.
+
 8.3. **Detección de datos de contacto y de pago.** Para hacer cumplir la cláusula de uso exclusivo de los Términos (sección 10), la aplicación analiza **en el dispositivo de quien escribe**, antes de enviarlo, si un texto incluye datos de contacto o de pago (por ejemplo, un teléfono, una red social o un CBU). **El texto no se envía a Vita para este análisis ni se almacena por este motivo.** Cuando se detecta uno de esos datos, Vita registra únicamente: el **tipo** de dato detectado, el lugar de la aplicación donde ocurrió, la fecha, las cuentas involucradas y si se decidió enviarlo igual. Vita puede revisar esos registros para evaluar un posible incumplimiento y, en su caso, aplicar las medidas previstas en los Términos; **ninguna medida se aplica en forma automática**. Cuando revisa un caso, Vita puede conservar documentación vinculada (por ejemplo, capturas aportadas en un reporte), con acceso restringido al equipo de Vita y registro de quién la consulta. Esa documentación no se comparte con otros Usuarios. Si un Profesional es suspendido o dado de baja, Vita informa a los Clientes que tenían un vínculo reciente con él que no se encuentra disponible, **sin indicar el motivo**.
 
 8.4. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
@@ -362,16 +366,19 @@ El ejercicio del derecho de acceso es **gratuito**, y puede ejercerse a interval
 
 Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el tratamiento depende de la categoría del dato:
 
-- **Contenido personal de bienestar**: entradas de diario, registros de estado de ánimo, ejercicios de gratitud, hábitos, recordatorios, recursos guardados y respuestas del cuestionario: **se suprimen de forma inmediata y definitiva**, junto con la foto de perfil.
-- **Reservas y datos de la transacción**: montos, identificadores de pago, fechas y estados: se conservan **diez (10) años** desde la operación, por obligaciones contables y fiscales, **disociados de la identidad** del Usuario dado de baja.
+- **Contenido personal de bienestar**: entradas de diario, registros de estado de ánimo, ejercicios de gratitud, hábitos, recordatorios, recursos guardados, respuestas del cuestionario, el registro de qué contenidos de bienestar utilizó y las notas de sesión que un Profesional haya escrito sobre el Usuario: **se suprimen de forma inmediata y definitiva**, junto con la foto de perfil.
+- **Reservas y datos de la transacción**: montos, identificadores de pago, fechas y estados: se conservan **diez (10) años** desde la operación, por obligaciones contables y fiscales, **disociados de la identidad** del Usuario dado de baja. El mensaje que el Usuario le escribió al Profesional al reservar y el tema por el que llegó **se suprimen**: no forman parte de la transacción.
 - **Reseñas**: se conservan de forma indefinida y **anonimizadas**, por integrar la reputación pública del Profesional evaluado. Suprimirlas permitiría que una baja de cuenta se use para eliminar una evaluación desfavorable.
 - **Mensajes y salas de conversación**: se conservan **anonimizados** mientras subsista la conversación, dado que pertenecen también al otro participante.
-- **Datos técnicos y de uso** (analítica): se conservan **disociados de la identidad** del Usuario.
+- **Reportes y avisos de problemas con una Sesión**: se conservan **disociados de la identidad** del Usuario, porque documentan una actuación de Vita o involucran a otra persona.
+- **Datos técnicos y de uso** (analítica y calidad de las videollamadas): se conservan **disociados de la identidad** del Usuario.
 - **Registros de detección de datos de contacto y de pago** (ver 8.3): se conservan **doce (12) meses** desde que se generan y luego se suprimen.
 - **Correos de la lista de espera** (ver 2.5): se suprimen una vez enviado el aviso, o antes si el titular lo pide por los medios de contacto.
+- **Imágenes de verificación de identidad** (ver 2.6): se suprimen al confirmarse la identidad. La constancia de la verificación se conserva mientras exista la cuenta y se suprime al darse de baja.
+- **Datos del Profesional que se da de baja**: su agenda, el enlace de calendario y las notas privadas que escribió **se suprimen de inmediato**. Sus datos de cobro (CBU, alias, cuenta de PayPal, billetera) y la conexión con Mercado Pago se suprimen en el mismo momento, **salvo que existan cobros, reintegros o reclamos en curso**, caso en el cual se conservan hasta completarlos. Las notas que compartió con un Cliente se conservan, porque también pertenecen a ese Cliente. El nombre con el que prestó cada Sesión queda en el registro de esa reserva.
 - **Medidas aplicadas a un Profesional y su documentación** (advertencias, suspensiones y bajas): se conservan mientras exista la cuenta del Profesional, para poder considerar la reiteración, y tras la baja quedan **disociadas de su identidad**, como el resto de su ficha.
 
-Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente y se reembolsan. La ficha de perfil no se elimina: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.
+Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente. El reintegro sigue la regla de cancelación de los Términos: corresponde si faltan veinticuatro (24) horas o más para la Sesión. Una Sesión ya iniciada no se cancela. La ficha de perfil no se elimina: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.
 
 Cumplidos los plazos indicados, los datos se suprimen o anonimizan de modo irreversible.
 
@@ -516,7 +523,7 @@ export const LEGAL_PLACEHOLDERS: string[] = [];
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '858b0f80ee26';
+export const LEGAL_VERSION = '969ad5ae5d09';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

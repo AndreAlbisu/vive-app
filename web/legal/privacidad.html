@@ -2,85 +2,98 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7EFE4">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>Política de Privacidad — Vita</title>
 <style>
-  :root { color-scheme: light dark; }
+  :root {
+    color-scheme: light;
+    --cream: #F7EFE4; --paper: #FBF8F1; --olive: #565E32; --soft: #566245;
+    --terra-ink: #A25842; --line: rgba(86, 94, 50, .16);
+  }
   * { box-sizing: border-box; }
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0; padding: 40px 20px 80px;
-    background: #F7EFE4; color: #3A4F2A;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 16px; line-height: 1.65;
+    margin: 0; padding: 0 20px 80px;
+    background: var(--cream); color: var(--olive);
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px; line-height: 1.7; -webkit-font-smoothing: antialiased;
   }
   main { max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 1.75rem; line-height: 1.25; margin: 0 0 1.5rem; }
-  h2 { font-size: 1.2rem; margin: 2.5rem 0 .75rem; }
-  h3 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+  /* Los links largos (como la URL de Defensa del Consumidor) se cortan: sin
+     esto la página de arrepentimiento se corría de costado en el celular. */
+  main a { overflow-wrap: anywhere; }
+  h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); line-height: 1.1; letter-spacing: -0.035em; font-weight: 800; margin: 0 0 1.25rem; text-wrap: balance; }
+  h2 { font-size: 1.25rem; line-height: 1.25; letter-spacing: -0.02em; font-weight: 800; margin: 2.75rem 0 .75rem; }
+  h3 { font-size: 1.02rem; font-weight: 700; margin: 1.6rem 0 .5rem; }
   p, li { font-size: 1rem; }
+  strong { font-weight: 700; }
   ul, ol { padding-left: 1.35rem; }
   li { margin-bottom: .4rem; }
-  hr { border: 0; border-top: 1px solid rgba(58,79,42,.15); margin: 2.5rem 0; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2.5rem 0; }
   /* La página de eliminación de cuenta declara los plazos de conservación en
      una tabla; sin overflow se rompe en pantallas angostas. */
   .table-wrap { overflow-x: auto; margin: 1.25rem 0; }
   table { border-collapse: collapse; width: 100%; font-size: .925rem; }
-  th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid rgba(58,79,42,.15); vertical-align: top; }
+  th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { font-weight: 700; }
   /* ⚠️ #C1694F daba 3.41:1 sobre el crema — por debajo del 4.5 de AA, y acá el
      link ES el contenido (son páginas de puros enlaces). Esta es la misma
      terracota oscurecida: 4.59:1. Es el valor que en la app se llama
-     ViveColors.primaryInk. En oscuro hay que ir al revés y aclararla. */
-  a { color: #A25842; }
+     ViveColors.primaryInk. */
+  a { color: var(--terra-ink); }
 
   /* Foco de teclado. No había ninguno: quien navega con Tab —o con un lector de
      pantalla, o sin poder usar un mouse— no tenía forma de saber dónde estaba
      parado. focus-visible y no focus a secas para que el anillo no aparezca al
      hacer click con el mouse, que es lo que lleva a la gente a matarlo con
      outline:none. */
-  :focus-visible {
-    outline: 3px solid #A25842;
-    outline-offset: 2px;
-    border-radius: 3px;
-  }
-  code { background: rgba(58,79,42,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
-  .nav { max-width: 720px; margin: 0 auto 2rem; font-size: .9rem; }
+  :focus-visible { outline: 3px solid var(--terra-ink); outline-offset: 2px; border-radius: 6px; }
+  code { background: rgba(86,94,50,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
+
+  .top { max-width: 720px; margin: 0 auto; padding: 22px 0 8px; }
+  .wordmark { display: inline-flex; align-items: center; gap: .28em; font-weight: 800; font-size: 26px; letter-spacing: -0.03em; color: var(--olive); text-decoration: none; line-height: 1; }
+  .vmark { width: .95em; height: .95em; fill: none; stroke: currentColor; stroke-width: 7; }
+  .nav { max-width: 720px; margin: 0 auto 2.25rem; padding: 14px 0 12px; border-bottom: 1px solid var(--line); font-size: .9rem; font-weight: 600; }
+  .nav-links { display: flex; flex-wrap: wrap; gap: 0 20px; }
+  .nav a { color: var(--soft); text-decoration: none; padding: 10px 0; touch-action: manipulation; }
+  @media (hover: hover) and (pointer: fine) { .nav a:hover { color: var(--olive); text-decoration: underline; } }
+  .nav a[aria-current="page"] { color: var(--olive); text-decoration: underline; text-decoration-color: var(--terra-ink); text-underline-offset: 5px; }
   /* "Lugar destacado" de la Res. 424/2020: el enlace no puede ser un link más
-     perdido en el pie. Se lo pinta como botón y se lo separa del resto. */
+     perdido en el pie. Va primero y como botón, en su propia pastilla. */
   .nav a.regret {
-    display: inline-block; margin-left: .35rem; padding: .35rem .7rem;
-    background: #A25842; color: #FFF6EC; border-radius: 8px;  /* sobre #C1694F el crema daba 3.64:1 */
-    font-weight: 700; letter-spacing: .02em; text-decoration: none;
+    display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 6px;
+    padding: 0 16px; background: var(--terra-ink); color: #FFF6EC; border-radius: 999px;
+    font-weight: 700; letter-spacing: .02em;
   }
+  .nav a.regret[aria-current="page"] { text-decoration: none; }
+  .fechas { color: var(--soft); }
   .draft {
     max-width: 720px; margin: 0 auto 2rem; padding: 12px 16px;
     background: rgba(193,105,79,.10); border: 1px solid rgba(193,105,79,.28);
     border-radius: 12px; color: #8A5A2B; font-size: .875rem; line-height: 1.5;
   }
-  @media (prefers-color-scheme: dark) {
-    body { background: #1A1C16; color: #E4E0D2; }
-    h1, h2, h3 { color: #F2EDE0; }
-    /* La misma terracota, para el otro lado: sobre el fondo oscuro hay que
-       aclararla (#A25842 ahí da 3.28). Esta da 4.89. */
-    a { color: #C5735A; }
-    :focus-visible { outline-color: #C5735A; }
-    hr { border-top-color: rgba(228,224,210,.18); }
-    code { background: rgba(228,224,210,.10); }
-    th, td { border-bottom-color: rgba(228,224,210,.18); }
-    .draft { background: rgba(193,105,79,.16); color: #E8B48F; border-color: rgba(193,105,79,.35); }
-    .card { background: rgba(228,224,210,.05); border-color: rgba(228,224,210,.14); }
-    .lead { color: rgba(228,224,210,.85); }
-    .card.regret strong { color: #C5735A; }
-  }
 </style>
 </head>
 <body>
-<nav class="nav"><a href="../index.html">Inicio</a> · <a href="./terminos.html">Términos y Condiciones</a> · <a href="./arrepentimiento.html" class="regret">BOTÓN DE ARREPENTIMIENTO</a> · <a href="./eliminar-cuenta.html">Eliminar tu cuenta</a></nav>
+<header class="top"><a class="wordmark" href="/" aria-label="Vita, ir al inicio"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>vita</a></header>
+<nav class="nav" aria-label="Legales">
+  <a class="regret" href="./arrepentimiento.html">BOTÓN DE ARREPENTIMIENTO</a>
+  <div class="nav-links">
+    <a href="/">Inicio</a>
+    <a href="./terminos.html">Términos y Condiciones</a>
+    <a href="./privacidad.html" aria-current="page">Política de Privacidad</a>
+    <a href="./eliminar-cuenta.html">Eliminar tu cuenta</a>
+  </div>
+</nav>
 
 <main>
 <h1>Política de Privacidad de Vita</h1>
-<p><strong>Última actualización:</strong> 25 de septiembre de 2026
-<strong>Vigencia a partir de:</strong> 25 de septiembre de 2026</p>
+<p class="fechas"><strong>Última actualización:</strong> 3 de octubre de 2026<br><strong>Vigencia a partir de:</strong> 1 de octubre de 2026</p>
 <p>Esta Política describe cómo Vita, operada por Andre Albisu Lambertini, CUIT 20-46034087-0, con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba (&quot;<strong>Vita</strong>&quot;, &quot;<strong>nosotros</strong>&quot;), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la <strong>Ley 25.326 de Protección de los Datos Personales</strong> de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).</p>
 <p>Al utilizar la Plataforma, el Usuario declara haber leído y comprendido esta Política. Forma parte de los Términos y Condiciones.</p>
 <h2>1. Responsable del Tratamiento</h2>
@@ -88,7 +101,7 @@
 <h2>2. Qué Datos Recolectamos</h2>
 <p><strong>2.1. Datos que el Usuario proporciona:</strong></p>
 <ul>
-<li><strong>Registro y perfil:</strong> nombre, correo electrónico y, según el caso, fecha de nacimiento, género, nacionalidad, foto de perfil; para Profesionales: especialidad, presentación, precio, video, temas, credenciales que decida cargar.</li>
+<li><strong>Registro y perfil:</strong> nombre, correo electrónico y, según el caso, fecha de nacimiento, género, nacionalidad, foto de perfil; para Profesionales: especialidad, presentación, precio, video, temas, credenciales que decida cargar y las imágenes para verificar su identidad (ver 2.6).</li>
 <li><strong>Contenido de bienestar (datos sensibles):</strong> registros de estado de ánimo (check-in), entradas de diario, ejercicios de gratitud y similares.</li>
 <li><strong>Comunicaciones:</strong> mensajes intercambiados con Profesionales dentro de una Sesión; reseñas; reportes; notas de sesión (en el caso de Profesionales).</li>
 </ul>
@@ -103,11 +116,12 @@
 </ul>
 <p><strong>2.4. Accesos al dispositivo que la aplicación solicita.</strong> En todos los casos el sistema operativo pide autorización previa, el Usuario puede negarla o revocarla en cualquier momento desde los ajustes del dispositivo, y la aplicación sigue funcionando sin ellos (solo deja de estar disponible la función asociada):</p>
 <ul>
-<li><strong>Fotos y cámara:</strong> para subir la foto de perfil y, en el caso de Profesionales, el video de presentación. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.</li>
+<li><strong>Fotos y cámara:</strong> para subir la foto de perfil y, en el caso de Profesionales, el video de presentación y las imágenes de verificación de identidad. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.</li>
 <li><strong>Micrófono:</strong> únicamente durante la grabación del video de presentación y durante las videollamadas de las Sesiones.</li>
 <li><strong>Calendario:</strong> solo para <em>escribir</em> el evento de una Sesión que el Usuario decide agendar. Vita <strong>no lee</strong> los eventos existentes del calendario.</li>
 </ul>
 <p><strong>2.5. Lista de espera del sitio web.</strong> Quien deja su correo en vitaapp.com.ar para que le avisemos cuando Vita esté disponible nos proporciona ese correo, si se anota como persona o como Profesional y, si llegó por un enlace de invitación, su código; registramos además la fecha. Lo usamos solo para avisarle del lanzamiento y, si se anotó como Profesional, para contarle cómo postularse. No lo compartimos con terceros ni lo usamos con fines publicitarios.</p>
+<p><strong>2.6. Verificación de identidad de Profesionales.</strong> Al postularse, el Profesional aporta una imagen del frente y del dorso de su documento de identidad y una fotografía de su rostro sosteniendo ese documento. La finalidad es una sola: confirmar que quien ofrece Sesiones es la persona que dice ser, antes de habilitarlo. La comparación la hace <strong>una persona del equipo de Vita</strong>, a simple vista; <strong>Vita no utiliza sistemas automáticos de reconocimiento facial</strong> ni extrae plantillas biométricas. Las imágenes se guardan en un espacio de almacenamiento privado, al que solo accede el equipo de Vita, que <strong>registra quién las abre</strong>; no se muestran en el perfil ni se comparten con otros Usuarios. <strong>Se suprimen apenas se confirma la identidad.</strong> Vita conserva únicamente la constancia: que la identidad fue verificada, la fecha, quién la verificó y el nombre confirmado. Si la postulación no avanza, las imágenes se suprimen al darse de baja la cuenta, o antes si el Profesional lo pide escribiendo a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a>.</p>
 <h2>3. Datos Sensibles y Consentimiento Explícito</h2>
 <p>Ciertos datos vinculados al Usuario (los registros de estado de ánimo, las entradas de diario y de gratitud, los temas que elige en el cuestionario para encontrar Profesionales, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y <strong>el registro de qué contenidos de bienestar utiliza</strong>) constituyen <strong>datos sensibles</strong> en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.</p>
 <p>3.1. Su tratamiento requiere el <strong>consentimiento libre, expreso e informado</strong> del Usuario. Ese consentimiento se solicita <strong>de forma específica y separada de la aceptación de estos documentos</strong>, la primera vez que el Usuario accede a estas funcionalidades, mostrando previamente qué datos se tratan y con qué finalidad. Vita deja constancia de la fecha y de la versión del texto informado.</p>
@@ -161,6 +175,7 @@
 <h2>8. Seguridad de los Datos</h2>
 <p>8.1. Vita aplica medidas técnicas y organizativas razonables para proteger los datos, incluyendo controles de acceso a nivel de base de datos que restringen el acceso a la información de cada Usuario.</p>
 <p>8.2. <strong>Sobre los mensajes:</strong> los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. <strong>No cuentan con cifrado de extremo a extremo</strong>, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.</p>
+<p><strong>Sobre el diario y los registros de bienestar:</strong> las entradas de diario, de gratitud y de estado de ánimo se almacenan con controles de acceso que impiden que otros Usuarios, incluidos los Profesionales, accedan a ellas, salvo lo que el propio Usuario decida compartir conforme a la sección 3.4. <strong>Tampoco cuentan con cifrado de extremo a extremo</strong>, por lo que quienes administran la infraestructura de Vita podrían técnicamente acceder a su contenido. Vita se compromete a no hacerlo salvo que resulte indispensable para resolver una falla a pedido del Usuario, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar ese contenido con fines comerciales. La aplicación no ofrece al equipo de Vita ninguna función para leerlos.</p>
 <p>8.3. <strong>Detección de datos de contacto y de pago.</strong> Para hacer cumplir la cláusula de uso exclusivo de los Términos (sección 10), la aplicación analiza <strong>en el dispositivo de quien escribe</strong>, antes de enviarlo, si un texto incluye datos de contacto o de pago (por ejemplo, un teléfono, una red social o un CBU). <strong>El texto no se envía a Vita para este análisis ni se almacena por este motivo.</strong> Cuando se detecta uno de esos datos, Vita registra únicamente: el <strong>tipo</strong> de dato detectado, el lugar de la aplicación donde ocurrió, la fecha, las cuentas involucradas y si se decidió enviarlo igual. Vita puede revisar esos registros para evaluar un posible incumplimiento y, en su caso, aplicar las medidas previstas en los Términos; <strong>ninguna medida se aplica en forma automática</strong>. Cuando revisa un caso, Vita puede conservar documentación vinculada (por ejemplo, capturas aportadas en un reporte), con acceso restringido al equipo de Vita y registro de quién la consulta. Esa documentación no se comparte con otros Usuarios. Si un Profesional es suspendido o dado de baja, Vita informa a los Clientes que tenían un vínculo reciente con él que no se encuentra disponible, <strong>sin indicar el motivo</strong>.</p>
 <p>8.4. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.</p>
 <h2>9. Derechos del Titular de los Datos</h2>
@@ -172,16 +187,19 @@
 <h2>10. Conservación de los Datos</h2>
 <p>Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el tratamiento depende de la categoría del dato:</p>
 <ul>
-<li><strong>Contenido personal de bienestar</strong>: entradas de diario, registros de estado de ánimo, ejercicios de gratitud, hábitos, recordatorios, recursos guardados y respuestas del cuestionario: <strong>se suprimen de forma inmediata y definitiva</strong>, junto con la foto de perfil.</li>
-<li><strong>Reservas y datos de la transacción</strong>: montos, identificadores de pago, fechas y estados: se conservan <strong>diez (10) años</strong> desde la operación, por obligaciones contables y fiscales, <strong>disociados de la identidad</strong> del Usuario dado de baja.</li>
+<li><strong>Contenido personal de bienestar</strong>: entradas de diario, registros de estado de ánimo, ejercicios de gratitud, hábitos, recordatorios, recursos guardados, respuestas del cuestionario, el registro de qué contenidos de bienestar utilizó y las notas de sesión que un Profesional haya escrito sobre el Usuario: <strong>se suprimen de forma inmediata y definitiva</strong>, junto con la foto de perfil.</li>
+<li><strong>Reservas y datos de la transacción</strong>: montos, identificadores de pago, fechas y estados: se conservan <strong>diez (10) años</strong> desde la operación, por obligaciones contables y fiscales, <strong>disociados de la identidad</strong> del Usuario dado de baja. El mensaje que el Usuario le escribió al Profesional al reservar y el tema por el que llegó <strong>se suprimen</strong>: no forman parte de la transacción.</li>
 <li><strong>Reseñas</strong>: se conservan de forma indefinida y <strong>anonimizadas</strong>, por integrar la reputación pública del Profesional evaluado. Suprimirlas permitiría que una baja de cuenta se use para eliminar una evaluación desfavorable.</li>
 <li><strong>Mensajes y salas de conversación</strong>: se conservan <strong>anonimizados</strong> mientras subsista la conversación, dado que pertenecen también al otro participante.</li>
-<li><strong>Datos técnicos y de uso</strong> (analítica): se conservan <strong>disociados de la identidad</strong> del Usuario.</li>
+<li><strong>Reportes y avisos de problemas con una Sesión</strong>: se conservan <strong>disociados de la identidad</strong> del Usuario, porque documentan una actuación de Vita o involucran a otra persona.</li>
+<li><strong>Datos técnicos y de uso</strong> (analítica y calidad de las videollamadas): se conservan <strong>disociados de la identidad</strong> del Usuario.</li>
 <li><strong>Registros de detección de datos de contacto y de pago</strong> (ver 8.3): se conservan <strong>doce (12) meses</strong> desde que se generan y luego se suprimen.</li>
 <li><strong>Correos de la lista de espera</strong> (ver 2.5): se suprimen una vez enviado el aviso, o antes si el titular lo pide por los medios de contacto.</li>
+<li><strong>Imágenes de verificación de identidad</strong> (ver 2.6): se suprimen al confirmarse la identidad. La constancia de la verificación se conserva mientras exista la cuenta y se suprime al darse de baja.</li>
+<li><strong>Datos del Profesional que se da de baja</strong>: su agenda, el enlace de calendario y las notas privadas que escribió <strong>se suprimen de inmediato</strong>. Sus datos de cobro (CBU, alias, cuenta de PayPal, billetera) y la conexión con Mercado Pago se suprimen en el mismo momento, <strong>salvo que existan cobros, reintegros o reclamos en curso</strong>, caso en el cual se conservan hasta completarlos. Las notas que compartió con un Cliente se conservan, porque también pertenecen a ese Cliente. El nombre con el que prestó cada Sesión queda en el registro de esa reserva.</li>
 <li><strong>Medidas aplicadas a un Profesional y su documentación</strong> (advertencias, suspensiones y bajas): se conservan mientras exista la cuenta del Profesional, para poder considerar la reiteración, y tras la baja quedan <strong>disociadas de su identidad</strong>, como el resto de su ficha.</li>
 </ul>
-<p>Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente y se reembolsan. La ficha de perfil no se elimina: queda <strong>vaciada de todo dato personal</strong> y muestra &quot;Usuario eliminado&quot; allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.</p>
+<p>Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente. El reintegro sigue la regla de cancelación de los Términos: corresponde si faltan veinticuatro (24) horas o más para la Sesión. Una Sesión ya iniciada no se cancela. La ficha de perfil no se elimina: queda <strong>vaciada de todo dato personal</strong> y muestra &quot;Usuario eliminado&quot; allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.</p>
 <p>Cumplidos los plazos indicados, los datos se suprimen o anonimizan de modo irreversible.</p>
 <h2>11. Menores de Edad</h2>
 <p>La Plataforma está dirigida a personas mayores de 18 años. No recolectamos deliberadamente datos de menores. Si tomamos conocimiento de que se registró un menor, procederemos a dar de baja la cuenta y suprimir sus datos.</p>
