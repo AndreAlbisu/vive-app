@@ -43,6 +43,9 @@ describe('mensajeDeRechazo', () => {
   it('traduce el bloqueo de profesional', () => {
     expect(mensajeDeRechazo({ message: 'NOMBRE_BLOQUEADO_PROFESIONAL' })).toContain('profesional');
   });
+  it('traduce el bloqueo por identidad enviada', () => {
+    expect(mensajeDeRechazo({ message: 'NOMBRE_BLOQUEADO_IDENTIDAD' })).toContain('verificación de identidad');
+  });
   it('traduce el límite con la fecha que manda la base', () => {
     expect(mensajeDeRechazo({ message: 'NOMBRE_CAMBIADO_HACE_POCO', details: '2026-10-21' })).toContain('21 de octubre');
   });

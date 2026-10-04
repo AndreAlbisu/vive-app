@@ -62,6 +62,9 @@ export function mensajeDeRechazo(error: { message?: string; details?: string | n
   if (msg.includes('NOMBRE_BLOQUEADO_PROFESIONAL')) {
     return `Tu nombre de profesional no se puede cambiar desde la app. Escribinos a ${MAIL_SOPORTE}`;
   }
+  if (msg.includes('NOMBRE_BLOQUEADO_IDENTIDAD')) {
+    return `Tu nombre queda fijo desde que enviaste tu verificación de identidad. Si necesitás corregirlo, escribinos a ${MAIL_SOPORTE}`;
+  }
   if (msg.includes('NOMBRE_CAMBIADO_HACE_POCO')) {
     const iso = error?.details ?? '';
     const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00`) : null;

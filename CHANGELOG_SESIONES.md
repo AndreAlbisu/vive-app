@@ -1,3 +1,18 @@
+## 2026-10-04 — Andre (Claude · auditoría fase 3, tanda 2: reglas de la base y lib)
+
+**Tocado:** `supabase/migrations/20261004010000_lock_specialty_and_identity_name.sql` (nuevo), `lib/cambioDeNombre.ts`, `__tests__/cambioDeNombre.test.ts`
+
+**Resumen:**
+- Revisión de las migraciones nuevas y de `lib/` desde el 24/09. Sin hallazgos en notas de sesión, consentimiento, subida de identidad, panel de admin y privacidad de postulaciones pendientes.
+- 🗄️ **Migración escrita y probada en `vita-pruebas`, 🔴 NO aplicada en producción** (la corre Andre): (1) `trg_guard_coach_specialty`: desde el cliente, `coaches.specialty` solo nace con uno de los tres valores del formulario y después no se cambia (un profesional sin matrícula podía ponerse "Psicóloga clínica y psiquiatra" por la API, y ese texto se muestra en Favoritos, "tus profesionales", la reseña y Conexiones); (2) `limitar_cambio_de_nombre` bloquea el nombre desde que hay fila en `identity_verifications` (antes se podía cambiar entre la verificación del DNI y la aprobación). La app muestra el motivo.
+- Probado por la API de prueba: el cambio de especialidad y el alta con título libre rebotan, la bio se sigue pudiendo editar, la postulación normal sigue andando, y el nombre queda fijo solo para quien ya envió su identidad.
+- **Confirmado, sin arreglar:** un profesional despublicado desde el panel (`set_coach_verified` false) no se puede volver a publicar: `approve_coach_application` exige postulación `pendiente` y devuelve `solicitud_no_pendiente`. Las sanciones no pasan por ahí (usan `suspendido_hasta`).
+
+**Pendiente para la próxima sesión:**
+- Andre: `! supabase db query --linked -f supabase/migrations/20261004010000_lock_specialty_and_identity_name.sql`. Después Claude verifica, registra la migración y actualiza SCHEMA.md.
+- Decidir si volver a publicar a un despublicado tiene que ser posible desde el panel.
+- Fase 3, tanda 3: pantallas y web. En producción hay valores viejos de `specialty` en texto libre (datos de prueba).
+
 ## 2026-10-03 — Andre (Claude · auditoría fase 3, tanda 1: funciones del servidor)
 
 **Tocado:** `supabase/functions/delete-account/index.ts` (v30), `admin-actions/index.ts` (v42), `guarantee-claim/index.ts` (v33), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
