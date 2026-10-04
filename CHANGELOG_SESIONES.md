@@ -1,3 +1,17 @@
+## 2026-10-03 — Andre (Claude · auditoría fases 1 y 2, tres endurecimientos)
+
+**Tocado:** `supabase/migrations/20261003010000_harden_mp_grants_block_check_email_lookup.sql` (nuevo)
+
+**Resumen:**
+- **Fase 2:** `test:security`, 10 de 10. **Fase 1:** los 50 avisos de `supabase db advisors` clasificados; ninguno explotable. Aceptados: las 4 vistas del catálogo, 9 tablas sin policy y sin grants, las funciones que comprueban quién llama, `pg_net` en public. `npm audit`: 47 altos, todos de Metro, Jest y Expo CLI (no viajan en la app).
+- 🗄️ **Migración escrita y probada en `vita-pruebas`, 🔴 NO aplicada en producción** (el control de permisos del entorno bloquea el SQL de escritura contra producción; la corre Andre): (1) `coach_mp_accounts` pierde los grants de `anon`/`authenticated` (la protegía solo el RLS); (2) `are_blocked` le contesta a un usuario común solo si es una de las dos personas (admins, triggers y service role siguen igual); (3) `email_es_de_coach` con tope de 20 por hora por IP.
+- Probado por la API del proyecto de prueba: un tercero ya no ve el bloqueo ajeno, los dos involucrados y la admin sí, el trigger de mensajes sigue frenando al bloqueado, la consulta 21 de mails rebota.
+
+**Pendiente para la próxima sesión:**
+- Andre: `! supabase db query --linked -f supabase/migrations/20261003010000_harden_mp_grants_block_check_email_lookup.sql`. Después Claude verifica en producción, registra la migración y actualiza SCHEMA.md.
+- Confirmar si la protección de contraseñas filtradas de Supabase existe en el plan gratis.
+- Fase 3 (revisión del código escrito desde el 24/09).
+
 ## 2026-10-03 — Andre (Claude · plan de auditoría, proyecto de prueba y Strix)
 
 **Tocado:** nada del código de la app. Fuera del repo: proyecto Supabase `vita-pruebas`, carpeta `~/.config/vita-pruebas/`, Strix instalado.
