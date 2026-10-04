@@ -1,3 +1,19 @@
+## 2026-10-04 — Andre (Claude · auditoría fases 6 y 7: Strix y privacidad comprobable)
+
+**Tocado:** nada del repo.
+
+**Resumen:**
+- **Fase 6 (Strix): no se pudo correr.** Arrancó contra `vita-pruebas` y el modelo se negó en el primer paso por el filtro de contenido del proveedor. Sin hallazgos y sin reintentos. Queda instalado; la copia limpia del código está en `~/vita-strix/` (Strix no monta carpetas bajo `.config`). Si se quiere una mirada externa, la alternativa es una prueba de intrusión hecha por una persona sobre el proyecto de prueba.
+- **Fase 7, retirar el consentimiento:** probado en `vita-pruebas`. Al retirarlo, la base rechaza nuevas entradas de diario y de ánimo; lo ya guardado queda y la persona lo puede borrar. Coincide con Política §3.3.
+- **Fase 7, etiquetas de las tiendas (`docs/etiquetas-privacidad-tiendas.md`, del 06/08 al 13/08): desactualizadas.** No declaran: fotos del documento de identidad y selfie (desde el 01/10), datos de cobro de profesionales (CBU, alias, PayPal, billetera), credenciales y matrículas, y los errores de la app que desde el 23/09 salen del teléfono (`error_app`), que hoy contradicen el "no" a datos de diagnóstico. El pendiente "no hay borrado de cuenta dentro de la app" ya no es cierto.
+- **Fase 7, Política:** no menciona la zona horaria que se guarda con cada reserva, la dirección IP que se usa para los topes de intentos ni los informes de error de la app.
+- **Fase 7, pedido de datos:** el derecho de acceso se ejerce por mail y no hay un procedimiento ni una herramienta para armar la respuesta.
+
+**Pendiente para la próxima sesión:**
+- Actualizar las etiquetas de las tiendas y sumar los tres puntos a la Política (espera OK de Andre).
+- Procedimiento para responder un pedido de datos.
+- Fases 8 (cuentas y operación, de Andre) y 9 (teléfono, Joaquín). Revocar la clave de API que se usó para Strix.
+
 ## 2026-10-04 — Andre (Claude · auditoría fase 5: pruebas por rol)
 
 **Tocado:** nada del repo. Fuera del repo: `~/.config/vita-pruebas/roles-lectura.py`, `roles-escritura.py`, `seed-extra.sql`.
