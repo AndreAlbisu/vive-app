@@ -1,0 +1,7 @@
+Origen: https://github.com/remotion-dev/skills (oficial de Remotion), carpeta skills/remotion-best-practices
+Commit: 0b5db9d (01/10/2026), versión de la skill 4.0.532
+Copiada a mano el 02/10/2026, sin `npx skills add`. Revisada antes de copiar: solo texto (SKILL.md y
+REFERENCE.md), código de ejemplo y dos scripts que preparan datos de mapas (leen y escriben archivos
+locales; no se ejecutan solos). Sin hooks ni binarios.
+Esta carpeta ya incluye las otras skills del repo (create, markup, render, studio, captions, maps, etc.).
+Para actualizar: volver a clonar el repo, revisar el diff y copiar de nuevo.
