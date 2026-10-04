@@ -38,10 +38,11 @@ const R         = 66;    // resting circle radius
 const ORBIT_R   = 150;   // far orbital radius (entry start)
 const REST_DIST = 46;    // center→circle-center distance at rest
 
-// Classic Venn triangle: top, bottom-right, bottom-left (degrees, clockwise from right)
-const REST_ANGLES  = [270, 30, 150] as const;
-// Off-plane start angles so each circle swings in along its own arc
-const START_ANGLES = [200, -40, 80] as const;
+// Venn triangle INVERTIDO (apex abajo): bottom, top-right, top-left — reflejo
+// vertical del original [270,30,150] (degrees, clockwise from right; y+ = abajo).
+const REST_ANGLES  = [90, 330, 210] as const;
+// Start angles reflejados igual, para que cada círculo entre por su propio arco.
+const START_ANGLES = [160, 40, 280] as const;
 
 const ENTRY_MS      = 1900;
 const HOLD_MS       = 1500;
@@ -51,9 +52,12 @@ const BRAND_GROW_MS = 1100;
 const PAL = {
   bg:        '#FBF3E7',
   bgTo:      '#F4E2C8',
-  textColor: '#7A3D12',
-  subColor:  '#B97A3E',
-  ring:      'rgba(122,61,18,0.28)',
+  // Verde de la app (mismo que VitaWordmark / ViveColors.text), no el marrón viejo.
+  textColor: '#565E32',
+  // Tagline en oliva suave de la app (FOREST_SOFT/softInk), no marrón.
+  subColor:  '#566245',
+  // Anillo suave: naranja del propio glow a baja opacidad, no el hairline marrón.
+  ring:      'rgba(224,122,58,0.22)',
 } as const;
 
 const AURA_COLORS = ['#FF9A52', '#FFB36B', '#FFC98C'] as const;
