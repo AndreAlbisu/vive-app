@@ -1,3 +1,18 @@
+## 2026-10-04 — Andre (Claude · auditoría fase 5: pruebas por rol)
+
+**Tocado:** nada del repo. Fuera del repo: `~/.config/vita-pruebas/roles-lectura.py`, `roles-escritura.py`, `seed-extra.sql`.
+
+**Resumen:**
+- Pruebas por la API del proyecto `vita-pruebas` con siete identidades (visitante, dos clientes, dos profesionales, una profesional suspendida, admin) y datos marcados en 37 tablas.
+- **Lecturas:** cada cuenta ve solo lo suyo. Ningún dato marcado como secreto apareció en una cuenta que no fuera su dueña, su contraparte en la sesión o la admin.
+- **Escrituras:** 112 intentos de modificar lo ajeno o escalar privilegios (hacerse admin, tocar montos y estados de pago, hablar en nombre de otro, falsificar avisos, publicarse, verificarse la matrícula, levantarse una sanción, correr tareas programadas, leer o pisar documentos de identidad). Rebotaron todos. Reservar con una profesional suspendida rebota por el motivo correcto, y `send-push` ignora el texto que manda el cliente.
+- Dos observaciones, sin arreglar: (1) el cliente puede leer por la API el campo `notes` de su reclamo de garantía, donde queda el motivo de rechazo que escribe el admin; (2) la admin ve `bookings.user_message` (lo que el cliente le escribió al profesional al reservar).
+- Los dos scripts se pueden volver a correr después de cada cambio de permisos.
+
+**Pendiente para la próxima sesión:**
+- Decidir qué hacer con las dos observaciones.
+- Fase 6 (Strix): falta la clave de API. Después, privacidad comprobable, cuentas y operación, y la prueba en teléfono.
+
 ## 2026-10-04 — Andre (Claude · auditoría fase 4: checklist de endurecimiento)
 
 **Tocado:** `supabase/functions/delete-account/index.ts` (v31), `supabase/functions/mp-oauth-start/index.ts` (v28), `web/sala/index.html`, `web/vendor/daily-js-0.92.2.esm.js` (nuevo), `vercel.json`, `docs/politica-de-privacidad.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
