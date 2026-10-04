@@ -1,3 +1,18 @@
+## 2026-10-05 — Joaquín (Claude · segunda iteración de la animación de inicio)
+
+**Tocado:** `screens/OnboardingScreen1.tsx`
+
+**Resumen:**
+- Segunda pasada visual a la animación de inicio (rama `fix-onboarding-tipografia`, PR #8), iterando sobre device con Joaquín (skill `animate-expo`):
+  - **Orbes:** gradiente de "luz suave" — pico de opacidad `0.95`→`0.55` + stop intermedio, para que los 3 naranjas se superpongan como luz y no *quemen* el centro (se veía como mancha brillante). Sacados los anillos finos del todo (Layer 3 + hook `useRingAnimProps` + token `PAL.ring`): eran lo que se veía berreta.
+  - **Tipografía:** "vita" + tagline de verde/oliva (`#565E32`/`#566245`) → terracota de marca (`#C1694F` / `#9E5742`). Joaquín rechazó marrón y verde; terracota elegido sobre device.
+- No se tocó base de datos ni schema.
+
+**Pendiente para la próxima sesión:**
+- 🔴 Joaquín seguía viendo verde tras recargar: **Metro corre desde el checkout principal** (`/Users/apple/vive-app-andre`, rama `build-anim`), que está detrás del commit terracota (`a696dd74` en `fix-onboarding-tipografia`). Para verlo: en el checkout principal `git pull` (build-anim trackea `andre/fix-onboarding-tipografia`) y recargar Metro (`r`). Falta confirmar el visual terracota + orbes de luz suave en device.
+- Riesgo a mirar: el terracota del texto puede competir con el naranja de los orbes cuando "vita" queda encima al fusionarse. Si se funde → terracota más oscuro o correr el texto un toque.
+- PR #8 sigue esperando merge/confirmación de Andre.
+
 ## 2026-10-03 — Andre (Claude · auditoría fase 3, tanda 1: funciones del servidor)
 
 **Tocado:** `supabase/functions/delete-account/index.ts` (v30), `admin-actions/index.ts` (v42), `guarantee-claim/index.ts` (v33), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
