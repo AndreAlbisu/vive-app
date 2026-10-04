@@ -52,12 +52,11 @@ const BRAND_GROW_MS = 1100;
 const PAL = {
   bg:        '#FBF3E7',
   bgTo:      '#F4E2C8',
-  // Verde de la app (mismo que VitaWordmark / ViveColors.text), no el marrón viejo.
-  textColor: '#565E32',
-  // Tagline en oliva suave de la app (FOREST_SOFT/softInk), no marrón.
-  subColor:  '#566245',
-  // Anillo suave: naranja del propio glow a baja opacidad, no el hairline marrón.
-  ring:      'rgba(224,122,58,0.22)',
+  // Terracota de la marca (ViveColors.primary). Elegido por Joaquín (04/10)
+  // sobre el verde/marrón: cálido y en paleta con los orbes.
+  textColor: '#C1694F',
+  // Tagline en una terracota más honda para que ceda jerarquía al wordmark.
+  subColor:  '#9E5742',
 } as const;
 
 const AURA_COLORS = ['#FF9A52', '#FFB36B', '#FFC98C'] as const;
@@ -120,30 +119,6 @@ function useCircleAnimProps(
       cy,
       r:       baseR * rMult,
       opacity: lerp(0.9, 1, me) * opacityMult,
-    };
-  });
-}
-
-function useRingAnimProps(
-  idx: 0 | 1 | 2,
-  entryP: SharedValue<number>,
-  mergeP: SharedValue<number>,
-) {
-  const sx = START_POS[idx].x;
-  const sy = START_POS[idx].y;
-  const rx = REST_POS[idx].x;
-  const ry = REST_POS[idx].y;
-
-  return useAnimatedProps(() => {
-    const ee = eioq(entryP.value);
-    const me = eioq(mergeP.value);
-    const cx = lerp(lerp(sx, rx, ee), CX, me);
-    const cy = lerp(lerp(sy, ry, ee), CY, me);
-    return {
-      cx,
-      cy,
-      r:           lerp(R, R * 1.5, me),
-      strokeWidth: lerp(1.2, 0, me),
     };
   });
 }
@@ -229,10 +204,6 @@ export default function OnboardingScreen1() {
   const ig0 = useCircleAnimProps(0, 0.88, 1.0, entryP, mergeP);
   const ig1 = useCircleAnimProps(1, 0.88, 1.0, entryP, mergeP);
   const ig2 = useCircleAnimProps(2, 0.88, 1.0, entryP, mergeP);
-  // Thin rings (stroke fades to 0 during merge)
-  const rg0 = useRingAnimProps(0, entryP, mergeP);
-  const rg1 = useRingAnimProps(1, entryP, mergeP);
-  const rg2 = useRingAnimProps(2, entryP, mergeP);
 
   // Brand name: y slides from CY-92 down to CY; fontSize grows 28→34
   const brandProps = useAnimatedProps(() => {
@@ -296,7 +267,11 @@ export default function OnboardingScreen1() {
                   cx="50%" cy="50%" r="55%"
                   fx="50%" fy="50%"
                 >
-                  <Stop offset="0%"   stopColor={color} stopOpacity="0.95" />
+                  {/* Pico bajo + caída en 3 tramos: así los 3 orbes se
+                      superponen como LUZ (se suman suave) en vez de quemar el
+                      centro con un naranja saturado. Look de aura premium. */}
+                  <Stop offset="0%"   stopColor={color} stopOpacity="0.55" />
+                  <Stop offset="55%"  stopColor={color} stopOpacity="0.26" />
                   <Stop offset="100%" stopColor={color} stopOpacity="0" />
                 </RadialGradient>
               ))}
@@ -311,11 +286,6 @@ export default function OnboardingScreen1() {
             <AnimatedCircle animatedProps={ig0} fill={`url(#${GRAD_IDS[0]})`} />
             <AnimatedCircle animatedProps={ig1} fill={`url(#${GRAD_IDS[1]})`} />
             <AnimatedCircle animatedProps={ig2} fill={`url(#${GRAD_IDS[2]})`} />
-
-            {/* ── Layer 3: thin rings (fade during merge) ── */}
-            <AnimatedCircle animatedProps={rg0} fill="none" stroke={PAL.ring} />
-            <AnimatedCircle animatedProps={rg1} fill="none" stroke={PAL.ring} />
-            <AnimatedCircle animatedProps={rg2} fill="none" stroke={PAL.ring} />
 
             {/* ── Brand name: floats above, glides to center on merge ── */}
             <AnimatedSvgText
