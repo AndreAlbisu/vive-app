@@ -270,6 +270,9 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 
 **2.3. Datos técnicos y de uso:**
 - Identificadores de dispositivo y **token de notificaciones push**; datos de uso y eventos de la aplicación (analítica); datos técnicos de conexión.
+- **Zona horaria del dispositivo** al momento de reservar, para mostrar el horario de la Sesión correctamente a cada parte.
+- **Dirección IP**, únicamente para limitar intentos repetidos o automatizados (por ejemplo, al anotarse en la lista de espera o al crear una cuenta). Se conserva asociada a ese contador por un máximo de **dos (2) días** y no se utiliza para ubicar al Usuario.
+- **Informes de error de la aplicación**: cuando algo falla, la aplicación registra en qué pantalla ocurrió y el mensaje técnico del error, para poder corregirlo. No incluyen el contenido que el Usuario escribió.
 
 **2.4. Accesos al dispositivo que la aplicación solicita.** En todos los casos el sistema operativo pide autorización previa, el Usuario puede negarla o revocarla en cualquier momento desde los ajustes del dispositivo, y la aplicación sigue funcionando sin ellos (solo deja de estar disponible la función asociada):
 - **Fotos y cámara:** para subir la foto de perfil y, en el caso de Profesionales, el video de presentación y las imágenes de verificación de identidad. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.
@@ -522,7 +525,7 @@ export const LEGAL_PLACEHOLDERS: string[] = [];
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '77d3d5face30';
+export const LEGAL_VERSION = 'e71b8ac170d4';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

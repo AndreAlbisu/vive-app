@@ -1,3 +1,17 @@
+## 2026-10-04 — Andre (Claude · fase 7: etiquetas de tiendas, política y pedido de datos)
+
+**Tocado:** `docs/etiquetas-privacidad-tiendas.md`, `docs/politica-de-privacidad.md`, `constants/legal.ts` y `web/legal/*` (generados), `docs/pedido-de-datos.md` (nuevo), `scripts/exportar-datos-de-usuario.sql` (nuevo), `scripts/decodificar-export.mjs` (nuevo)
+
+**Resumen:**
+- **Etiquetas de las tiendas** al día con lo que la app recolecta: documento de identidad y selfie, datos de cobro de profesionales, credenciales, errores de la app (antes decía "no" a diagnóstico) y zona horaria. Encargados de tratamiento alineados con Política §6. Sacado el pendiente viejo de "no hay borrado de cuenta".
+- **Política §2.3** suma zona horaria al reservar, dirección IP para limitar intentos (se borra a los 2 días, verificado: cron `purge-rate-limits`) e informes de error de la app. Cambió `LEGAL_VERSION`.
+- **Pedido de datos:** procedimiento en `docs/pedido-de-datos.md` y consulta de solo lectura que arma un JSON con todo lo de una persona, sin datos de terceros ni registros internos. Probado en `vita-pruebas` con un cliente y un profesional inventados; la decodificación de mensajes se probó de ida y vuelta con la clave real.
+
+**Pendiente para la próxima sesión:**
+- Que el abogado mire `docs/pedido-de-datos.md` (plazo de 10 días, notas privadas del profesional).
+- Cargar las etiquetas actualizadas en App Store Connect y Play Console cuando se publique.
+- Fases 8 (cuentas y operación) y 9 (teléfono).
+
 ## 2026-10-04 — Andre (Claude · auditoría fases 6 y 7: Strix y privacidad comprobable)
 
 **Tocado:** nada del repo.
