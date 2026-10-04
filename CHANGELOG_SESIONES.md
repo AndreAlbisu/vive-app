@@ -1,3 +1,17 @@
+## 2026-10-04 — Andre (Claude · auditoría fase 3, tanda 3: web y pantallas)
+
+**Tocado:** `supabase/migrations/20261004030000_media_urls_only_own_storage.sql` (nuevo)
+
+**Resumen:**
+- Web sin hallazgos (lo que escribe un profesional se pinta como texto; los parámetros de URL solo buscan la reserva o el código de invitación). Pantallas revisadas por patrones sobre lo agregado desde el 24/09, no línea por línea.
+- Hallazgo: `profiles.avatar_url` y `coaches.video_url` aceptaban cualquier dirección por la API. Apuntándolas a un servidor propio, un profesional veía la IP y la hora de cada persona que abría su perfil (también en `/c`, sin cuenta), y un cliente las de su profesional. `application_video_url` aceptaba cualquier esquema por edición directa, y el admin la abre con un toque.
+- 🗄️ **Migración escrita y probada en `vita-pruebas`, 🔴 NO aplicada en producción** (la corre Andre): triggers `trg_guard_profile_media` y `trg_guard_coach_media`. Desde el cliente, foto y video solo en nuestro Storage y en la carpeta de la propia cuenta; el link de postulación, solo `https`. `base_de_archivos()` lleva el ref del proyecto (en `vita-pruebas` se aplicó con el suyo). Las fotos de Google ya guardadas no se tocan; en producción las 3 fotos y el video subidos por la app cumplen la regla.
+- Con esto la fase 3 queda terminada.
+
+**Pendiente para la próxima sesión:**
+- Andre: `! supabase db query --linked -f supabase/migrations/20261004030000_media_urls_only_own_storage.sql`. Después Claude verifica, registra y actualiza SCHEMA.md.
+- Fases 4 (checklist de endurecimiento), 5 (pruebas por rol) y 6 (Strix, falta la clave de API).
+
 ## 2026-10-04 — Andre (Claude · volver a publicar a un profesional despublicado)
 
 **Tocado:** `supabase/migrations/20261004020000_republish_coach.sql` (nuevo), `supabase/functions/admin-actions/index.ts` (v43 en producción)
