@@ -1,3 +1,20 @@
+## 2026-10-04 — Andre (Claude · auditoría fase 4: checklist de endurecimiento)
+
+**Tocado:** `supabase/functions/delete-account/index.ts` (v31), `supabase/functions/mp-oauth-start/index.ts` (v28), `web/sala/index.html`, `web/vendor/daily-js-0.92.2.esm.js` (nuevo), `vercel.json`, `docs/politica-de-privacidad.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
+
+**Resumen:**
+- Checklist `security-and-hardening` (agent-skills) sobre lo que las fases 1 a 3 no cubrían. Bien: sin secretos en el repo ni en el historial, cabeceras de la web completas, CORS acotado, tope diario en la función con IA. Veredicto del plugin: ordena, no encontró nada nuevo de fondo.
+- **`mp-oauth-start`** ya no acepta cualquier origen (era el único con `*`). Antes de desplegar se bajó la versión en vivo: lo único que difería del repo era `verifyWebhookSignature`, que esta función no usa.
+- **`delete-account`** deja el detalle técnico del error en el log y a la persona le devuelve solo el mensaje.
+- **Sala web:** el componente de videollamada (`daily-js` 0.92.2) se sirve desde nuestro dominio en vez de unpkg.com. Es el archivo del paquete oficial, verificado contra la integridad de npm. `unpkg.com` sale del CSP y de la Política §6 y §7 (cambió `LEGAL_VERSION`). 🟡 Se comprobó que el módulo carga y expone lo que usa la sala; **no se probó una videollamada real**. Si la carga falla, la sala ya caía al iframe directo.
+- ⚠️ **Regla nueva de trabajo:** el repo es público. Un arreglo que depende de que Andre corra un comando en producción no se commitea con su descripción hasta que esté aplicado (el 04/10 quedó publicado unas horas un hallazgo todavía abierto).
+- En el historial público quedó un token de sesión de una cuenta de prueba de junio (vencido), con su mail. No se reescribió el historial.
+
+**Pendiente para la próxima sesión:**
+- Probar una videollamada real por la sala web después del próximo deploy de la web.
+- Andre, en el panel de Supabase → Authentication: largo mínimo de contraseña, contraseñas filtradas, vencimiento de códigos y captcha.
+- Fase 5 (pruebas por rol) y fase 6 (Strix, falta la clave de API).
+
 ## 2026-10-04 — Andre (Claude · auditoría fase 3, tanda 3: web y pantallas)
 
 **Tocado:** `supabase/migrations/20261004030000_media_urls_only_own_storage.sql` (nuevo)
@@ -5,11 +22,10 @@
 **Resumen:**
 - Web sin hallazgos (lo que escribe un profesional se pinta como texto; los parámetros de URL solo buscan la reserva o el código de invitación). Pantallas revisadas por patrones sobre lo agregado desde el 24/09, no línea por línea.
 - Hallazgo: `profiles.avatar_url` y `coaches.video_url` aceptaban cualquier dirección por la API. Apuntándolas a un servidor propio, un profesional veía la IP y la hora de cada persona que abría su perfil (también en `/c`, sin cuenta), y un cliente las de su profesional. `application_video_url` aceptaba cualquier esquema por edición directa, y el admin la abre con un toque.
-- 🗄️ **Migración escrita y probada en `vita-pruebas`, 🔴 NO aplicada en producción** (la corre Andre): triggers `trg_guard_profile_media` y `trg_guard_coach_media`. Desde el cliente, foto y video solo en nuestro Storage y en la carpeta de la propia cuenta; el link de postulación, solo `https`. `base_de_archivos()` lleva el ref del proyecto (en `vita-pruebas` se aplicó con el suyo). Las fotos de Google ya guardadas no se tocan; en producción las 3 fotos y el video subidos por la app cumplen la regla.
+- 🗄️ **Migración `20261004030000` probada en `vita-pruebas` y ✅ aplicada en producción** (la corrió Andre; verificada y registrada; SCHEMA.md actualizado): triggers `trg_guard_profile_media` y `trg_guard_coach_media`. Desde el cliente, foto y video solo en nuestro Storage y en la carpeta de la propia cuenta; el link de postulación, solo `https`. `base_de_archivos()` lleva el ref del proyecto (en `vita-pruebas` se aplicó con el suyo). Las fotos de Google ya guardadas no se tocan; en producción las 3 fotos y el video subidos por la app cumplen la regla.
 - Con esto la fase 3 queda terminada.
 
 **Pendiente para la próxima sesión:**
-- Andre: `! supabase db query --linked -f supabase/migrations/20261004030000_media_urls_only_own_storage.sql`. Después Claude verifica, registra y actualiza SCHEMA.md.
 - Fases 4 (checklist de endurecimiento), 5 (pruebas por rol) y 6 (Strix, falta la clave de API).
 
 ## 2026-10-04 — Andre (Claude · volver a publicar a un profesional despublicado)

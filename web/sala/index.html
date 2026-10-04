@@ -248,7 +248,10 @@ function problema(titulo, detalle) {
 // y expone `key:"wrap"`. Las tres cosas que este código usa.
 // 📌 Pineado a una versión exacta a propósito: `@latest` cambiaría la sala en
 // vivo sin que nadie lo decida, y acá adentro pasa una sesión de acompañamiento.
-const DAILY_JS = 'https://unpkg.com/@daily-co/daily-js@0.92.2/dist/daily-esm.js';
+// 📌 Servido desde nuestro dominio (04/10/2026): es el `dist/daily-esm.js` del
+// paquete oficial 0.92.2, byte a byte. Antes se bajaba de unpkg.com en cada
+// sesión, sin verificación de integridad (`import()` no la admite).
+const DAILY_JS = '/vendor/daily-js-0.92.2.esm.js';
 const MIN_AVISO       = 2;   // "todavía no llegó nadie" — que sepa que no es su conexión
 const MIN_CLIENTE_VA  = 10;  // el cliente puede irse sin perder nada
 const MIN_COACH_VA    = 20;  // el coach ya cumplió y cobra igual

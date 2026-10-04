@@ -246,7 +246,7 @@ Ante consultas sobre estos Términos: vitaappar@gmail.com. Andre Albisu Lamberti
 
 export const PRIVACY_MD = `# Política de Privacidad de Vita
 
-**Última actualización:** 3 de octubre de 2026
+**Última actualización:** 4 de octubre de 2026
 **Vigencia a partir de:** 1 de octubre de 2026
 
 Esta Política describe cómo Vita, operada por Andre Albisu Lambertini, CUIT 20-46034087-0, con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
@@ -315,7 +315,6 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
 - **Pagos en USDT, solo si el Usuario elige ese medio:** el pago se registra en una **cadena de bloques pública**. La dirección desde la que se paga, la dirección que recibe y el monto quedan visibles para cualquier persona, en forma permanente, y **no pueden borrarse**, ni siquiera a pedido del Usuario. Vita consulta esos registros públicos para confirmar el pago y guarda la dirección que el Usuario indique para un eventual reintegro.
 - **Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:**
   - **Google** y **Apple**. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.
-- **Entrega de componentes desde redes de distribución (CDN):** la sala de Sesión a la que se accede por navegador carga el componente de videollamada desde **unpkg.com**. Al hacerlo, ese servicio recibe la dirección IP y datos técnicos del dispositivo. No recibe datos de la cuenta ni contenido alguno de la Sesión.
 - **Contenido embebido de terceros:** algunas fichas de recursos incluyen un reproductor de **YouTube** insertado dentro de la aplicación. Al cargarse, YouTube recibe la dirección IP y datos técnicos del dispositivo, y puede utilizar cookies o tecnologías similares conforme a sus propias políticas. Ocurre solo al abrir una ficha que contenga ese reproductor.
 - **Redacción asistida de la frase de bienestar:** la pantalla de inicio muestra una frase breve sobre cómo viene el Usuario. **Qué decir lo decide la propia aplicación en el dispositivo**, con reglas fijas; a un proveedor externo (**Anthropic**) se le pide únicamente **redactar** esa frase. Lo que se le envía es el nombre de una categoría (por ejemplo, "racha" o "tendencia en alza"), un tono, y dos o tres números enteros (días de registro consecutivos, sesiones y prácticas de la semana). **No se le envía identificador alguno del Usuario, ni sus registros de estado de ánimo, ni su historial, ni una sola palabra escrita por él**, y Vita no conserva vinculación entre ese envío y la persona. Si el proveedor no responde, o si el texto que devuelve no supera los controles de contenido de Vita, se muestra el texto redactado por la propia aplicación.
 - **Analítica:** Vita **no utiliza proveedores de analítica de terceros**. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.
@@ -336,7 +335,7 @@ Parte de los datos se almacenan o procesan fuera de la Argentina:
 - **Expo** (notificaciones), en los Estados Unidos: se conserva el identificador del dispositivo.
 - **Resend** (correos electrónicos) y **PayPal** (pagos en dólares), en los Estados Unidos.
 - **Anthropic** (redacción de la frase de bienestar), en los Estados Unidos, sin datos que identifiquen al Usuario, conforme a la sección 6.
-- Los demás servicios mencionados en la sección 6 (Cloudflare, Google, Apple, unpkg.com y YouTube) pueden procesar datos técnicos fuera del país.
+- Los demás servicios mencionados en la sección 6 (Cloudflare, Google, Apple y YouTube) pueden procesar datos técnicos fuera del país.
 
 Brasil y los Estados Unidos no integran la nómina de países con nivel adecuado de protección de la Disposición DNPDP 60-E/2016. Con Supabase rige su acuerdo de tratamiento de datos, que se incorpora al aceptar sus términos de servicio e incluye obligaciones de confidencialidad, medidas de seguridad, control de subencargados y supresión de los datos al finalizar el servicio. Vita trabaja para que el resto de las transferencias cuente con garantías equivalentes. El Usuario puede solicitar información sobre los acuerdos vigentes escribiendo a vitaappar@gmail.com.
 
@@ -523,7 +522,7 @@ export const LEGAL_PLACEHOLDERS: string[] = [];
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '969ad5ae5d09';
+export const LEGAL_VERSION = '77d3d5face30';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la
