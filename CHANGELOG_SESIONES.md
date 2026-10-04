@@ -1,3 +1,19 @@
+## 2026-10-03 — Andre (Claude · privacidad comprobable, a raíz del cierre de CUX)
+
+**Tocado:** `supabase/functions/delete-account/index.ts` (v28 en producción), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `screens/CoachComoFuncionaScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Andre preguntó por qué cerró CUX (falta de capital y de socio tecnológico; antes, rechazo de los colegios de psicólogos y denuncias de que borrar no borraba y de acceso humano a los chats). De ahí salió contrastar lo que promete la Política con lo que hace la baja de cuenta. Lo central estaba bien: 35 bajas en producción sin acceso ni restos de diario, ánimo o cuestionario, y el panel de admin no lee mensajes ni diario.
+- **Baja de cuenta, ahora también borra:** las notas de sesión sobre la persona (antes se conservaban; Andre decidió borrarlas), el registro de qué recursos abrió, y el mensaje al profesional y el tema de cada reserva. Función desplegada (v28) y verificada que responde. La prueba local cubre lo nuevo; de paso se arregló su fixture, que venía rota desde el 01/10 (faltaba el bucket de identidad). 🟡 La prueba contra producción con vuelta atrás la bloqueó el control de permisos: se leyó el trigger `guard_booking_security` y no frena ese cambio, pero **no se vio correr en producción**.
+- **Textos:** Política §8 dice ahora que diario y ánimo no tienen cifrado de punta a punta y que Vita se compromete a no leerlos; §10 y la página de eliminar cuenta nombran lo que se borra y lo que queda (reportes, problemas de sesión). "Cómo funciona" le avisa al profesional que las notas se borran si la persona elimina su cuenta. Cambió `LEGAL_VERSION`.
+- Base de datos: sin cambios de estructura. SCHEMA.md actualizado (sección Baja de cuenta).
+
+**Pendiente para la próxima sesión:**
+- **Baja de un profesional:** el arreglo (borrar agenda, enlace de calendario, país/provincia, notas privadas, y datos de cobro/Mercado Pago solo si no queda plata en movimiento) quedó escrito pero el control de permisos bloqueó la edición. No está aplicado. Toca área de Codex.
+- Probar una baja real con una cuenta de prueba que tenga reserva con mensaje y una nota de sesión.
+- Andre: confirmar que al panel de Supabase entran solo él y Joaquín, con verificación en dos pasos.
+- Después del lanzamiento: cifrar el diario en el teléfono, junto con el cifrado real de mensajes.
+
 ## 2026-10-02 — Andre (Claude · turno libre pronto: orden y tarjeta)
 
 **Tocado:** `scripts/add-proximos-turnos.sql`, `lib/coachesCache.ts`, `lib/coachDeckRanking.ts`, `__tests__/deckRanking.test.ts`, `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `SCHEMA.md`

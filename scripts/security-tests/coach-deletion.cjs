@@ -14,8 +14,18 @@ function fixture({ futureBooking = false, failCredentialsOnce = false } = {}) {
     coaches: [{ id: coachId, profile_id: userId, verified: true, availability_status: 'activo',
       bio: 'Identificable', slug: 'nombre-real', application_video_url: 'https://example.com/video' }],
     profiles: [{ id: userId, name: 'Nombre real', email: 'real@example.com' }],
-    bookings: futureBooking ? [{ id: 'booking', coach_id: coachId, user_id: 'client',
-      status: 'confirmada', scheduled_date: '2099-01-01' }] : [],
+    bookings: [
+      ...(futureBooking ? [{ id: 'booking', coach_id: coachId, user_id: 'client',
+        status: 'confirmada', scheduled_date: '2099-01-01' }] : []),
+      // Sesión vieja de la misma cuenta como cliente: queda la reserva, no lo que contó.
+      { id: 'vieja', coach_id: 'otro-coach', user_id: userId, status: 'completada',
+        scheduled_date: '2020-01-01', user_message: 'Vengo por ataques de pánico', tema_origen: 'Ansiedad y estrés' },
+    ],
+    session_notes: [
+      { id: 'sobre-mi', user_id: userId, coach_id: 'otro', content: 'Nota sobre la persona', shared: false },
+      { id: 'ajena', user_id: 'otra-persona', coach_id: 'otro', content: 'No se toca', shared: false },
+    ],
+    resource_events: [{ id: 'evento', user_id: userId }, { id: 'evento-ajeno', user_id: 'otra-persona' }],
     coach_credentials: [{ id: 'credential', coach_id: coachId }],
     coach_topics: [{ coach_id: coachId, topic: 'Estrés' }],
     coach_application_interviews: [{ coach_id: coachId, notes: 'Entrevista privada' }],
@@ -24,6 +34,7 @@ function fixture({ futureBooking = false, failCredentialsOnce = false } = {}) {
     'coach-credentials': new Set([`${userId}/documento.pdf`, `${userId}/huerfano.pdf`]),
     'coach-videos': new Set([`${userId}/video.mp4`]),
     avatars: new Set([`${userId}/avatar.jpg`]),
+    'identity-docs': new Set([`${userId}/dni-frente.jpg`, `${userId}/selfie.jpg`]),
   };
   const events = [];
   let authDeleted = false;
@@ -117,11 +128,17 @@ function fixture({ futureBooking = false, failCredentialsOnce = false } = {}) {
   assert.equal(retry.tables.coaches[0].application_video_url, null);
   assert.equal(retry.tables.coaches[0].slug, `deleted-${coachId}`);
   assert.equal(retry.tables.profiles[0].name, 'Usuario eliminado');
+  const vieja = retry.tables.bookings.find(b => b.id === 'vieja');
+  assert.equal(vieja.user_message, null);
+  assert.equal(vieja.tema_origen, null);
+  assert.equal(vieja.status, 'completada');
+  assert.deepEqual(retry.tables.session_notes.map(n => n.id), ['ajena']);
+  assert.deepEqual(retry.tables.resource_events.map(e => e.id), ['evento-ajeno']);
   assert.equal(retry.tables.coach_credentials.length, 0);
   assert.equal(retry.tables.coach_topics.length, 0);
   assert.equal(retry.tables.coach_application_interviews.length, 0);
   for (const paths of Object.values(retry.objects)) assert.equal(paths.size, 0);
   assert(retry.events.indexOf('coaches:update') < retry.events.indexOf('storage:coach-credentials:remove'));
   assert.equal(retry.events.at(-1), 'auth:delete');
-  console.log('PASS baja: bloqueo por reserva, despublicación, limpieza y reintento');
+  console.log('PASS baja: bloqueo por reserva, despublicación, limpieza, texto de reservas y notas, reintento');
 })().catch(error => { console.error(error); process.exitCode = 1; });

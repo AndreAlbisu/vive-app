@@ -8,7 +8,7 @@
 
 # Eliminar tu cuenta de Vita
 
-**Última actualización:** 25 de septiembre de 2026
+**Última actualización:** 3 de octubre de 2026
 
 ## Desde la app (la vía más rápida)
 
@@ -28,7 +28,9 @@ Se suprime de forma inmediata y definitiva todo tu contenido personal de bienest
 
 - Entradas del diario, registros de estado de ánimo y ejercicios de gratitud.
 - Hábitos, recordatorios y recursos guardados o fijados.
-- Tus respuestas del cuestionario.
+- Tus respuestas del cuestionario y el registro de qué recursos abriste.
+- Las notas de sesión que un profesional haya escrito sobre vos.
+- Lo que le escribiste al profesional al reservar y el tema por el que llegaste.
 - Tus favoritos y tus notificaciones.
 - Tu foto de perfil.
 
@@ -43,7 +45,8 @@ No todo se puede borrar: parte de la información pertenece también a otra pers
 | Reservas y datos de la transacción (montos, identificadores de pago, fechas) | **10 años**, disociados de tu identidad | Obligaciones contables y fiscales |
 | Reseñas que escribiste | Indefinido, **anonimizadas** | Integran la reputación pública del profesional evaluado. Si se borraran, alguien podría darse de baja para eliminar una reseña desfavorable |
 | Mensajes y conversaciones | Mientras subsista la conversación, **anonimizados** | Pertenecen también al otro participante |
-| Datos técnicos y de uso (analítica) | Disociados de tu identidad | Métricas agregadas, sin identificar a nadie |
+| Reportes y avisos de problemas con una sesión | **Anonimizados** | Documentan una actuación de Vita o involucran a otra persona |
+| Datos técnicos y de uso (analítica, calidad de las videollamadas) | Disociados de tu identidad | Métricas agregadas, sin identificar a nadie |
 
 Tu ficha de perfil no se elimina del todo: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" donde antes figurabas, para que las reservas, reseñas y conversaciones de terceros no queden rotas.
 

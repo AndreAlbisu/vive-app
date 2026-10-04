@@ -16,6 +16,11 @@
 //   · SE ANONIMIZA lo que pertenece también a un tercero o hay que conservar:
 //     reservas (fiscal), reseñas (reputación del coach) y mensajes (la
 //     conversación también es del otro). Pasan a mostrar "Usuario eliminado".
+//     De la reserva queda solo lo de la transacción: lo que la persona le
+//     escribió al profesional al reservar y el tema por el que llegó se vacían.
+//   · LAS NOTAS DE SESIÓN sobre la persona SE BORRAN (Andre, 03/10/2026; antes
+//     se conservaban). La política promete suprimir el contenido de bienestar y
+//     una nota sobre alguien que pidió la baja es exactamente eso.
 //   · La fila de `profiles` NO se borra: queda como LÁPIDA vaciada de datos
 //     personales. Además hoy no podría borrarse — reviews/messages/salas/
 //     journal_entries/saved_resources la referencian con NO ACTION.
@@ -72,14 +77,16 @@ const PERSONAL_TABLES: { table: string; column: string }[] = [
   { table: 'notifications',      column: 'recipient_id' },
   // La constancia de identidad lleva el nombre verificado (01/10/2026).
   { table: 'identity_verifications', column: 'profile_id' },
+  // Qué recursos abrió: dato de bienestar según nuestro propio consentimiento
+  // (Política §3). Cuelga de `profiles`, que sobrevive como lápida, así que el
+  // CASCADE nunca se dispara.
+  { table: 'resource_events',    column: 'user_id' },
+  // Lo que un profesional anotó sobre esta persona, privado o compartido.
+  { table: 'session_notes',      column: 'user_id' },
 ]
 // NO están acá a propósito, y conviene saber por qué:
 //   · bookings / reviews / messages / salas → se conservan anonimizadas.
-//   · session_notes → son el registro del profesional sobre sus sesiones, mismo
-//     criterio que los mensajes (decisión de Andre). ⚠️ A confirmar con abogado:
-//     contienen información sensible sobre una persona que pidió su baja, y bajo
-//     la Ley 25.326 podría corresponder suprimirlas. Del otro lado, un/a
-//     psicólogo/a puede tener obligación profesional de conservar registros.
+//   · reports / session_issues → quedan para moderación, atados a la lápida.
 //   · analytics_events / user_events → quedan sin identidad (SET NULL / cascade).
 
 serve(async (req) => {
@@ -156,6 +163,15 @@ serve(async (req) => {
       if (error) return json({ error: 'No se pudieron cancelar las sesiones futuras', detail: error.message }, 500)
       steps.push(`${futuras.length} sesión(es) futura(s) cancelada(s)`)
     }
+
+    // De la reserva se conserva la transacción (Política §10), no lo que la
+    // persona contó: el mensaje al profesional y el tema por el que llegó
+    // ("Ansiedad y estrés") no son datos fiscales.
+    const { error: scrubBookingsErr } = await admin
+      .from('bookings')
+      .update({ user_message: null, tema_origen: null })
+      .eq('user_id', userId)
+    if (scrubBookingsErr) return json({ error: 'No se pudo vaciar el texto de las reservas', detail: scrubBookingsErr.message }, 500)
 
     // ── 3. Expediente profesional y archivos ────────────────────────────────
     // El documento es privado, pero su vista textual verificada es pública;
