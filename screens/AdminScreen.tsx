@@ -1755,7 +1755,7 @@ function GuaranteePanel({ claims, onDone }: { claims: AdminClaim[]; onDone: () =
               style={[s.input, { marginTop: 10 }]}
               value={reason}
               onChangeText={setReason}
-              placeholder="Motivo del rechazo (solo si vas a rechazar)"
+              placeholder="Motivo del rechazo (solo si vas a rechazar). La persona puede leerlo: escribí lo que le dirías."
               placeholderTextColor="rgba(135,131,92,0.55)"
               multiline
             />

@@ -21,13 +21,17 @@ export type VisibilityData = { self: VisibilitySelf; pool: CachedCoach[]; coachI
 export async function loadVisibilitySelf(userId: string): Promise<VisibilityData | null> {
   const { data: coachRow } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking, suspendido_hasta, estilo, guia, focos, mp_connected, accepts_paypal, accepts_usdt, price_usd')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking, estilo, guia, focos, mp_connected, accepts_paypal, accepts_usdt, price_usd')
     .eq('profile_id', userId)
     .maybeSingle();
 
   if (!coachRow) return null;
 
   const coachId = coachRow.id as string;
+
+  // La propia suspensión, con su fecha: la columna ya no se lee desde el cliente.
+  const { data: suspension } = await supabase.rpc('mi_suspension');
+  const miSuspension = (typeof suspension === 'string' ? suspension : null) as string | null;
 
   const [{ data: profile }, { data: topicRows }, { data: reviewRows }, { data: trendRows }, { data: rebookRow }, { data: availRows }, pool] =
     await Promise.all([
@@ -67,7 +71,7 @@ export async function loadVisibilitySelf(userId: string): Promise<VisibilityData
     hasSlotThisWeek: availRows?.status === 'this_week',
     hasVideo: !!coachRow.video_url,
     instantBooking: !!coachRow.instant_booking,
-    suspendidoHasta: (coachRow.suspendido_hasta ?? null) as string | null,
+    suspendidoHasta: miSuspension,
     estilo: (coachRow.estilo ?? null) as string | null,
     guia: (coachRow.guia ?? null) as string | null,
     focos: ((coachRow.focos ?? []) as string[]),

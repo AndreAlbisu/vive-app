@@ -59,15 +59,22 @@ const escapar = (t) => String(t)
 // Mismo filtro que la página: sin aprobar, pausado o suspendido no tiene
 // página pública, y tampoco vista previa.
 async function buscarCoach(slug) {
-  const campos = 'profesion,suspendido_hasta,profiles!inner(name,avatar_url,gender)';
+  const campos = 'id,profesion,profiles!inner(name,avatar_url,gender)';
   const url = `${SUPABASE_URL}/rest/v1/coaches?slug=eq.${encodeURIComponent(slug)}` +
     `&verified=eq.true&availability_status=eq.activo&select=${campos}&limit=1`;
   const r = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY }, signal: AbortSignal.timeout(2500) });
   if (!r.ok) return null;
   const coach = (await r.json())[0];
   if (!coach) return null;
-  const h = coach.suspendido_hasta;
-  if (h && (h === 'infinity' || new Date(h).getTime() > Date.now())) return null;
+  // La base dice solo quiénes están suspendidos ahora, sin fechas. Si esta
+  // consulta falla hay vista previa igual: la página vuelve a comprobarlo.
+  try {
+    const s = await fetch(`${SUPABASE_URL}/rest/v1/rpc/profesionales_suspendidos`, {
+      method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }, body: '{}',
+      signal: AbortSignal.timeout(2500),
+    });
+    if (s.ok && (await s.json()).includes(coach.id)) return null;
+  } catch { /* sin respuesta: se sigue */ }
   return coach;
 }
 

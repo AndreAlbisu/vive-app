@@ -341,22 +341,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  /** Campos de constancia de aceptación, compartidos por los tres caminos de alta.
-   *  Nunca escribe `false` ni `null`: así una llamada parcial (p. ej. solo la
-   *  edad) no puede pisar una aceptación anterior ni borrar su fecha/versión.
-   *  La versión y la fecha van SOLO con los T&C — no las mueve la declaración de
-   *  edad, que no es la aceptación de un documento. */
-  function acceptanceFields(acceptedTerms: boolean, ageConfirmed: boolean) {
-    return {
-      ...(acceptedTerms
-        ? {
-            accepted_terms: true,
-            accepted_terms_at: new Date().toISOString(),
-            accepted_terms_version: LEGAL_VERSION,
-          }
-        : {}),
-      ...(ageConfirmed ? { age_confirmed: true } : {}),
-    };
+  /** Deja constancia de la aceptación de los T&C y de la declaración de edad.
+   *
+   *  🔴 La escribe el SERVIDOR (`registrar_aceptacion`, 04/10/2026): pone la
+   *  fecha con su reloj, guarda la versión del texto y nunca pisa ni borra una
+   *  aceptación anterior. Antes la escribía la app con un UPDATE directo, con
+   *  la fecha del teléfono, y cualquiera podía reescribir su propia constancia. */
+  async function registrarAceptacion(acceptedTerms: boolean, ageConfirmed: boolean) {
+    if (!acceptedTerms && !ageConfirmed) return;
+    const { error } = await supabase.rpc('registrar_aceptacion', {
+      p_terminos: acceptedTerms,
+      p_mayor: ageConfirmed,
+      p_version: LEGAL_VERSION,
+    });
+    if (error) console.warn('[auth] no se pudo registrar la aceptación:', error.message);
   }
 
   async function signUpWithEmail(email: string, password: string, name: string, acceptedTerms = false, ageConfirmed = false): Promise<string | null> {
@@ -394,11 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // que la cláusula anti-solicitación sea oponible). Requiere sesión, porque
     // el UPDATE pasa por RLS de dueño.
     if ((acceptedTerms || ageConfirmed) && data.session && data.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update(acceptanceFields(acceptedTerms, ageConfirmed))
-        .eq('id', data.user.id);
-      if (profileError) console.warn('[auth] no se pudo registrar la aceptación:', profileError.message);
+      await registrarAceptacion(acceptedTerms, ageConfirmed);
     }
     return null;
   }
@@ -422,29 +416,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
 
-    const { data: actual, error: readError } = await supabase
-      .rpc('get_my_profile')
-      .select('accepted_terms, age_confirmed')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    // Ante la duda no se escribe: pisar una aceptación buena es peor que no
-    // registrar una nueva, que además se puede recuperar en el próximo login.
-    if (readError) {
-      console.warn('[auth] no se pudo leer la aceptación previa:', readError.message);
-      return;
-    }
-
-    const fields = acceptanceFields(
-      acceptedTerms && !actual?.accepted_terms,
-      ageConfirmed && !actual?.age_confirmed,
-    );
-    if (Object.keys(fields).length === 0) return;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(fields)
-      .eq('id', session.user.id);
-    if (error) console.warn('[auth] no se pudo registrar la aceptación:', error.message);
+    // El servidor solo escribe lo que todavía no estaba declarado.
+    await registrarAceptacion(acceptedTerms, ageConfirmed);
   }
 
   /** Constancia de T&C y edad de quien se registró con mail y contraseña.

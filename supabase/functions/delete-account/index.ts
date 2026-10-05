@@ -272,14 +272,19 @@ serve(async (req) => {
       // SOLO si no queda plata en movimiento: `mp-process-refunds` reembolsa con
       // el token del profesional y el panel le paga lo adeudado con sus datos
       // de cobro. Borrarlos antes dejaría un reintegro o un pago sin camino.
-      const hace3Dias = new Date(Date.now() - (3 * 24 + 3) * 60 * 60 * 1000).toISOString().slice(0, 10)
+      //
+      // 📌 Y solo si no cobró nada en los últimos 180 días (04/10/2026): un
+      // contracargo de Mercado Pago puede llegar meses después, y sin la conexión
+      // del profesional ese pago no se puede leer. Lo que se conserva acá lo
+      // borra después la tarea diaria `limpiar_cobro_de_bajas()`.
+      const hace180Dias = new Date(Date.now() - (180 * 24 + 3) * 60 * 60 * 1000).toISOString().slice(0, 10)
       const abiertos = await Promise.all([
         // cobros o reintegros en curso
         admin.from('bookings').select('id', { count: 'exact', head: true })
           .eq('coach_id', coachRow.id).in('payment_status', ['pendiente', 'reembolso_pendiente']),
-        // sesiones cobradas todavía dentro de la ventana de la garantía (48 h)
+        // cobros de los últimos 180 días (cubre la garantía de 48 h y los contracargos)
         admin.from('bookings').select('id', { count: 'exact', head: true })
-          .eq('coach_id', coachRow.id).eq('payment_status', 'aprobado').gte('scheduled_date', hace3Dias),
+          .eq('coach_id', coachRow.id).in('payment_status', ['aprobado', 'reembolsado', 'contracargo']).gte('scheduled_date', hace180Dias),
         // sesiones cobradas por PayPal o USDT que Vita todavía no le transfirió
         admin.from('bookings').select('id', { count: 'exact', head: true })
           .eq('coach_id', coachRow.id).eq('status', 'completada').eq('payment_status', 'aprobado')
@@ -288,8 +293,8 @@ serve(async (req) => {
         admin.from('guarantee_claims').select('id', { count: 'exact', head: true })
           .eq('coach_id', coachRow.id).is('resolved_at', null),
       ])
-      const fallo = abiertos.find(r => r.error)
-      if (fallo?.error) return fallo('No se pudo comprobar si quedan pagos abiertos', fallo.error.message)
+      const consultaRota = abiertos.find(r => r.error)
+      if (consultaRota?.error) return fallo('No se pudo comprobar si quedan pagos abiertos', consultaRota.error.message)
 
       if (abiertos.every(r => (r.count ?? 0) === 0)) {
         for (const table of ['coach_payout_accounts', 'coach_mp_accounts']) {
@@ -300,8 +305,8 @@ serve(async (req) => {
         if (mpFlagErr) return fallo('No se pudo desconectar Mercado Pago', mpFlagErr.message)
         steps.push('datos de cobro borrados')
       } else {
-        // ⚠️ Nada los borra después: hoy es una limpieza manual (ver CHANGELOG 03/10).
-        steps.push('datos de cobro conservados: quedan pagos o reintegros abiertos')
+        // Los borra después `limpiar_cobro_de_bajas()` (tarea diaria).
+        steps.push('datos de cobro conservados: hay pagos abiertos o cobros de los últimos 180 días')
       }
     }
 

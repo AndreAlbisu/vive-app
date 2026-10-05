@@ -54,7 +54,7 @@ Tu ficha de perfil no se elimina del todo: queda **vaciada de todo dato personal
 
 Al darte de baja, **las sesiones futuras se cancelan automáticamente**. El reintegro sigue la misma regla que cualquier cancelación: se reembolsa si faltan 24 horas o más para la sesión. Una sesión que ya empezó no se cancela.
 
-Si sos profesional, además se borran tu agenda, tu enlace de calendario, tus notas privadas y tus datos de cobro. Los datos de cobro se conservan solo mientras quede algún cobro, reintegro o reclamo en curso.
+Si sos profesional, además se borran tu agenda, tu enlace de calendario, tus notas privadas y tus datos de cobro. Los datos de cobro se conservan solo mientras quede algún cobro, reintegro o reclamo en curso, o hasta 180 días después de tu último cobro, y después se borran solos.
 
 Si sos profesional, hay una condición: **no podés darte de baja con sesiones agendadas**. Tenés que cancelarlas primero, para que cada persona reciba el aviso y su reembolso.
 
