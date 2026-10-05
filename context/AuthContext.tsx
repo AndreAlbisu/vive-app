@@ -6,6 +6,7 @@ import { pedirCaptchaToken } from '@/lib/captcha';
 import { necesitaVerificarMail } from '@/lib/emailVerificado';
 import { cancelAllResourceReminders } from '@/lib/resourceReminders';
 import { clearBlockedCache } from '@/lib/blocking';
+import { olvidarClave } from '@/lib/wellbeingCrypto';
 import { LEGAL_VERSION } from '@/constants/legal';
 import { AuthModal } from '@/components/AuthModal';
 import { ERR_MAIL_SIN_CONFIRMAR, LARGO_MIN_CONTRASENA } from '@/lib/authErrores';
@@ -685,6 +686,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Lo que contestó en el quiz y el onboarding vive en el teléfono: sin esto
     // la próxima cuenta que entre lo hereda (auditoría del 26/09/2026, C1).
     await Promise.all([borrarPendienteLocal(), borrarRespuestasLocales()]).catch(() => {});
+    // La clave del diario del que se va no queda en el teléfono.
+    if (user) await olvidarClave(user.id);
     await supabase.auth.signOut();
     setUser(null);
     applyProfile({ role: "user", isAdmin: false, name: null });

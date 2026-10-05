@@ -19,11 +19,17 @@ Escrito el 04/10/2026, sin revisión legal todavía.
 
 1. **Copiar el script y poner el mail.** En una copia fuera del repo, reemplazar
    `MAIL_DE_LA_PERSONA` en `scripts/exportar-datos-de-usuario.sql`.
-2. **Correrlo y decodificar los mensajes:**
+2. **Correrlo y volverlo legible** (los mensajes están ofuscados; el diario y la
+   gratitud, cifrados):
 
    ```
    supabase db query --linked -f /ruta/a/la/copia.sql | node scripts/decodificar-export.mjs > datos.json
    ```
+
+   Para abrir el diario y la gratitud el script necesita el secreto maestro:
+   lo toma solo de `~/.config/vita/` (la copia que dejó
+   `scripts/crear-secreto-bienestar.sh`) o de la variable `WELLBEING_MASTER_KEY`.
+   Si no lo encuentra, corta sin entregar nada.
 
    El script es de solo lectura. Si `perfil` no aparece, ese mail no tiene cuenta:
    se le contesta eso.

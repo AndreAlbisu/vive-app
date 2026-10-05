@@ -452,6 +452,25 @@ parte al profesional. La cláusula ya dice que Vita "percibe el pago por cuenta 
 orden del Profesional". ¿Corresponde encuadrarlo expresamente como mandato de
 cobranza, y hace falta alguna previsión adicional en §8.2 o en §4?
 
+**B.8 — Cifrado de los datos sensibles.**
+El diario y la gratitud se cifran en el teléfono antes de guardarse, así que en
+la base quedan ilegibles. No es cifrado de extremo a extremo: Vita conserva un
+secreto con el que puede volver a abrirlos, y lo hace para dos cosas: que la
+persona no pierda su diario si cambia o le roban el teléfono, y poder contestar
+un pedido de acceso (Ley 25.326, art. 14). Los mensajes y el estado de ánimo no
+están cifrados de ese modo.
+Lo que encontré, para que lo confirmes o lo corrijas: el art. 9 de la Ley 25.326
+exige medidas "necesarias" sin nombrar el cifrado, y la Resolución AAIP 47/2018
+reemplazó las medidas obligatorias por recomendadas.
+- [ ] ¿Hay alguna norma vigente que **obligue** a cifrar datos sensibles o de
+      salud, o es solo recomendación?
+- [ ] ¿Alcanza con este esquema para el diario, o conviene extenderlo a los
+      mensajes y a las notas del profesional antes de lanzar?
+- [ ] ¿La Política puede decir "se almacenan cifrados" con este esquema, siempre
+      que aclare que no es de extremo a extremo?
+- [ ] Si hubiera una filtración, ¿hay hoy obligación de avisarle a la AAIP o a
+      las personas? ¿Conviene comprometer un plazo en la Política?
+
 ### C. Solo si decidimos que Sofía conversa — *decidir antes de enviar*
 
 > **Nota interna, borrar antes de mandar:** esta sección solo va si se decide

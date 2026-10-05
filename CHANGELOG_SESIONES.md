@@ -1,3 +1,22 @@
+## 2026-10-05 — Andre (Claude · cifrado del diario y la gratitud)
+
+**Tocado:** `lib/wellbeingCrypto.ts` (nuevo), `supabase/functions/wellbeing-key/index.ts` (nueva, v1 en producción), `app/diario.tsx`, `app/gratitud.tsx`, `context/AuthContext.tsx`, `lib/encryption.ts` (solo exporta un helper), `scripts/crear-secreto-bienestar.sh` (nuevo), `scripts/decodificar-export.mjs`, `__tests__/wellbeingCrypto.test.ts` (nuevo), `package.json` (`@noble/ciphers`), `docs/paquete-abogado.md` (B.8), `docs/pedido-de-datos.md`, `SCHEMA.md`
+
+**Resumen (decisión de Andre: opción "B"):**
+- **El texto del diario y de la gratitud se cifra en el teléfono antes de subir.** En la base queda ilegible. El ánimo, las fechas, los mensajes y las notas del profesional quedan como estaban.
+- **No es de extremo a extremo:** la clave de cada persona la calcula el servidor a partir de un secreto maestro. Se eligió para que el diario sobreviva a un teléfono robado y para poder contestar un pedido de acceso a los datos. Ningún texto visible puede prometer "ni Vita puede leerlo".
+- **Entradas viejas:** se leen igual y se cifran solas la primera vez que la persona abre Diario o Gratitud.
+- **Sin clave no se guarda** (la pantalla avisa), nunca se sube texto en claro.
+- **Legal:** investigado. La Ley 25.326 (art. 9) pide medidas "necesarias" sin nombrar el cifrado y la Res. AAIP 47/2018 lo deja como recomendación; no encontré norma vigente que lo obligue. Sumado al paquete del abogado como B.8.
+- 🗄️ **Base de datos: sin cambios de tablas ni policies.** Función nueva `wellbeing-key` desplegada en producción; SCHEMA.md actualizado.
+- ⚠️ **No verificado de punta a punta:** el entorno no me deja cargar secretos, así que la función está desplegada pero responde "configuración incompleta" hasta que Andre corra el script. Verificado: pruebas automáticas (cifrado, clave, formato contra el script del pedido de datos) y que la función rechaza a quien no tiene sesión.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Andre: correr `bash scripts/crear-secreto-bienestar.sh` antes de usar el Diario** (hasta entonces Diario y Gratitud no guardan) y pegar la copia del secreto en el gestor de contraseñas.
+- Después: probar en el teléfono guardar y releer una entrada, y mirar en la base que empiece con `vd1.`.
+- Recién con eso verificado, cambiar la Política §8.2 para que diga que diario y gratitud se almacenan cifrados (hoy dice que no, y es cierto hasta que el secreto esté cargado) y correr `npm run sync:legal`.
+- Evaluar después: notas privadas del profesional con el mismo esquema, y Face ID para abrir el Diario.
+
 ## 2026-10-04 — Andre (Claude · decisiones abiertas de la auditoría)
 
 **Tocado:** `supabase/migrations/20261004040000_decisiones_parte_1_funciones.sql` y `20261004050000_decisiones_parte_2_cierres.sql` (nuevos), `supabase/functions/delete-account/index.ts` (v32), `lib/suspendidos.ts` (nuevo), `lib/coachesCache.ts`, `lib/coachVisibilityData.ts`, `app/search3.tsx`, `screens/ProfesionalScreen.tsx`, `screens/AdminScreen.tsx`, `context/AuthContext.tsx`, `web/c/index.html`, `api/c.js`, `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, legales generados
