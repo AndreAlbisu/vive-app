@@ -9,10 +9,10 @@
 - **Garantías:** el panel avisa que el motivo de rechazo lo puede leer la persona.
 - **Mensaje al reservar:** Política §8.2 dice que recibe el mismo trato que los mensajes del chat. El panel no lo muestra. Ocultarlo de verdad a quien administra la base pide cifrado en el teléfono (pendiente post-lanzamiento, junto con chat y diario).
 - 🐛 **Error propio corregido:** en `delete-account` v31 una variable local se llamaba igual que el helper de errores, y algunos fallos de la baja de un profesional devolvían "Error inesperado" en vez de su mensaje. Seguía fallando cerrado. Arreglado en v32, con una aserción nueva en la prueba.
-- 🗄️ **Dos migraciones, en orden:** la parte 1 solo agrega funciones y la tarea diaria; la parte 2 cierra las columnas y va **después** de publicar la web y recargar la app. Probadas las dos en `vita-pruebas`, con las 112 pruebas por rol de nuevo en verde.
+- 🗄️ **Dos migraciones, las dos ✅ aplicadas en producción por Andre el 04/10** (parte 1, deploy de la web, parte 2), verificadas y registradas; SCHEMA.md actualizado. Probadas antes en `vita-pruebas`, con las 112 pruebas por rol en verde.
 
 **Pendiente para la próxima sesión:**
-- Parte 2 en producción, después del deploy de la web.
+- Recargar la app en el teléfono con el código nuevo y mirar el catálogo y una ficha (la versión vieja pide una columna que ya no se puede leer).
 - Ayuda en crisis a un toque (L14): falta decidir el diseño.
 
 ## 2026-10-04 — Andre (Claude · fase 7: etiquetas de tiendas, política y pedido de datos)
