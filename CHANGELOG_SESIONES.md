@@ -17,6 +17,19 @@
 - Recién con eso verificado, cambiar la Política §8.2 para que diga que diario y gratitud se almacenan cifrados (hoy dice que no, y es cierto hasta que el secreto esté cargado) y correr `npm run sync:legal`.
 - Evaluar después: notas privadas del profesional con el mismo esquema, y Face ID para abrir el Diario.
 
+## 2026-10-05 — Andre (Claude · "Para qué sirve" más discreto)
+
+**Tocado:** `components/ParaQueSirve.tsx`
+
+**Resumen:**
+- A Andre le molestaba ver la tarjeta "Para qué sirve" plegada en cada herramienta (Diario, Gratitud, Respiración, Sonidos). La primera vez sigue apareciendo abierta, como tarjeta. Después ya no queda la caja: queda un enlace chico y apagado, a la derecha, que la vuelve a abrir.
+- Se descartó mostrarla una sola vez y sacarla del todo: el texto dice cosas que conviene poder releer ("Tu profesional no lo ve").
+- Sin cambios de base de datos ni de textos.
+
+**Pendiente para la próxima sesión:**
+- Andre: mirarlo en el teléfono en las cuatro herramientas y decir si el enlace quedó bien ubicado (está a la derecha) o si lo prefiere en otro lado.
+- `docs/pitch-feria-21.md` (contexto y guion del pitch de Feria 21) está escrito pero sin commitear: Andre decide si va al repo, que es público, o a Notion.
+
 ## 2026-10-04 — Andre (Claude · decisiones abiertas de la auditoría)
 
 **Tocado:** `supabase/migrations/20261004040000_decisiones_parte_1_funciones.sql` y `20261004050000_decisiones_parte_2_cierres.sql` (nuevos), `supabase/functions/delete-account/index.ts` (v32), `lib/suspendidos.ts` (nuevo), `lib/coachesCache.ts`, `lib/coachVisibilityData.ts`, `app/search3.tsx`, `screens/ProfesionalScreen.tsx`, `screens/AdminScreen.tsx`, `context/AuthContext.tsx`, `web/c/index.html`, `api/c.js`, `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, legales generados
