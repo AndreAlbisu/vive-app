@@ -1,3 +1,18 @@
+## 2026-10-05 — Andre (Claude · USDT: empieza la reactivación)
+
+**Tocado:** `supabase/migrations/20261005010000_usdt_recycle_amounts.sql` (nuevo), `supabase/functions/_shared/usdt.ts` (comentario), `scripts/security-tests/database.mjs`
+
+**Resumen:**
+- Andre preguntó si los pagos en USDT funcionan: **no**, están suspendidos desde el 22/09 (falta `USDT_LEDGER_WALLET` en producción a propósito). La app igual ofrece la opción a los clientes de los 2 profesionales que la aceptan, y el cron `usdt-check-payments` corre cada minuto contra un 503.
+- Decisión de Andre: reactivarlo. Descartados los cuatro decimales (las billeteras cortan en dos, como ya decía `_shared/usdt.ts`). Plan en tres pasos: (1) reciclar montos, (2) transferencias sin dueño y comprobante con aprobación en el panel, (3) pantalla del cliente y prueba con una transferencia real.
+- 🗄️ **Paso 1 escrito y probado (local y `vita-pruebas`), 🔴 NO aplicado en producción:** `usdt_amount_assignments.released_at`, trigger `release_usdt_amount`, cuarentena de 7 días (`usdt_cuarentena()`), y `usdt_montos_libres(precio)`. El límite pasa de 100 montos por precio para siempre a 100 cada 7 días. No reactiva el riel.
+- Andre avisó que hay que cambiarle el nombre a la app, así que USDT no llega al pitch del viernes ni hace falta que llegue.
+
+**Pendiente para la próxima sesión:**
+- Pasos 2 y 3. Aplicar las migraciones en producción todas juntas al final.
+- De Andre: una billetera TRC20 nueva para cobrar (la nota de la auditoría pide no reusar la anterior), una transferencia chica de prueba, y consultar con abogado y contador cómo se factura.
+- Mientras tanto la opción USDT sigue visible en el checkout y falla al final: decidir si se oculta hasta reactivar.
+
 ## 2026-10-05 — Andre (Claude · Recursos sin la racha en el encabezado)
 
 **Tocado:** `app/(tabs)/recursos.tsx`

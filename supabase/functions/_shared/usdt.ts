@@ -30,10 +30,11 @@ export const USDT_DECIMALS = 6;
  * decimal 5 sería imposible de tipear para el usuario, y el pago nunca se
  * podría reconocer. 2 decimales es el mínimo común denominador.
  *
- * Los montos se reservan permanentemente en usdt_amount_assignments,
- * incluso después de cancelar. El techo es 100 por precio para toda la vida
- * de la wallet. Al agotarse, se rechazan nuevos cobros; para escalar hace falta
- * una dirección de depósito por intento.
+ * Los montos se reservan en `usdt_amount_assignments` y **se reciclan**
+ * (05/10/2026, migración `20261005010000`): cuando la reserva deja de esperar
+ * el pago, su monto queda 7 días en cuarentena y después vuelve a estar libre.
+ * El techo es 100 montos por precio cada 7 días. Hasta esa fecha se reservaban
+ * para siempre, y por eso el riel quedó suspendido el 22/09.
 
  */
 export const NONCE_DIGITS = 2;
