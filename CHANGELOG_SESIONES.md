@@ -1,3 +1,14 @@
+## 2026-10-05 — Andre (Claude · Recursos sin la racha en el encabezado)
+
+**Tocado:** `app/(tabs)/recursos.tsx`
+
+**Resumen:**
+- Andre: "hay una racha rara al lado de Recursos". Era una pastilla "3 días" con siete puntitos, sin decir qué contaba, pegada a la campana y al marcador y un poco desalineada. Se sacó del encabezado. La racha sigue en Progreso ("Racha actual").
+- Sin simulador abierto: no se vio en pantalla.
+
+**Pendiente para la próxima sesión:**
+- Mirar el encabezado de Recursos en el iPhone.
+
 ## 2026-10-05 — Andre (Claude · cifrado del diario y la gratitud)
 
 **Tocado:** `lib/wellbeingCrypto.ts` (nuevo), `supabase/functions/wellbeing-key/index.ts` (nueva, v1 en producción), `app/diario.tsx`, `app/gratitud.tsx`, `context/AuthContext.tsx`, `lib/encryption.ts` (solo exporta un helper), `scripts/crear-secreto-bienestar.sh` (nuevo), `scripts/decodificar-export.mjs`, `__tests__/wellbeingCrypto.test.ts` (nuevo), `package.json` (`@noble/ciphers`), `docs/paquete-abogado.md` (B.8), `docs/pedido-de-datos.md`, `SCHEMA.md`
