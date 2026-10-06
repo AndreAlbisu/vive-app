@@ -13,7 +13,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView,
-  ActivityIndicator, StatusBar, TextInput,
+  ActivityIndicator, StatusBar, TextInput, KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -45,6 +45,9 @@ export default function UsdtPaymentScreen() {
   const [error, setError] = useState<string | null>(null);
   const [acreditado, setAcreditado] = useState(false);
   const sondeo = useRef<ReturnType<typeof setInterval> | null>(null);
+  // El campo del comprobante está al final: con el teclado abierto quedaba tapado.
+  const scrollRef = useRef<ScrollView>(null);
+  const subirAlCampo = () => { setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250); };
 
   // ── Comprobante: "pagué y no se confirmó" (05/10/2026) ──────────────────────
   // La reserva se reconoce sola por el monto exacto. Si el exchange descontó su
@@ -148,7 +151,7 @@ export default function UsdtPaymentScreen() {
           </Text>
         )}
         {!formAbierto ? (
-          <TouchableOpacity onPress={() => setFormAbierto(true)} activeOpacity={0.7} hitSlop={8}>
+          <TouchableOpacity onPress={() => { setFormAbierto(true); subirAlCampo(); }} activeOpacity={0.7} hitSlop={8}>
             <Text style={s.linkComprobante}>¿Ya transferiste y no se confirmó? Cargá el comprobante</Text>
           </TouchableOpacity>
         ) : (
@@ -161,6 +164,7 @@ export default function UsdtPaymentScreen() {
               style={s.inputCodigo}
               value={codigo}
               onChangeText={setCodigo}
+              onFocus={subirAlCampo}
               placeholder="Pegá el código acá"
               placeholderTextColor="rgba(135,131,92,0.45)"
               autoCapitalize="none"
@@ -216,10 +220,11 @@ export default function UsdtPaymentScreen() {
           <View style={s.headerSpacer} />
         </View>
 
+        <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {loading ? (
           <View style={s.centro}><ActivityIndicator size="large" color={ViveColors.primary} /></View>
         ) : vencida ? (
-          <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={scrollRef} contentContainerStyle={s.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
             <Text style={s.label}>Esta reserva venció</Text>
             <Text style={s.montoNota}>
               Pasó el tiempo para pagarla y el horario quedó libre. Si llegaste a transferir, cargá el comprobante y te devolvemos el dinero.
@@ -238,7 +243,7 @@ export default function UsdtPaymentScreen() {
             </TouchableOpacity>
           </View>
         ) : cobro ? (
-          <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={scrollRef} contentContainerStyle={s.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
             <Text style={s.label}>Mandá exactamente</Text>
             {/* 2 decimales, que es lo máximo que las billeteras dejan tipear
                 (verificado en Belo). El identificador son los centavos. */}
@@ -280,6 +285,7 @@ export default function UsdtPaymentScreen() {
             {bloqueComprobante()}
           </ScrollView>
         ) : null}
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </AppBg>
   );
@@ -287,6 +293,7 @@ export default function UsdtPaymentScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
+  flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14 },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -304,7 +311,7 @@ const s = StyleSheet.create({
   okTitle: { fontFamily: ViveFonts.semibold, fontSize: 20, color: '#565E32', marginTop: 8 },
   okDesc: { fontFamily: ViveFonts.regular, fontSize: 14, color: 'rgba(135,131,92,0.80)' },
 
-  content: { paddingHorizontal: 20, paddingBottom: 48 },
+  content: { paddingHorizontal: 20, paddingBottom: 96 },
   label: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#565E32', marginTop: 22, marginBottom: 8 },
   monto: { fontFamily: ViveFonts.semibold, fontSize: 30, color: '#565E32', letterSpacing: -0.5 },
   montoNota: { fontFamily: ViveFonts.regular, fontSize: 12, lineHeight: 17, color: 'rgba(135,131,92,0.78)', marginTop: 6 },
