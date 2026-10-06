@@ -1097,6 +1097,11 @@ serve(async (req) => {
           payment_status: vencida ? 'reembolso_pendiente' : 'aprobado',
           payment_id: claim.tx_id,
           paid_at: claim.block_time,
+          // 🔴 Lo que LLEGÓ, que puede no ser lo que se esperaba (`usdt_amount`).
+          // Es lo que hay que devolver si esto termina en reintegro: sin esto la
+          // lista de reintegros mostraba el monto esperado (06/10/2026: llegó 1
+          // USDT y pedía devolver 49,05).
+          charged_amount: Number(claim.amount),
         })
         .eq('id', booking.id).eq('payment_provider', 'usdt').eq('payment_status', 'pendiente').eq('status', booking.status)
         .select('id')
@@ -1169,7 +1174,7 @@ serve(async (req) => {
         .eq('id', body.booking_id)
         .eq('payment_provider', 'usdt')
         .eq('payment_status', 'reembolso_pendiente')   // idempotente: no repisa uno ya hecho
-        .select('id, usdt_amount, refund_tx_id')
+        .select('id, usdt_amount, charged_amount, refund_tx_id')
 
       if (error) return json({ error: error.message }, 500)
       if (!data || data.length === 0) {
@@ -1183,7 +1188,7 @@ serve(async (req) => {
         targetId: data[0].id,
         // Misma forma que arriba (D8). `monto` ya estaba; se le suman los otros
         // campos para que la vista no tenga que adivinar por acción.
-        details: { monto: data[0].usdt_amount, tx, moneda: 'USD', riel: 'usdt', referencia: tx },
+        details: { monto: data[0].charged_amount ?? data[0].usdt_amount, tx, moneda: 'USD', riel: 'usdt', referencia: tx },
       })
 
       return json({ result: 'ok', booking: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })

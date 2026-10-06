@@ -460,7 +460,7 @@ export type UsdtRefund = {
 export async function listUsdtRefunds(): Promise<UsdtRefund[]> {
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, usdt_amount, scheduled_date, scheduled_time, coach_name, refund_address, refund_network')
+    .select('id, usdt_amount, charged_amount, scheduled_date, scheduled_time, coach_name, refund_address, refund_network')
     .eq('payment_provider', 'usdt')
     .eq('payment_status', 'reembolso_pendiente')
     .order('scheduled_date', { ascending: true })
@@ -472,7 +472,8 @@ export async function listUsdtRefunds(): Promise<UsdtRefund[]> {
   }
   return (data ?? []).map(b => ({
     bookingId: b.id,
-    monto: b.usdt_amount != null ? Number(b.usdt_amount) : null,
+    // Lo que efectivamente llegó, si se acreditó por comprobante con un monto distinto.
+    monto: b.charged_amount != null ? Number(b.charged_amount) : b.usdt_amount != null ? Number(b.usdt_amount) : null,
     fecha: b.scheduled_date,
     hora: String(b.scheduled_time ?? '').slice(0, 5),
     coachName: b.coach_name ?? null,

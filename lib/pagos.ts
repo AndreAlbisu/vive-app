@@ -63,7 +63,10 @@ export function nombreProveedor(p: Proveedor | null): string {
 /** "$ 11.000", "USD 30", "6 USDT". Lo cobrado de verdad si difiere del precio. */
 export function montoLegible(r: Pick<PagoRow, 'amount' | 'charged_amount' | 'referral_discount' | 'currency' | 'usdt_amount' | 'payment_provider'>): string {
   if (r.payment_provider === 'usdt' && r.usdt_amount != null) {
-    return `${Number(r.usdt_amount).toLocaleString('es-AR', { maximumFractionDigits: 6 })} USDT`;
+    // `charged_amount` en USDT solo existe si el pago se acreditó por comprobante
+    // con un monto distinto del esperado: ahí lo cierto es lo que llegó.
+    const usdt = r.charged_amount != null ? Number(r.charged_amount) : Number(r.usdt_amount);
+    return `${usdt.toLocaleString('es-AR', { maximumFractionDigits: 6 })} USDT`;
   }
   const valor = r.charged_amount
     ?? (r.amount != null ? Number(r.amount) - Number(r.referral_discount ?? 0) : null);
