@@ -52,14 +52,17 @@ const BRAND_GROW_MS = 1100;
 const PAL = {
   bg:        '#FBF3E7',
   bgTo:      '#F4E2C8',
-  // Terracota de la marca (ViveColors.primary). Elegido por Joaquín (04/10)
-  // sobre el verde/marrón: cálido y en paleta con los orbes.
-  textColor: '#C1694F',
-  // Tagline en una terracota más honda para que ceda jerarquía al wordmark.
-  subColor:  '#9E5742',
+  // Espresso (casi negro cálido). Elegido por Joaquín (06/10) en el laboratorio
+  // HTML sobre terracota/verde/marrón: máximo contraste, deja que el color lo
+  // lleven los orbes sin competir.
+  textColor: '#3A2A20',
+  // Tagline en un espresso más claro para que ceda jerarquía al wordmark.
+  subColor:  '#5A463A',
 } as const;
 
-const AURA_COLORS = ['#FF9A52', '#FFB36B', '#FFC98C'] as const;
+// Durazno calmo (Joaquín, 06/10, laboratorio) — antes naranja (#FF9A52…), se
+// sentía fuerte; este tono es más suave y menos "neón" al superponerse.
+const AURA_COLORS = ['#F39A7E', '#F7BBA6', '#FBD8CB'] as const;
 const GRAD_IDS    = ['vgA', 'vgB', 'vgC'] as const;
 const DEG         = Math.PI / 180;
 
@@ -270,8 +273,8 @@ export default function OnboardingScreen1() {
                   {/* Pico bajo + caída en 3 tramos: así los 3 orbes se
                       superponen como LUZ (se suman suave) en vez de quemar el
                       centro con un naranja saturado. Look de aura premium. */}
-                  <Stop offset="0%"   stopColor={color} stopOpacity="0.55" />
-                  <Stop offset="55%"  stopColor={color} stopOpacity="0.26" />
+                  <Stop offset="0%"   stopColor={color} stopOpacity="0.45" />
+                  <Stop offset="55%"  stopColor={color} stopOpacity="0.21" />
                   <Stop offset="100%" stopColor={color} stopOpacity="0" />
                 </RadialGradient>
               ))}
