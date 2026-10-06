@@ -491,6 +491,55 @@ export function markUsdtRefunded(bookingId: string, refundTxId: string) {
   });
 }
 
+// ─── USDT en revisión (05/10/2026) ───────────────────────────────────────────
+//
+// Lo que llegó a la billetera y no se acreditó solo: comprobantes que presentó
+// un cliente y transferencias que nadie reclamó todavía. Aprobar un comprobante
+// acredita la sesión si la reserva sigue esperando; si ya venció, la deja para
+// reintegro en la lista de arriba.
+
+export type UsdtClaim = {
+  id: string;
+  bookingId: string;
+  txId: string;
+  recibido: number;
+  esperado: number | null;
+  desde: string;
+  fechaTransferencia: string;
+  presentado: string;
+  reservaVencida: boolean;
+  coachName: string | null;
+  fecha: string | null;
+  hora: string | null;
+};
+
+export type UsdtLooseTransfer = {
+  txId: string;
+  desde: string;
+  monto: number;
+  fecha: string;
+  estado: 'sin_dueno' | 'monto_menor';
+  bookingSugerida: string | null;
+};
+
+export async function listUsdtReview(): Promise<{ claims: UsdtClaim[]; transfers: UsdtLooseTransfer[]; error: string | null }> {
+  const res = await callAdmin({ action: 'list_usdt_review' });
+  if (!res.ok) return { claims: [], transfers: [], error: res.error ?? 'No se pudo leer la revisión de USDT' };
+  return {
+    claims: (res.data?.claims ?? []) as UsdtClaim[],
+    transfers: (res.data?.transfers ?? []) as UsdtLooseTransfer[],
+    error: null,
+  };
+}
+
+export function resolveUsdtClaim(claimId: string, approve: boolean, motivo?: string) {
+  return callAdmin({ action: 'resolve_usdt_claim', claim_id: claimId, approve, motivo: motivo?.trim() || undefined });
+}
+
+export function discardUsdtTransfer(txId: string, nota: string) {
+  return callAdmin({ action: 'discard_usdt_transfer', tx_id: txId, nota: nota.trim() });
+}
+
 // ─── Pagos a coaches (riel internacional) ────────────────────────────────────
 //
 // Solo existe para los rieles donde cobra VIVE. Con Mercado Pago el split ya le

@@ -35,6 +35,7 @@ import {
   listPendingReports, resolveReport,
   listClaims, checkGuarantee, approveGuarantee, rejectGuarantee,
   listUsdtRefunds, markUsdtRefunded, type UsdtRefund,
+  listUsdtReview, resolveUsdtClaim, discardUsdtTransfer, type UsdtClaim, type UsdtLooseTransfer,
   listCoachPayouts, markCoachPaid, type CoachPayout,
   listCommissionReport, type CommissionReport,
   listAuditLog,
@@ -679,6 +680,7 @@ export default function AdminScreen() {
                 el hash como prueba. Automatizar el envío exigiría la clave
                 privada de la wallet en el backend — quien accediera a ese
                 secret vaciaría la billetera entera, no un reembolso. */}
+            {!loading && tab === 'reembolsos' && <UsdtReviewPanel onChanged={() => { void load(); }} />}
             {!loading && tab === 'reembolsos' && (
               refunds.length === 0 ? (
                 <View style={s.empty}><Text style={s.emptyText}>No hay reembolsos pendientes</Text></View>
@@ -1166,6 +1168,133 @@ const MOTIVO_PROBLEMA: Record<string, string> = {
   cobro: 'Problema con el cobro',
   otro: 'Otra cosa',
 };
+
+// ── USDT en revisión (05/10/2026) ────────────────────────────────────────────
+// Lo que llegó a la billetera y no se acreditó solo. Va arriba de los reintegros
+// porque aprobar el comprobante de una reserva vencida la manda a esa lista.
+function UsdtReviewPanel({ onChanged }: { onChanged: () => void }) {
+  const [claims, setClaims] = useState<UsdtClaim[]>([]);
+  const [transfers, setTransfers] = useState<UsdtLooseTransfer[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [nota, setNota] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const cargar = useCallback(async () => {
+    const r = await listUsdtReview();
+    setClaims(r.claims);
+    setTransfers(r.transfers);
+    setError(r.error);
+  }, []);
+  useEffect(() => { void cargar(); }, [cargar]);
+
+  async function resolver(c: UsdtClaim, aprobar: boolean) {
+    const motivo = (nota[c.id] ?? '').trim();
+    if (!aprobar && !motivo) { Alert.alert('Falta el motivo', 'Para rechazar un comprobante escribí por qué.'); return; }
+    setBusy(c.id);
+    const res = await resolveUsdtClaim(c.id, aprobar, motivo);
+    setBusy(null);
+    if (!res.ok) { Alert.alert('No se pudo resolver', res.error ?? ''); return; }
+    if (res.data?.warning) Alert.alert('Hecho, con un aviso', res.data.warning);
+    setNota(prev => ({ ...prev, [c.id]: '' }));
+    await cargar();
+    onChanged();
+  }
+
+  function confirmar(c: UsdtClaim) {
+    const diferencia = c.esperado != null && Math.abs(c.recibido - c.esperado) >= 0.005;
+    Alert.alert(
+      c.reservaVencida ? 'Aprobar para reintegro' : 'Acreditar el pago',
+      c.reservaVencida
+        ? 'La reserva venció esperando el pago. No se reactiva: queda en la lista de reintegros para que le devuelvas el dinero.'
+        : `Se confirma la sesión y se avisa al profesional.${diferencia ? ` Llegaron ${c.recibido.toFixed(2)} y se esperaban ${c.esperado!.toFixed(2)}: la diferencia la absorbe Vita.` : ''}`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: c.reservaVencida ? 'Aprobar' : 'Acreditar', onPress: () => { void resolver(c, true); } },
+      ],
+    );
+  }
+
+  async function descartar(t: UsdtLooseTransfer) {
+    const motivo = (nota[t.txId] ?? '').trim();
+    if (!motivo) { Alert.alert('Falta la nota', 'Escribí por qué se descarta esta transferencia.'); return; }
+    setBusy(t.txId);
+    const res = await discardUsdtTransfer(t.txId, motivo);
+    setBusy(null);
+    if (!res.ok) { Alert.alert('No se pudo descartar', res.error ?? ''); return; }
+    setNota(prev => ({ ...prev, [t.txId]: '' }));
+    await cargar();
+  }
+
+  if (error) {
+    return <View style={s.card}><Text style={s.cardBody}>No se pudo leer la revisión de USDT: {error}</Text></View>;
+  }
+  if (claims.length === 0 && transfers.length === 0) return null;
+
+  return (
+    <>
+      {claims.map(c => (
+        <View key={c.id} style={s.card}>
+          <Text style={s.cardTitle}>Comprobante en revisión · {c.recibido.toFixed(2)} USDT</Text>
+          <Text style={s.cardMeta}>
+            {c.esperado != null ? `Se esperaban ${c.esperado.toFixed(2)}` : 'Monto esperado desconocido'}
+            {c.fecha ? ` · sesión del ${c.fecha} ${String(c.hora ?? '').slice(0, 5)} hs` : ''}
+            {c.coachName ? ` · ${c.coachName}` : ''}
+          </Text>
+          <Text style={s.cardBody}>
+            {c.reservaVencida
+              ? 'La reserva venció esperando el pago. Aprobar la deja para reintegro.'
+              : 'La reserva todavía espera el pago. Aprobar acredita la sesión.'}
+          </Text>
+          <Text style={s.mono} selectable>{c.txId}</Text>
+          <Text style={s.mono} selectable>desde {c.desde}</Text>
+          <TextInput
+            style={s.input}
+            value={nota[c.id] ?? ''}
+            onChangeText={v => setNota(prev => ({ ...prev, [c.id]: v }))}
+            placeholder="Motivo (obligatorio para rechazar)"
+            placeholderTextColor="rgba(135,131,92,0.45)"
+            multiline
+          />
+          <View style={s.actions}>
+            <TouchableOpacity style={[s.btn, s.btnPrimary]} activeOpacity={0.85} disabled={busy === c.id} onPress={() => confirmar(c)}>
+              <Text style={s.btnPrimaryText}>{c.reservaVencida ? 'Aprobar para reintegro' : 'Acreditar'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.btn, s.btnGhost]} activeOpacity={0.85} disabled={busy === c.id} onPress={() => { void resolver(c, false); }}>
+              <Text style={s.btnGhostText}>Rechazar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+
+      {transfers.map(t => (
+        <View key={t.txId} style={s.card}>
+          <Text style={s.cardTitle}>Llegaron {t.monto.toFixed(2)} USDT sin reserva</Text>
+          <Text style={s.cardMeta}>
+            {new Date(t.fecha).toLocaleString('es-AR')}
+            {t.estado === 'monto_menor' ? ' · los centavos coinciden con una reserva en espera, pero llegó de menos' : ''}
+          </Text>
+          <Text style={s.cardBody}>
+            Nadie presentó todavía un comprobante por esta transferencia. Si la persona escribe, pedile que lo cargue desde la pantalla de pago.
+          </Text>
+          <Text style={s.mono} selectable>{t.txId}</Text>
+          <Text style={s.mono} selectable>desde {t.desde}</Text>
+          <TextInput
+            style={s.input}
+            value={nota[t.txId] ?? ''}
+            onChangeText={v => setNota(prev => ({ ...prev, [t.txId]: v }))}
+            placeholder="Nota para descartarla (por ejemplo: prueba nuestra)"
+            placeholderTextColor="rgba(135,131,92,0.45)"
+          />
+          <View style={s.actions}>
+            <TouchableOpacity style={[s.btn, s.btnGhost]} activeOpacity={0.85} disabled={busy === t.txId} onPress={() => { void descartar(t); }}>
+              <Text style={s.btnGhostText}>Descartar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </>
+  );
+}
 
 // Un profesional aprobado no cambia su nombre desde la app (01/10/2026): es el
 // nombre que se revisó. Las correcciones las hace un admin desde acá.

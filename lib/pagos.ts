@@ -49,8 +49,9 @@ export type EstadoPago = {
   /** Qué significa y qué sigue. */
   detalle: string;
   tono: Tono;
-  /** Hace falta que la persona haga algo (hoy: pasar su dirección de USDT). */
-  accion?: 'direccion_usdt';
+  /** Algo que la persona puede hacer: pasar su dirección de USDT para la
+   *  devolución, o cargar el comprobante de una transferencia que no se acreditó. */
+  accion?: 'direccion_usdt' | 'comprobante_usdt';
 };
 
 export function nombreProveedor(p: Proveedor | null): string {
@@ -134,18 +135,34 @@ export function estadoDelPago(r: PagoRow): EstadoPago {
       };
 
     case 'pendiente':
+      // Con USDT la plata puede haber llegado igual (monto distinto, o tarde):
+      // la persona puede cargar el comprobante de su transferencia.
       if (r.status === 'cancelada') {
-        return {
-          titulo: 'El pago no se completó',
-          detalle: 'La reserva se canceló sin que entrara el pago. Si ves un cobro en tu resumen, avisanos.',
-          tono: 'neutro',
-        };
+        return r.payment_provider === 'usdt'
+          ? {
+              titulo: 'El pago no se completó',
+              detalle: 'La reserva se canceló sin que reconociéramos el pago. Si llegaste a transferir, cargá el comprobante y te devolvemos el dinero.',
+              tono: 'neutro',
+              accion: 'comprobante_usdt',
+            }
+          : {
+              titulo: 'El pago no se completó',
+              detalle: 'La reserva se canceló sin que entrara el pago. Si ves un cobro en tu resumen, avisanos.',
+              tono: 'neutro',
+            };
       }
-      return {
-        titulo: 'Esperando la confirmación del pago',
-        detalle: `Todavía no nos llegó la confirmación de ${prov}. Si ya pagaste, suele tardar unos minutos.`,
-        tono: 'proceso',
-      };
+      return r.payment_provider === 'usdt'
+        ? {
+            titulo: 'Esperando la confirmación del pago',
+            detalle: 'Todavía no reconocimos tu transferencia. Si ya la hiciste, suele tardar unos minutos; si pasó más tiempo, cargá el comprobante.',
+            tono: 'proceso',
+            accion: 'comprobante_usdt',
+          }
+        : {
+            titulo: 'Esperando la confirmación del pago',
+            detalle: `Todavía no nos llegó la confirmación de ${prov}. Si ya pagaste, suele tardar unos minutos.`,
+            tono: 'proceso',
+          };
 
     case 'aprobado': {
       const cuando = fechaCorta(r.paid_at);

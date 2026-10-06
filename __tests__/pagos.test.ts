@@ -14,6 +14,17 @@ function row(over: Partial<PagoRow> = {}): PagoRow {
 }
 
 describe('estadoDelPago', () => {
+  it('USDT sin reconocer: se puede cargar el comprobante, esté vencida o en espera', () => {
+    const vencida = estadoDelPago(row({ status: 'cancelada', payment_status: 'pendiente', payment_provider: 'usdt' }));
+    expect(vencida.accion).toBe('comprobante_usdt');
+    expect(vencida.detalle).toContain('comprobante');
+    const enEspera = estadoDelPago(row({ status: 'pendiente', payment_status: 'pendiente', payment_provider: 'usdt' }));
+    expect(enEspera.accion).toBe('comprobante_usdt');
+  });
+  it('con Mercado Pago o PayPal no hay comprobante que cargar', () => {
+    expect(estadoDelPago(row({ status: 'cancelada', payment_status: 'pendiente', payment_provider: 'mp' })).accion).toBeUndefined();
+    expect(estadoDelPago(row({ status: 'pendiente', payment_status: 'pendiente', payment_provider: 'paypal' })).accion).toBeUndefined();
+  });
   it('pagado', () => {
     expect(estadoDelPago(row()).titulo).toBe('Pagado');
   });

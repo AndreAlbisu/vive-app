@@ -1,3 +1,18 @@
+## 2026-10-06 — Andre (Claude · USDT paso 3: pantallas del comprobante y de la revisión)
+
+**Tocado:** `screens/UsdtPaymentScreen.tsx`, `screens/MisPagosScreen.tsx`, `lib/pagos.ts`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `__tests__/pagos.test.ts`, `scripts/security-tests/endpoints.cjs`
+
+**Resumen:**
+- **Cliente:** en la pantalla de pago con USDT, debajo de "Esperando el pago", un enlace "¿Ya transferiste y no se confirmó? Cargá el comprobante" abre un campo para pegar el código de la transferencia. Muestra el estado después (en revisión, aprobado, o que hay que cargarlo de nuevo). Si la reserva ya venció, la pantalla lo dice y deja cargar el comprobante para que se devuelva el dinero.
+- **Mis pagos:** una reserva en USDT sin reconocer (en espera o vencida) tiene el botón "Cargar comprobante", que lleva a esa pantalla. Es la entrada para quien pagó tarde.
+- **Panel:** en la pestaña Reembolsos, arriba de los reintegros, aparecen los comprobantes en revisión (cuánto llegó, cuánto se esperaba, si la reserva sigue en espera o venció) con Acreditar o Aprobar para reintegro, y Rechazar con motivo. También las transferencias que llegaron sin reserva, con Descartar.
+- Pruebas: dos casos nuevos de `usdt-claim` en `test:security` y dos de `estadoDelPago`. 🟡 Las pantallas no se vieron en un teléfono.
+
+**Pendiente para la próxima sesión:**
+- Mirar las tres pantallas en el iPhone.
+- Producción, en este orden: (1) migraciones `20261005010000` y `20261005020000`; (2) desplegar `usdt-claim`, `usdt-check-payments`, `usdt-create-payment` y `admin-actions`; (3) billetera nueva en `USDT_WALLET_TRC20` y recién ahí `USDT_LEDGER_WALLET` igual a ella, que es lo que prende el riel; (4) transferencia real chica.
+- Antes de cobrarle a un cliente real: consulta con abogado y contador.
+
 ## 2026-10-05 — Andre (Claude · USDT paso 2: centavos únicos, transferencias sin dueño y comprobantes)
 
 **Tocado:** `supabase/migrations/20261005020000_usdt_claims_and_unmatched.sql` (nuevo), `supabase/functions/usdt-claim/index.ts` (nuevo), `usdt-check-payments/index.ts`, `admin-actions/index.ts`, `_shared/usdt.ts`, `__tests__/usdt.test.ts`

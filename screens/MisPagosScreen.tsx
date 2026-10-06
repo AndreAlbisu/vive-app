@@ -143,6 +143,14 @@ function MisPagosContent({ userId }: { userId: string | null }) {
                 {!!e.detalle && <Text style={s.detalle}>{e.detalle}</Text>}
 
                 <View style={s.acciones}>
+                  {e.accion === 'comprobante_usdt' && (
+                    <TouchableOpacity
+                      style={s.btnPrimario}
+                      onPress={() => router.push({ pathname: '/pago-usdt', params: { booking_id: item.id } })}
+                      activeOpacity={0.85}>
+                      <Text style={s.btnPrimarioText}>Cargar comprobante</Text>
+                    </TouchableOpacity>
+                  )}
                   {e.accion === 'direccion_usdt' && (
                     <TouchableOpacity
                       style={s.btnPrimario}
