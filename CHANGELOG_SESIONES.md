@@ -1,3 +1,15 @@
+## 2026-10-06 — Andre (Claude · el checkout retoma un cobro USDT en curso)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`
+
+**Resumen:**
+- En la prueba real, volver a pasar por el checkout canceló la reserva anterior y creó una nueva con otro monto (tres reservas en diez minutos). Con USDT eso deja sin reserva a una transferencia que la persona ya pudo haber hecho.
+- Ahora, antes de limpiar el intento anterior, el checkout busca un cobro en USDT propio y en espera para ese mismo turno. Si la persona vuelve a elegir USDT, se retoma: misma reserva, mismo monto. Si elige otro medio, se le avisa ("Ya empezaste a pagar este turno con USDT") y puede volver al pago en USDT o seguir con el otro medio.
+- Mercado Pago y PayPal no cambian. 🟡 No se vio en el teléfono.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone: empezar un pago en USDT, volver atrás y reservar el mismo turno de nuevo.
+
 ## 2026-10-06 — Andre (Claude · USDT: primera prueba con plata real)
 
 **Tocado:** `screens/UsdtPaymentScreen.tsx`, `supabase/functions/admin-actions/index.ts` (v48), `lib/admin.ts`, `lib/pagos.ts`, `screens/AdminScreen.tsx`
