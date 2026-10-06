@@ -1187,11 +1187,11 @@ function UsdtReviewPanel({ onChanged }: { onChanged: () => void }) {
   }, []);
   useEffect(() => { void cargar(); }, [cargar]);
 
-  async function resolver(c: UsdtClaim, aprobar: boolean) {
+  async function resolver(c: UsdtClaim, aprobar: boolean, reactivar = false) {
     const motivo = (nota[c.id] ?? '').trim();
     if (!aprobar && !motivo) { Alert.alert('Falta el motivo', 'Para rechazar un comprobante escribí por qué.'); return; }
     setBusy(c.id);
-    const res = await resolveUsdtClaim(c.id, aprobar, motivo);
+    const res = await resolveUsdtClaim(c.id, aprobar, motivo, reactivar);
     setBusy(null);
     if (!res.ok) { Alert.alert('No se pudo resolver', res.error ?? ''); return; }
     if (res.data?.warning) Alert.alert('Hecho, con un aviso', res.data.warning);
@@ -1210,6 +1210,18 @@ function UsdtReviewPanel({ onChanged }: { onChanged: () => void }) {
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: c.reservaVencida ? 'Aprobar' : 'Acreditar', onPress: () => { void resolver(c, true); } },
+      ],
+    );
+  }
+
+  function confirmarReactivar(c: UsdtClaim) {
+    const diferencia = c.esperado != null && Math.abs(c.recibido - c.esperado) >= 0.005;
+    Alert.alert(
+      'Acreditar y volver a dar la sesión',
+      `El horario sigue libre. Se crea de nuevo la reserva, ya pagada, y se avisa al profesional.${diferencia ? ` Llegaron ${c.recibido.toFixed(2)} y se esperaban ${c.esperado!.toFixed(2)}: la diferencia la absorbe Vita.` : ''}`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Acreditar', onPress: () => { void resolver(c, true, true); } },
       ],
     );
   }
@@ -1241,9 +1253,11 @@ function UsdtReviewPanel({ onChanged }: { onChanged: () => void }) {
             {c.coachName ? ` · ${c.coachName}` : ''}
           </Text>
           <Text style={s.cardBody}>
-            {c.reservaVencida
-              ? 'La reserva venció esperando el pago. Aprobar la deja para reintegro.'
-              : 'La reserva todavía espera el pago. Aprobar acredita la sesión.'}
+            {!c.reservaVencida
+              ? 'La reserva todavía espera el pago. Aprobar acredita la sesión.'
+              : c.puedeReactivar
+                ? 'La reserva venció esperando el pago, pero el horario sigue libre: podés volver a dar la sesión o devolver el dinero.'
+                : 'La reserva venció esperando el pago y el horario ya no está libre. Aprobar la deja para reintegro.'}
           </Text>
           <Text style={s.mono} selectable>{c.txId}</Text>
           <Text style={s.mono} selectable>desde {c.desde}</Text>
@@ -1256,8 +1270,13 @@ function UsdtReviewPanel({ onChanged }: { onChanged: () => void }) {
             multiline
           />
           <View style={s.actions}>
-            <TouchableOpacity style={[s.btn, s.btnPrimary]} activeOpacity={0.85} disabled={busy === c.id} onPress={() => confirmar(c)}>
-              <Text style={s.btnPrimaryText}>{c.reservaVencida ? 'Aprobar para reintegro' : 'Acreditar'}</Text>
+            {c.reservaVencida && c.puedeReactivar && (
+              <TouchableOpacity style={[s.btn, s.btnPrimary]} activeOpacity={0.85} disabled={busy === c.id} onPress={() => confirmarReactivar(c)}>
+                <Text style={s.btnPrimaryText}>Acreditar y dar la sesión</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={[s.btn, c.reservaVencida && c.puedeReactivar ? s.btnGhost : s.btnPrimary]} activeOpacity={0.85} disabled={busy === c.id} onPress={() => confirmar(c)}>
+              <Text style={c.reservaVencida && c.puedeReactivar ? s.btnGhostText : s.btnPrimaryText}>{c.reservaVencida ? 'Aprobar para reintegro' : 'Acreditar'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.btn, s.btnGhost]} activeOpacity={0.85} disabled={busy === c.id} onPress={() => { void resolver(c, false); }}>
               <Text style={s.btnGhostText}>Rechazar</Text>

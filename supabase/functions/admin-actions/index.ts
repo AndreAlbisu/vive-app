@@ -112,6 +112,42 @@ const EVIDENCE_MIMES: Record<string, string> = {
   'application/pdf': 'pdf',
 }
 
+/** "9:00" y "09:00" son el mismo turno. */
+function hhmm(t: unknown): string {
+  const [h, m] = String(t ?? '').split(':')
+  return `${(h ?? '').padStart(2, '0')}:${(m ?? '00').padStart(2, '0')}`
+}
+
+/**
+ * ¿Se puede volver a dar el turno de una reserva que venció esperando el pago?
+ * Solo si todavía no empezó, sigue en la agenda del profesional y nadie más lo
+ * tiene pagado o confirmado. Devuelve el motivo cuando no se puede.
+ */
+async function turnoSigueLibre(
+  admin: SupabaseClient,
+  b: { id: string; coach_id: string; scheduled_date: string; scheduled_time: string },
+): Promise<{ libre: boolean; motivo?: string }> {
+  const inicio = Date.parse(`${b.scheduled_date}T${hhmm(b.scheduled_time)}:00-03:00`)
+  if (!Number.isFinite(inicio) || inicio <= Date.now()) return { libre: false, motivo: 'el horario ya pasó' }
+
+  const { data: agenda, error: agendaErr } = await admin.from('coach_availability')
+    .select('time, blocked').eq('coach_id', b.coach_id).eq('date', b.scheduled_date)
+  if (agendaErr) return { libre: false, motivo: 'no se pudo leer la agenda' }
+  if (!(agenda ?? []).some((a: any) => !a.blocked && hhmm(a.time) === hhmm(b.scheduled_time))) {
+    return { libre: false, motivo: 'el profesional ya no ofrece ese horario' }
+  }
+
+  const { data: otras, error: otrasErr } = await admin.from('bookings')
+    .select('id, status, payment_status, scheduled_time')
+    .eq('coach_id', b.coach_id).eq('scheduled_date', b.scheduled_date).neq('id', b.id)
+    .in('status', ['pendiente', 'confirmada', 'completada'])
+  if (otrasErr) return { libre: false, motivo: 'no se pudieron leer las otras reservas' }
+  const ocupado = (otras ?? []).some((o: any) => hhmm(o.scheduled_time) === hhmm(b.scheduled_time)
+    && (o.status !== 'pendiente' || o.payment_status === 'aprobado'))
+  if (ocupado) return { libre: false, motivo: 'otra persona ya tiene ese horario' }
+  return { libre: true }
+}
+
 async function notifyProfile(
   admin: SupabaseClient,
   profileId: string,
@@ -1013,7 +1049,7 @@ serve(async (req) => {
     case 'list_usdt_review': {
       const { data: claims, error: claimsErr } = await admin
         .from('usdt_claims')
-        .select('id, booking_id, user_id, tx_id, amount, from_address, block_time, created_at, bookings!inner(usdt_amount, status, payment_status, coach_name, scheduled_date, scheduled_time, refund_address, refund_network)')
+        .select('id, booking_id, user_id, tx_id, amount, from_address, block_time, created_at, bookings!inner(id, coach_id, usdt_amount, status, payment_status, coach_name, scheduled_date, scheduled_time, refund_address, refund_network)')
         .eq('estado', 'pendiente')
         .order('created_at', { ascending: true })
         .limit(100)
@@ -1027,11 +1063,20 @@ serve(async (req) => {
         .limit(100)
       if (transfersErr) return json({ error: transfersErr.message }, 500)
 
+      // Para una reserva vencida: ¿el horario sigue libre? Si sí, el panel ofrece
+      // acreditar y volver a dar la sesión en vez de devolver la plata.
+      const reactivables = new Map<string, boolean>()
+      for (const c of (claims ?? []) as any[]) {
+        const b = Array.isArray(c.bookings) ? c.bookings[0] : c.bookings
+        if (b?.status === 'cancelada') reactivables.set(c.id, (await turnoSigueLibre(admin, b)).libre)
+      }
+
       return json({
         result: 'ok',
         claims: (claims ?? []).map((c: any) => {
           const b = Array.isArray(c.bookings) ? c.bookings[0] : c.bookings
           return {
+            puedeReactivar: reactivables.get(c.id) === true,
             id: c.id, bookingId: c.booking_id, txId: c.tx_id,
             recibido: Number(c.amount), esperado: b?.usdt_amount != null ? Number(b.usdt_amount) : null,
             desde: c.from_address, fechaTransferencia: c.block_time, presentado: c.created_at,
@@ -1087,13 +1132,75 @@ serve(async (req) => {
       if (usada?.length) return json({ error: 'esa transferencia ya pagó otra reserva' }, 409)
 
       const { data: booking, error: bookingErr } = await admin
-        .from('bookings').select('id, status, payment_status, payment_provider').eq('id', claim.booking_id).maybeSingle()
+        .from('bookings').select('*').eq('id', claim.booking_id).maybeSingle()
       if (bookingErr) return json({ error: bookingErr.message }, 500)
       if (!booking || booking.payment_provider !== 'usdt' || booking.payment_status !== 'pendiente') {
         return json({ error: 'la reserva ya no está esperando un pago en USDT' }, 409)
       }
 
       const vencida = booking.status === 'cancelada'
+
+      // ── Reserva vencida, pero el horario sigue libre: se vuelve a dar la sesión ──
+      // Una reserva cancelada no se reabre (la base lo impide, y está bien: es
+      // historia). Se crea una NUEVA para el mismo turno, ya pagada con esta
+      // transferencia, y sigue el circuito normal: aviso al profesional y, si
+      // tiene reserva instantánea, confirmación. La vieja queda cancelada.
+      if (vencida && body.reactivar === true) {
+        const turno = await turnoSigueLibre(admin, booking as any)
+        if (!turno.libre) return json({ error: `no se puede reactivar: ${turno.motivo}. Aprobala para reintegro.` }, 409)
+
+        const { data: nueva, error: nuevaErr } = await admin.from('bookings').insert({
+          user_id: booking.user_id,
+          coach_id: booking.coach_id,
+          coach_name: booking.coach_name,
+          coach_specialty: booking.coach_specialty,
+          scheduled_date: booking.scheduled_date,
+          scheduled_time: booking.scheduled_time,
+          duration_minutes: booking.duration_minutes,
+          sala_id: booking.sala_id,
+          user_message: booking.user_message,
+          amount: booking.amount,
+          currency: booking.currency,
+          platform_fee_pct: booking.platform_fee_pct,
+          origen: booking.origen,
+          tema_origen: booking.tema_origen,
+          user_tz_observed: booking.user_tz_observed,
+          user_observation_source: booking.user_observation_source,
+          status: 'pendiente',
+          payment_provider: 'usdt',
+          payment_status: 'aprobado',
+          payment_id: claim.tx_id,
+          paid_at: claim.block_time,
+          charged_amount: Number(claim.amount),
+        }).select('id')
+        if (nuevaErr || !nueva?.length) {
+          // Las mismas reglas que frenan cualquier reserva: bloqueo entre las dos
+          // personas, profesional suspendido o dado de baja, horario tomado en el
+          // medio. No es un error del sistema: no se puede reactivar y va a reintegro.
+          const msg = nuevaErr?.message ?? 'sin respuesta'
+          const regla = /^(blocked|coach_suspendido|profesional_no_disponible|sala_invalida)/.test(msg) || (nuevaErr as { code?: string } | null)?.code === '23505'
+          return json({ error: `no se puede reactivar (${msg}). Aprobala para reintegro.` }, regla ? 409 : 500)
+        }
+        const nuevaId = nueva[0].id as string
+
+        let avisoReactivar: string | null = null
+        try { await processPaidBookingEffects(admin, nuevaId) }
+        catch (e) { avisoReactivar = `reserva creada y pagada, pero falta confirmar la sesión (la tarea de conciliación lo reintenta): ${(e as Error).message}` }
+
+        await admin.from('usdt_claims')
+          .update({ estado: 'aprobado', resultado: 'acreditada', motivo: motivo || null, resolved_at: ahora, resolved_by: user.id })
+          .eq('id', claim.id)
+        await admin.from('usdt_transfers')
+          .update({ estado: 'acreditada', resolved_at: ahora, resolved_by: user.id })
+          .eq('tx_id', claim.tx_id)
+
+        const auditReactivar = await audit(admin, {
+          ...actor, action: 'resolve_usdt_claim', targetType: 'booking', targetId: nuevaId,
+          details: { aprobado: true, resultado: 'reactivada', reserva_vencida: booking.id, tx: claim.tx_id, monto: Number(claim.amount), moneda: 'USD', riel: 'usdt', referencia: claim.tx_id },
+        })
+        const avisosReactivar = [avisoReactivar, auditReactivar ? `acción hecha, auditoría fallida: ${auditReactivar}` : null].filter(Boolean)
+        return json({ result: 'ok', estado: 'aprobado', resultado: 'reactivada', booking_id: nuevaId, ...(avisosReactivar.length ? { warning: avisosReactivar.join(' · ') } : {}) })
+      }
       // Las guardas del update son el reclamo: si otra corrida la movió, no devuelve fila.
       const { data: movida, error: movErr } = await admin.from('bookings')
         .update({

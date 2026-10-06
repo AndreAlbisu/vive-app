@@ -509,6 +509,8 @@ export type UsdtClaim = {
   fechaTransferencia: string;
   presentado: string;
   reservaVencida: boolean;
+  /** Reserva vencida cuyo horario sigue libre: se puede volver a dar la sesión. */
+  puedeReactivar: boolean;
   coachName: string | null;
   fecha: string | null;
   hora: string | null;
@@ -533,8 +535,8 @@ export async function listUsdtReview(): Promise<{ claims: UsdtClaim[]; transfers
   };
 }
 
-export function resolveUsdtClaim(claimId: string, approve: boolean, motivo?: string) {
-  return callAdmin({ action: 'resolve_usdt_claim', claim_id: claimId, approve, motivo: motivo?.trim() || undefined });
+export function resolveUsdtClaim(claimId: string, approve: boolean, motivo?: string, reactivar = false) {
+  return callAdmin({ action: 'resolve_usdt_claim', claim_id: claimId, approve, motivo: motivo?.trim() || undefined, reactivar: reactivar || undefined });
 }
 
 export function discardUsdtTransfer(txId: string, nota: string) {

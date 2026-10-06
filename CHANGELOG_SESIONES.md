@@ -1,3 +1,17 @@
+## 2026-10-06 — Andre (Claude · USDT: volver a dar la sesión de una reserva vencida)
+
+**Tocado:** `supabase/functions/admin-actions/index.ts` (v49 en producción), `lib/admin.ts`, `screens/AdminScreen.tsx`
+
+**Resumen:**
+- Andre preguntó si aprobar un comprobante no debería darle la sesión a la persona. Sí cuando la reserva sigue en espera; una vencida iba siempre a reintegro. **Decisión:** sumar una tercera salida.
+- Para un comprobante de una reserva vencida, el panel ahora dice si el horario sigue libre (todavía no empezó, sigue en la agenda del profesional, nadie más lo tiene pagado o confirmado). Si sí, aparece **"Acreditar y dar la sesión"** además de "Aprobar para reintegro".
+- Una reserva cancelada no se reabre (el guard de la base lo impide para cualquier rol, y está bien). Se crea una **reserva nueva** para el mismo turno, ya pagada con esa transferencia, y corre el circuito normal de un pago acreditado. La vieja queda cancelada; la auditoría guarda las dos.
+- Si las reglas de reserva lo impiden (bloqueo entre las dos personas, profesional suspendido, horario tomado en el medio), responde que no se puede reactivar y queda el reintegro.
+- Probado en `vita-pruebas`: horario libre → reserva nueva pagada y aviso al profesional; horario ocupado → rechazado; par bloqueado → rechazado. Sin migración.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el panel del iPhone.
+
 ## 2026-10-06 — Andre (Claude · el checkout retoma un cobro USDT en curso)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`
