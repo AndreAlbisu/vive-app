@@ -52,12 +52,11 @@ const BRAND_GROW_MS = 1100;
 const PAL = {
   bg:        '#FBF3E7',
   bgTo:      '#F4E2C8',
-  // Espresso (casi negro cálido). Elegido por Joaquín (06/10) en el laboratorio
-  // HTML sobre terracota/verde/marrón: máximo contraste, deja que el color lo
-  // lleven los orbes sin competir.
-  textColor: '#3A2A20',
-  // Tagline en un espresso más claro para que ceda jerarquía al wordmark.
-  subColor:  '#5A463A',
+  // Terracota de la marca (ViveColors.primary). Joaquín volvió al terracota el
+  // 06/10 (sobre espresso/verde/marrón), ahora que los círculos son nítidos.
+  textColor: '#C1694F',
+  // Tagline en una terracota más honda para que ceda jerarquía al wordmark.
+  subColor:  '#9E5742',
 } as const;
 
 // Durazno calmo (Joaquín, 06/10, laboratorio) — antes naranja (#FF9A52…), se
@@ -199,10 +198,11 @@ export default function OnboardingScreen1() {
 
   // ── Animated props (9 circle hooks — fixed call order) ───────────────────
 
-  // Outer deep glow — large blur, r × 1.15, 70 % opacity
-  const og0 = useCircleAnimProps(0, 1.15, 0.7, entryP, mergeP);
-  const og1 = useCircleAnimProps(1, 1.15, 0.7, entryP, mergeP);
-  const og2 = useCircleAnimProps(2, 1.15, 0.7, entryP, mergeP);
+  // Outer deep glow — r × 1.15, 30 % opacity (modo "nítido": halo tenue para
+  // que el disco interior defina el círculo en vez de difuminarse).
+  const og0 = useCircleAnimProps(0, 1.15, 0.3, entryP, mergeP);
+  const og1 = useCircleAnimProps(1, 1.15, 0.3, entryP, mergeP);
+  const og2 = useCircleAnimProps(2, 1.15, 0.3, entryP, mergeP);
   // Inner glow — medium blur, r × 0.88, 100 % opacity
   const ig0 = useCircleAnimProps(0, 0.88, 1.0, entryP, mergeP);
   const ig1 = useCircleAnimProps(1, 0.88, 1.0, entryP, mergeP);
@@ -270,11 +270,11 @@ export default function OnboardingScreen1() {
                   cx="50%" cy="50%" r="55%"
                   fx="50%" fy="50%"
                 >
-                  {/* Pico bajo + caída en 3 tramos: así los 3 orbes se
-                      superponen como LUZ (se suman suave) en vez de quemar el
-                      centro con un naranja saturado. Look de aura premium. */}
-                  <Stop offset="0%"   stopColor={color} stopOpacity="0.45" />
-                  <Stop offset="55%"  stopColor={color} stopOpacity="0.21" />
+                  {/* Modo "nítido" (Joaquín, 06/10): núcleo plano y opaco con
+                      caída recién cerca del borde, para que cada orbe se lea
+                      como un DISCO definido (un Venn), no como niebla. */}
+                  <Stop offset="0%"   stopColor={color} stopOpacity="0.67" />
+                  <Stop offset="72%"  stopColor={color} stopOpacity="0.62" />
                   <Stop offset="100%" stopColor={color} stopOpacity="0" />
                 </RadialGradient>
               ))}
