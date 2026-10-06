@@ -19,6 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useConsentGate } from '@/hooks/useConsentGate';
 import { ConsentSheet } from '@/components/ConsentSheet';
 import { supabase } from '@/lib/supabase';
+import { cifrar, descifrar, estaCifrado, obtenerClave, obtenerClaveSiSePuede } from '@/lib/wellbeingCrypto';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { ToolHeader } from '@/components/ui/ToolHeader';
@@ -194,8 +195,27 @@ export default function DiarioScreen() {
       // de la persona en cada apertura — el texto más sensible de la app,
       // creciendo sin freno en cada carga de pantalla.
       .limit(50)
-      .then(({ data }) => {
-        if (data) setEntries(data);
+      .then(async ({ data }) => {
+        if (!data) return;
+        // El texto llega cifrado (ver `lib/wellbeingCrypto.ts`). Sin clave, lo
+        // cifrado se muestra como "no se pudo abrir" y lo viejo se lee igual.
+        const clave = await obtenerClaveSiSePuede(user.id);
+        setEntries(data.map(e => ({ ...e, content: descifrar(e.content, clave, user.id) })));
+        if (!clave) return;
+        // Las entradas de antes del cifrado se cifran acá, de a una y sin
+        // bloquear: si alguna falla queda legible como estaba y se reintenta
+        // en la próxima apertura.
+        for (const e of data) {
+          if (!e.content || estaCifrado(e.content)) continue;
+          try {
+            await supabase
+              .from('journal_entries')
+              .update({ content: cifrar(e.content, clave, user.id) })
+              .eq('id', e.id);
+          } catch {
+            // Se reintenta en la próxima apertura.
+          }
+        }
       });
   }, [user]);
 
@@ -224,15 +244,28 @@ export default function DiarioScreen() {
     setAvisoCheckin(false);
     setSaved(true);
 
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .insert({
-        user_id: user.id,
-        mood: moodDeLaEntrada,
-        content: texto,
-      })
-      .select()
-      .single();
+    // 🔴 Falla cerrado: si no hay clave o no se puede cifrar, NO se guarda en
+    // claro. Cae en el mismo camino de error de abajo, que devuelve el texto.
+    let cifrado: string | null = null;
+    try {
+      cifrado = cifrar(texto, await obtenerClave(user.id), user.id);
+    } catch {
+      cifrado = null;
+    }
+
+    const { data: fila, error } = cifrado === null
+      ? { data: null, error: new Error('sin clave') }
+      : await supabase
+          .from('journal_entries')
+          .insert({
+            user_id: user.id,
+            mood: moodDeLaEntrada,
+            content: cifrado,
+          })
+          .select()
+          .single();
+    // La fila vuelve con el texto cifrado: en pantalla va el que se escribió.
+    const data = fila ? { ...fila, content: texto } : null;
 
     // 🔴 Si falla, se devuelve el texto. Antes el campo se limpiaba y el botón
     // decía "Guardado" pasara lo que pasara —el `if (!error && data)` solo

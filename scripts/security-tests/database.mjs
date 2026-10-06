@@ -61,7 +61,28 @@ await test('duplicate client event blocked',()=>blocked(notification,'23505'));
 await server();
 await test('confirmed slot uniqueness normalizes hours',async()=>{await q(insert('09:00',',status,payment_status')+`,'confirmada','aprobado')`);await blocked(insert('9:00',',status,payment_status')+`,'confirmada','aprobado')`,'23505')});
 await test('checkout lease single owner and privileged only',async()=>{const x=(await q(`select claim_checkout('${b.id}','mp') as id`)).rows[0].id;assert(x);assert.equal((await q(`select claim_checkout('${b.id}','paypal') as id`)).rows[0].id,null);await user();await blocked(`select claim_checkout('${b.id}','mp')`,'42501');await server()});
-await test('USDT amount not reused after cancellation',async()=>{await q(`update bookings set payment_provider='usdt',usdt_amount=49.99 where id='${b.id}'`);await q(`update bookings set status='cancelada' where id='${b.id}'`);const n=(await q(insert('14:00')+`) returning id`)).rows[0].id;await blocked(`update bookings set usdt_amount=49.99 where id='${n}'`,'23505')});
+await db.exec(read('supabase/migrations/20261005010000_usdt_recycle_amounts.sql'));
+await db.exec(read('supabase/migrations/20261005010000_usdt_recycle_amounts.sql')); // se puede volver a correr
+await test('USDT amount is quarantined after cancellation, then recycled',async()=>{
+  await q(`update bookings set payment_provider='usdt',payment_status='pendiente',usdt_amount=49.99 where id='${b.id}'`);
+  const n=(await q(insert('14:00')+`) returning id`)).rows[0].id;
+  // En uso: nadie más lo puede tomar.
+  await blocked(`update bookings set usdt_amount=49.99 where id='${n}'`,'23505');
+  await q(`update bookings set status='cancelada' where id='${b.id}'`);
+  assert.equal((await q(`select released_at is not null as r from usdt_amount_assignments where amount=49.99`)).rows[0].r,true);
+  // Recién liberado: sigue en cuarentena (un pago tardío no puede caer en otra reserva).
+  await blocked(`update bookings set usdt_amount=49.99 where id='${n}'`,'23505');
+  assert.equal((await q(`select public.usdt_montos_libres(50) as n`)).rows[0].n,99);
+  // Pasada la cuarentena, se reasigna y queda de nuevo en uso.
+  await q(`update usdt_amount_assignments set released_at=now()-interval '8 days' where amount=49.99`);
+  assert.equal((await q(`select public.usdt_montos_libres(50) as n`)).rows[0].n,100);
+  await q(`update bookings set payment_provider='usdt',payment_status='pendiente',usdt_amount=49.99 where id='${n}'`);
+  const fila=(await q(`select booking_id,released_at from usdt_amount_assignments where amount=49.99`)).rows[0];
+  assert.equal(fila.booking_id,n);assert.equal(fila.released_at,null);
+  // Un pago acreditado también libera el monto (con la misma cuarentena).
+  await q(`update bookings set payment_status='aprobado' where id='${n}'`);
+  assert.equal((await q(`select released_at is not null as r from usdt_amount_assignments where amount=49.99`)).rows[0].r,true);
+});
 await test('push block and quota fail closed',async()=>{for(let i=0;i<5;i++)assert.equal((await q(`select claim_push('${uid}','${cp}') as ok`)).rows[0].ok,true);assert.equal((await q(`select claim_push('${uid}','${cp}') as ok`)).rows[0].ok,false);await q(`insert into blocked_users values('${cp}','${uid}')`);assert.equal((await q(`select claim_push('${cp}','${uid}') as ok`)).rows[0].ok,false)});
 await test('push destination moves between accounts',async()=>{await user();await q(`select register_push_token('ExpoPushToken[fixture]')`);await user(cp);await q(`select register_push_token('ExpoPushToken[fixture]')`);await server();const rows=(await q(`select id from profiles where push_token='ExpoPushToken[fixture]'`)).rows;assert.deepEqual(rows,[{id:cp}])});
 await test('coach without payment rails cannot confirm an unpaid booking',async()=>{

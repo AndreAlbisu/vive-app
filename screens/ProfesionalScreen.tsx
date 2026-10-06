@@ -41,7 +41,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { opcionesGuardadas } from '@/lib/enfoque';
 import { logResourceEvent } from '@/lib/resourceEvents';
-import { estaSuspendido } from '@/lib/coachVisibility';
+import { idsSuspendidos } from '@/lib/suspendidos';
 import { esPerfilEjemplo, PERFIL_EJEMPLO, CREDENCIALES_EJEMPLO, RESENAS_EJEMPLO, AVISO_EJEMPLO } from '@/lib/perfilEjemplo';
 import {
   firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad,
@@ -248,7 +248,7 @@ export default function ProfesionalScreen() {
     }
     supabase
       .from('coaches')
-      .select('id, slug, verified, availability_status, specialty, profesion, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url, gender)')
+      .select('id, slug, verified, availability_status, specialty, profesion, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, profiles!inner(name, avatar_url, gender)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
@@ -262,7 +262,9 @@ export default function ProfesionalScreen() {
         }
         setCoachRowId((data as any).id);
         setCoachSlug((data as any).slug ?? null);
-        setNoDisponible(estaSuspendido({ suspendidoHasta: (data as any).suspendido_hasta ?? null }));
+        // Solo si está suspendido o no: la fecha ya no viaja al cliente.
+        setNoDisponible(false);
+        void idsSuspendidos().then(s => setNoDisponible(s.has((data as any).id)));
         setFetchedData({
           name: (data as any).profiles.name,
           specialty: etiquetaProfesionalPublica(data as any, (data as any).profiles.gender),

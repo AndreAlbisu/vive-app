@@ -40,7 +40,7 @@ const FALTA_CLAVE =
  * reemplazo deja pasar el mensaje —perdiendo un glifo roto que ya no se veía
  * bien— en vez de tirar la conversación entera.
  */
-function sinSustitutosSueltos(s: string): string {
+export function sinSustitutosSueltos(s: string): string {
   return s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '�');
 }
 

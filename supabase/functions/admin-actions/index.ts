@@ -37,6 +37,7 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 // MISMO número que en el cobro, o el registro de lo que se pagó no cuadra contra
 // lo que se retuvo. Duplicar la fórmula es exactamente cómo se desincronizan.
 import { marketplaceFeeFor } from '../_shared/commission.ts'
+import { processPaidBookingEffects } from '../_shared/paid-effects-recovery.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -109,6 +110,42 @@ const EVIDENCE_MIMES: Record<string, string> = {
   'image/webp': 'webp',
   'image/heic': 'heic',
   'application/pdf': 'pdf',
+}
+
+/** "9:00" y "09:00" son el mismo turno. */
+function hhmm(t: unknown): string {
+  const [h, m] = String(t ?? '').split(':')
+  return `${(h ?? '').padStart(2, '0')}:${(m ?? '00').padStart(2, '0')}`
+}
+
+/**
+ * ¿Se puede volver a dar el turno de una reserva que venció esperando el pago?
+ * Solo si todavía no empezó, sigue en la agenda del profesional y nadie más lo
+ * tiene pagado o confirmado. Devuelve el motivo cuando no se puede.
+ */
+async function turnoSigueLibre(
+  admin: SupabaseClient,
+  b: { id: string; coach_id: string; scheduled_date: string; scheduled_time: string },
+): Promise<{ libre: boolean; motivo?: string }> {
+  const inicio = Date.parse(`${b.scheduled_date}T${hhmm(b.scheduled_time)}:00-03:00`)
+  if (!Number.isFinite(inicio) || inicio <= Date.now()) return { libre: false, motivo: 'el horario ya pasó' }
+
+  const { data: agenda, error: agendaErr } = await admin.from('coach_availability')
+    .select('time, blocked').eq('coach_id', b.coach_id).eq('date', b.scheduled_date)
+  if (agendaErr) return { libre: false, motivo: 'no se pudo leer la agenda' }
+  if (!(agenda ?? []).some((a: any) => !a.blocked && hhmm(a.time) === hhmm(b.scheduled_time))) {
+    return { libre: false, motivo: 'el profesional ya no ofrece ese horario' }
+  }
+
+  const { data: otras, error: otrasErr } = await admin.from('bookings')
+    .select('id, status, payment_status, scheduled_time')
+    .eq('coach_id', b.coach_id).eq('scheduled_date', b.scheduled_date).neq('id', b.id)
+    .in('status', ['pendiente', 'confirmada', 'completada'])
+  if (otrasErr) return { libre: false, motivo: 'no se pudieron leer las otras reservas' }
+  const ocupado = (otras ?? []).some((o: any) => hhmm(o.scheduled_time) === hhmm(b.scheduled_time)
+    && (o.status !== 'pendiente' || o.payment_status === 'aprobado'))
+  if (ocupado) return { libre: false, motivo: 'otra persona ya tiene ese horario' }
+  return { libre: true }
 }
 
 async function notifyProfile(
@@ -363,6 +400,16 @@ serve(async (req) => {
       if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
       if (typeof body.verified !== 'boolean') return json({ error: 'verified tiene que ser booleano' }, 400)
 
+      // ¿Aprobación o volver a publicar a quien ya estuvo aprobado? Solo cambia
+      // el aviso que recibe: las exigencias las pone `approve_coach_application`.
+      let republica = false
+      if (body.verified) {
+        const { data: previo, error: previoError } = await admin
+          .from('coaches').select('application_status').eq('id', body.coach_id).maybeSingle()
+        if (previoError) return json({ error: previoError.message }, 500)
+        republica = previo?.application_status === 'aprobada'
+      }
+
       if (body.verified) {
         const { data: interview, error: interviewError } = await admin
           .from('coach_application_interviews')
@@ -394,10 +441,20 @@ serve(async (req) => {
         action: 'set_coach_verified',
         targetType: 'coach',
         targetId: coach.id,
-        details: { verified: body.verified, notes: body.notes ?? null },
+        details: { verified: body.verified, notes: body.notes ?? null, ...(republica ? { republicado: true } : {}) },
       })
 
-      if (body.verified) {
+      if (body.verified && republica) {
+        // No es una sanción levantada, pero es el tipo que ya significa "volvés
+        // a aparecer" y no manda el mail de postulación aprobada otra vez.
+        await notifyProfile(
+          admin,
+          coach.profile_id,
+          'sancion_levantada',
+          'Tu perfil vuelve a estar publicado',
+          'Ya volvés a aparecer en Vita y a recibir reservas.',
+        )
+      } else if (body.verified) {
         await notifyProfile(
           admin,
           coach.profile_id,
@@ -986,6 +1043,227 @@ serve(async (req) => {
     //
     // Por eso esta acción **registra**, no transfiere: el hash es la prueba de
     // que la plata salió, y sin él no se puede marcar nada.
+    // ── USDT: lo que llegó y no se acreditó solo (05/10/2026) ────────────────
+    // Comprobantes que presentaron los clientes (`usdt-claim`) y transferencias
+    // que el cron vio llegar sin reconocer (`usdt_transfers`).
+    case 'list_usdt_review': {
+      const { data: claims, error: claimsErr } = await admin
+        .from('usdt_claims')
+        .select('id, booking_id, user_id, tx_id, amount, from_address, block_time, created_at, bookings!inner(id, coach_id, usdt_amount, status, payment_status, coach_name, scheduled_date, scheduled_time, refund_address, refund_network)')
+        .eq('estado', 'pendiente')
+        .order('created_at', { ascending: true })
+        .limit(100)
+      if (claimsErr) return json({ error: claimsErr.message }, 500)
+
+      const { data: transfers, error: transfersErr } = await admin
+        .from('usdt_transfers')
+        .select('tx_id, from_address, amount, block_time, estado, booking_sugerida, seen_at')
+        .in('estado', ['sin_dueno', 'monto_menor'])
+        .order('block_time', { ascending: false })
+        .limit(100)
+      if (transfersErr) return json({ error: transfersErr.message }, 500)
+
+      // Para una reserva vencida: ¿el horario sigue libre? Si sí, el panel ofrece
+      // acreditar y volver a dar la sesión en vez de devolver la plata.
+      const reactivables = new Map<string, boolean>()
+      for (const c of (claims ?? []) as any[]) {
+        const b = Array.isArray(c.bookings) ? c.bookings[0] : c.bookings
+        if (b?.status === 'cancelada') reactivables.set(c.id, (await turnoSigueLibre(admin, b)).libre)
+      }
+
+      return json({
+        result: 'ok',
+        claims: (claims ?? []).map((c: any) => {
+          const b = Array.isArray(c.bookings) ? c.bookings[0] : c.bookings
+          return {
+            puedeReactivar: reactivables.get(c.id) === true,
+            id: c.id, bookingId: c.booking_id, txId: c.tx_id,
+            recibido: Number(c.amount), esperado: b?.usdt_amount != null ? Number(b.usdt_amount) : null,
+            desde: c.from_address, fechaTransferencia: c.block_time, presentado: c.created_at,
+            // Si la reserva venció esperando, aprobar la deja para reintegro en vez de acreditarla.
+            reservaVencida: b?.status === 'cancelada',
+            coachName: b?.coach_name ?? null, fecha: b?.scheduled_date ?? null, hora: b?.scheduled_time ?? null,
+            refundAddress: b?.refund_address ?? null,
+          }
+        }),
+        // Una transferencia que ya tiene un comprobante en revisión se resuelve
+        // desde ese comprobante: mostrarla también como "sin reserva, nadie la
+        // reclamó" era contradictorio (visto en la primera prueba real, 06/10).
+        transfers: (transfers ?? []).filter((t: any) => !(claims ?? []).some((c: any) => c.tx_id === t.tx_id)).map((t: any) => ({
+          txId: t.tx_id, desde: t.from_address, monto: Number(t.amount), fecha: t.block_time,
+          estado: t.estado, bookingSugerida: t.booking_sugerida,
+        })),
+      })
+    }
+
+    // Aprobar o rechazar un comprobante.
+    //   · Reserva que todavía espera el pago → se acredita, igual que si el cron
+    //     la hubiera reconocido (confirma la sesión y avisa al profesional).
+    //   · Reserva que venció esperando → NO se revive (el horario pudo tomarlo
+    //     otra persona): queda en "reembolso pendiente" y aparece en la lista de
+    //     reintegros de USDT.
+    case 'resolve_usdt_claim': {
+      if (!body.claim_id) return json({ error: 'falta claim_id' }, 400)
+      if (typeof body.approve !== 'boolean') return json({ error: 'approve tiene que ser booleano' }, 400)
+      const motivo = typeof body.motivo === 'string' ? body.motivo.trim().slice(0, 500) : ''
+      if (!body.approve && !motivo) return json({ error: 'hace falta un motivo para rechazar' }, 400)
+
+      const { data: claim, error: claimErr } = await admin
+        .from('usdt_claims').select('id, booking_id, tx_id, amount, block_time, estado').eq('id', body.claim_id).maybeSingle()
+      if (claimErr) return json({ error: claimErr.message }, 500)
+      if (!claim || claim.estado !== 'pendiente') return json({ error: 'ese comprobante no está pendiente' }, 404)
+
+      const ahora = new Date().toISOString()
+      if (!body.approve) {
+        const { data: rechazado, error } = await admin.from('usdt_claims')
+          .update({ estado: 'rechazado', motivo, resolved_at: ahora, resolved_by: user.id })
+          .eq('id', claim.id).eq('estado', 'pendiente').select('id')
+        if (error) return json({ error: error.message }, 500)
+        if (!rechazado?.length) return json({ error: 'ese comprobante ya fue resuelto' }, 409)
+        const auditErr = await audit(admin, {
+          ...actor, action: 'resolve_usdt_claim', targetType: 'booking', targetId: claim.booking_id,
+          details: { aprobado: false, tx: claim.tx_id, motivo, riel: 'usdt' },
+        })
+        return json({ result: 'ok', estado: 'rechazado', ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+      }
+
+      // Una transferencia paga una sola reserva.
+      const { data: usada } = await admin.from('bookings').select('id').eq('payment_id', claim.tx_id).limit(1)
+      if (usada?.length) return json({ error: 'esa transferencia ya pagó otra reserva' }, 409)
+
+      const { data: booking, error: bookingErr } = await admin
+        .from('bookings').select('*').eq('id', claim.booking_id).maybeSingle()
+      if (bookingErr) return json({ error: bookingErr.message }, 500)
+      if (!booking || booking.payment_provider !== 'usdt' || booking.payment_status !== 'pendiente') {
+        return json({ error: 'la reserva ya no está esperando un pago en USDT' }, 409)
+      }
+
+      const vencida = booking.status === 'cancelada'
+
+      // ── Reserva vencida, pero el horario sigue libre: se vuelve a dar la sesión ──
+      // Una reserva cancelada no se reabre (la base lo impide, y está bien: es
+      // historia). Se crea una NUEVA para el mismo turno, ya pagada con esta
+      // transferencia, y sigue el circuito normal: aviso al profesional y, si
+      // tiene reserva instantánea, confirmación. La vieja queda cancelada.
+      if (vencida && body.reactivar === true) {
+        const turno = await turnoSigueLibre(admin, booking as any)
+        if (!turno.libre) return json({ error: `no se puede reactivar: ${turno.motivo}. Aprobala para reintegro.` }, 409)
+
+        const { data: nueva, error: nuevaErr } = await admin.from('bookings').insert({
+          user_id: booking.user_id,
+          coach_id: booking.coach_id,
+          coach_name: booking.coach_name,
+          coach_specialty: booking.coach_specialty,
+          scheduled_date: booking.scheduled_date,
+          scheduled_time: booking.scheduled_time,
+          duration_minutes: booking.duration_minutes,
+          sala_id: booking.sala_id,
+          user_message: booking.user_message,
+          amount: booking.amount,
+          currency: booking.currency,
+          platform_fee_pct: booking.platform_fee_pct,
+          origen: booking.origen,
+          tema_origen: booking.tema_origen,
+          user_tz_observed: booking.user_tz_observed,
+          user_observation_source: booking.user_observation_source,
+          status: 'pendiente',
+          payment_provider: 'usdt',
+          payment_status: 'aprobado',
+          payment_id: claim.tx_id,
+          paid_at: claim.block_time,
+          charged_amount: Number(claim.amount),
+        }).select('id')
+        if (nuevaErr || !nueva?.length) {
+          // Las mismas reglas que frenan cualquier reserva: bloqueo entre las dos
+          // personas, profesional suspendido o dado de baja, horario tomado en el
+          // medio. No es un error del sistema: no se puede reactivar y va a reintegro.
+          const msg = nuevaErr?.message ?? 'sin respuesta'
+          const regla = /^(blocked|coach_suspendido|profesional_no_disponible|sala_invalida)/.test(msg) || (nuevaErr as { code?: string } | null)?.code === '23505'
+          return json({ error: `no se puede reactivar (${msg}). Aprobala para reintegro.` }, regla ? 409 : 500)
+        }
+        const nuevaId = nueva[0].id as string
+
+        let avisoReactivar: string | null = null
+        try { await processPaidBookingEffects(admin, nuevaId) }
+        catch (e) { avisoReactivar = `reserva creada y pagada, pero falta confirmar la sesión (la tarea de conciliación lo reintenta): ${(e as Error).message}` }
+
+        await admin.from('usdt_claims')
+          .update({ estado: 'aprobado', resultado: 'acreditada', motivo: motivo || null, resolved_at: ahora, resolved_by: user.id })
+          .eq('id', claim.id)
+        await admin.from('usdt_transfers')
+          .update({ estado: 'acreditada', resolved_at: ahora, resolved_by: user.id })
+          .eq('tx_id', claim.tx_id)
+
+        const auditReactivar = await audit(admin, {
+          ...actor, action: 'resolve_usdt_claim', targetType: 'booking', targetId: nuevaId,
+          details: { aprobado: true, resultado: 'reactivada', reserva_vencida: booking.id, tx: claim.tx_id, monto: Number(claim.amount), moneda: 'USD', riel: 'usdt', referencia: claim.tx_id },
+        })
+        const avisosReactivar = [avisoReactivar, auditReactivar ? `acción hecha, auditoría fallida: ${auditReactivar}` : null].filter(Boolean)
+        return json({ result: 'ok', estado: 'aprobado', resultado: 'reactivada', booking_id: nuevaId, ...(avisosReactivar.length ? { warning: avisosReactivar.join(' · ') } : {}) })
+      }
+      // Las guardas del update son el reclamo: si otra corrida la movió, no devuelve fila.
+      const { data: movida, error: movErr } = await admin.from('bookings')
+        .update({
+          payment_status: vencida ? 'reembolso_pendiente' : 'aprobado',
+          payment_id: claim.tx_id,
+          paid_at: claim.block_time,
+          // 🔴 Lo que LLEGÓ, que puede no ser lo que se esperaba (`usdt_amount`).
+          // Es lo que hay que devolver si esto termina en reintegro: sin esto la
+          // lista de reintegros mostraba el monto esperado (06/10/2026: llegó 1
+          // USDT y pedía devolver 49,05).
+          charged_amount: Number(claim.amount),
+        })
+        .eq('id', booking.id).eq('payment_provider', 'usdt').eq('payment_status', 'pendiente').eq('status', booking.status)
+        .select('id')
+      if (movErr) return json({ error: movErr.message }, 500)
+      if (!movida?.length) return json({ error: 'la reserva cambió mientras se resolvía; volvé a mirar la lista' }, 409)
+
+      let avisoEfectos: string | null = null
+      if (!vencida) {
+        try { await processPaidBookingEffects(admin, booking.id) }
+        catch (e) { avisoEfectos = `pago acreditado, pero falta confirmar la sesión (la tarea de conciliación lo reintenta): ${(e as Error).message}` }
+      }
+
+      const resultado = vencida ? 'reintegro' : 'acreditada'
+      await admin.from('usdt_claims')
+        .update({ estado: 'aprobado', resultado, motivo: motivo || null, resolved_at: ahora, resolved_by: user.id })
+        .eq('id', claim.id)
+      await admin.from('usdt_transfers')
+        .update({ estado: 'acreditada', resolved_at: ahora, resolved_by: user.id })
+        .eq('tx_id', claim.tx_id)
+
+      const auditErr = await audit(admin, {
+        ...actor, action: 'resolve_usdt_claim', targetType: 'booking', targetId: booking.id,
+        details: { aprobado: true, resultado, tx: claim.tx_id, monto: Number(claim.amount), moneda: 'USD', riel: 'usdt', referencia: claim.tx_id },
+      })
+      const avisos = [avisoEfectos, auditErr ? `acción hecha, auditoría fallida: ${auditErr}` : null].filter(Boolean)
+      return json({ result: 'ok', estado: 'aprobado', resultado, ...(avisos.length ? { warning: avisos.join(' · ') } : {}) })
+    }
+
+    // Una transferencia que no corresponde a ninguna reserva (alguien mandó plata
+    // por error, una prueba propia): sale de la lista, con una nota de por qué.
+    case 'discard_usdt_transfer': {
+      const tx = String(body.tx_id ?? '').trim().toLowerCase()
+      if (!/^[0-9a-f]{64}$/.test(tx)) return json({ error: 'tx_id tiene que ser el hash de la transacción (64 hexadecimales)' }, 400)
+      const nota = typeof body.nota === 'string' ? body.nota.trim().slice(0, 500) : ''
+      if (!nota) return json({ error: 'hace falta una nota de por qué se descarta' }, 400)
+
+      const { data, error } = await admin.from('usdt_transfers')
+        .update({ estado: 'descartada', nota, resolved_at: new Date().toISOString(), resolved_by: user.id })
+        .eq('tx_id', tx).in('estado', ['sin_dueno', 'monto_menor']).select('tx_id, amount')
+      if (error) return json({ error: error.message }, 500)
+      if (!data?.length) return json({ error: 'no hay una transferencia pendiente con ese hash' }, 404)
+
+      // No hay reserva ni profesional a quien colgarle la auditoría: va sin `target_id`.
+      const { error: auditError } = await admin.from('admin_audit_log').insert({
+        admin_id: actor.adminId, admin_email: actor.adminEmail, action: 'discard_usdt_transfer',
+        target_type: 'usdt_transfer', target_id: null,
+        details: { tx, nota, monto: Number(data[0].amount), moneda: 'USD', riel: 'usdt', referencia: tx },
+      })
+      if (auditError) console.error('[admin-actions] NO SE PUDO AUDITAR discard_usdt_transfer', tx, auditError.message)
+      return json({ result: 'ok', ...(auditError ? { warning: `acción hecha, auditoría fallida: ${auditError.message}` } : {}) })
+    }
+
     case 'mark_usdt_refunded': {
       if (!body.booking_id) return json({ error: 'falta booking_id' }, 400)
       const tx = String(body.refund_tx_id ?? '').trim()
@@ -1006,7 +1284,7 @@ serve(async (req) => {
         .eq('id', body.booking_id)
         .eq('payment_provider', 'usdt')
         .eq('payment_status', 'reembolso_pendiente')   // idempotente: no repisa uno ya hecho
-        .select('id, usdt_amount, refund_tx_id')
+        .select('id, usdt_amount, charged_amount, refund_tx_id')
 
       if (error) return json({ error: error.message }, 500)
       if (!data || data.length === 0) {
@@ -1020,7 +1298,7 @@ serve(async (req) => {
         targetId: data[0].id,
         // Misma forma que arriba (D8). `monto` ya estaba; se le suman los otros
         // campos para que la vista no tenga que adivinar por acción.
-        details: { monto: data[0].usdt_amount, tx, moneda: 'USD', riel: 'usdt', referencia: tx },
+        details: { monto: data[0].charged_amount ?? data[0].usdt_amount, tx, moneda: 'USD', riel: 'usdt', referencia: tx },
       })
 
       return json({ result: 'ok', booking: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })

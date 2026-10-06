@@ -9,7 +9,11 @@ jest.mock('@/lib/supabase', () => {
       ? (ok: (v: unknown) => void) => ok(mockRespuesta)
       : () => cadena(),
   });
-  return { supabase: { from: (tabla: string) => { if (tabla === 'coaches') mockConsultas++; return cadena(); } } };
+  return { supabase: {
+    from: (tabla: string) => { if (tabla === 'coaches') mockConsultas++; return cadena(); },
+    // `profesionales_suspendidos`: nadie suspendido.
+    rpc: async () => ({ data: [], error: null }),
+  } };
 });
 
 import { getCoachesCache, getCoachesStatus, invalidateCoachesCache, loadCoaches, prefetchCoaches } from '@/lib/coachesCache';

@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useConsentGate } from '@/hooks/useConsentGate';
 import { ConsentSheet } from '@/components/ConsentSheet';
 import { supabase } from '@/lib/supabase';
+import { cifrar, descifrar, estaCifrado, obtenerClave, obtenerClaveSiSePuede } from '@/lib/wellbeingCrypto';
 import { logError } from '@/lib/logging';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
@@ -38,6 +39,8 @@ interface GratitudeEntry {
   item_3: string;
   created_at: string;
 }
+
+const CAMPOS = ['item_1', 'item_2', 'item_3'] as const;
 
 // Ícono + color por campo (ver PLACEHOLDERS) — mismo lenguaje visual que los
 // cards pastel de Sonidos/Recursos, rediseño herramientas sesión 76.
@@ -100,8 +103,30 @@ export default function GratitudScreen() {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) setEntries(data);
+      .then(async ({ data }) => {
+        if (!data) return;
+        // Mismo esquema que el Diario (ver `lib/wellbeingCrypto.ts`): el texto
+        // llega cifrado, y lo de antes del cifrado se cifra al abrir.
+        const clave = await obtenerClaveSiSePuede(user.id);
+        setEntries(data.map(e => ({
+          ...e,
+          item_1: descifrar(e.item_1, clave, user.id),
+          item_2: descifrar(e.item_2, clave, user.id),
+          item_3: descifrar(e.item_3, clave, user.id),
+        })));
+        if (!clave) return;
+        for (const e of data) {
+          const viejos = CAMPOS.filter(c => e[c] && !estaCifrado(e[c]));
+          if (viejos.length === 0) continue;
+          try {
+            await supabase
+              .from('gratitude_entries')
+              .update(Object.fromEntries(viejos.map(c => [c, cifrar(e[c], clave, user.id)])))
+              .eq('id', e.id);
+          } catch {
+            // Se reintenta en la próxima apertura.
+          }
+        }
       });
   }, [user]);
 
@@ -161,16 +186,30 @@ export default function GratitudScreen() {
       Animated.spring(saveScale, { toValue: 1, useNativeDriver: true, damping: 14, stiffness: 180 }),
     ]).start();
 
-    const { data, error } = await supabase
-      .from('gratitude_entries')
-      .insert({
-        user_id: user.id,
-        item_1: items[0].trim(),
-        item_2: items[1].trim(),
-        item_3: items[2].trim(),
-      })
-      .select()
-      .single();
+    // 🔴 Falla cerrado: sin clave no se guarda en claro; cae en el error de abajo.
+    const textos = items.map(i => i.trim());
+    let cifrados: string[] | null = null;
+    try {
+      const clave = await obtenerClave(user.id);
+      cifrados = textos.map(t => cifrar(t, clave, user.id));
+    } catch {
+      cifrados = null;
+    }
+
+    const { data: fila, error } = cifrados === null
+      ? { data: null, error: new Error('sin clave') }
+      : await supabase
+          .from('gratitude_entries')
+          .insert({
+            user_id: user.id,
+            item_1: cifrados[0],
+            item_2: cifrados[1],
+            item_3: cifrados[2],
+          })
+          .select()
+          .single();
+    // La fila vuelve cifrada: en pantalla va lo que se escribió.
+    const data = fila ? { ...fila, item_1: textos[0], item_2: textos[1], item_3: textos[2] } : null;
 
     if (error || !data) {
       await logError('GratitudScreen: save entry failed', error);

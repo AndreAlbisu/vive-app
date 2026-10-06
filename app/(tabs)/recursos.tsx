@@ -54,8 +54,8 @@ type CoachRecoItem = {
 // Herramientas/Recomendado/Biblioteca (Ajustes 1-5) usan los tokens planos del
 // mockup (CARD/LINE/CREAM_DEEP) en vez del "glass" translúcido del resto de la
 // app — con el fondo con gradiente, el glass se lavaba y las cards no tenían
-// el contraste que pide la spec. ContinueCard y StreakChip, fuera de los 6
-// ajustes, se dejaron con GLASS_BG/GLASS_BORDER tal cual estaban.
+// el contraste que pide la spec. ContinueCard, fuera de los 6
+// ajustes, se dejó con GLASS_BG/GLASS_BORDER tal cual estaba.
 const FOREST       = '#3F512F';
 const FOREST_SOFT  = '#566245';
 const CREAM_LIGHT  = '#F3EEDF';
@@ -65,20 +65,6 @@ const LINE         = 'rgba(63,81,47,0.14)';
 const TERRACOTTA   = '#C06B4A';
 const GLASS_BG     = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
-
-// ─── StreakChip ───────────────────────────────────────────────────────────────
-function StreakChip({ streak, weekActivity }: { streak: number; weekActivity: boolean[] }) {
-  return (
-    <View style={s.streakChip}>
-      <Text style={s.streakText}>{streak} {streak === 1 ? 'día' : 'días'}</Text>
-      <View style={s.streakDots}>
-        {weekActivity.map((active, i) => (
-          <View key={i} style={[s.streakDot, active && s.streakDotActive]} />
-        ))}
-      </View>
-    </View>
-  );
-}
 
 // ─── RecommendedCard ──────────────────────────────────────────────────────────
 // Sugerencia del día dentro de "Herramientas de Vita". 3 estados de render
@@ -475,8 +461,7 @@ export default function RecursosScreen() {
   const { entries: moodEntries } = useMoodHistory(user?.id, 1);
   const todayMoodEntry = moodEntries[0];
 
-  const { streak, weekActivity, completedInLast7Days } =
-    useResourceProgress(user?.id);
+  const { completedInLast7Days } = useResourceProgress(user?.id);
 
   const { reco } = useRecommendedResource({
     userId: user?.id,
@@ -529,13 +514,11 @@ export default function RecursosScreen() {
           contentContainerStyle={s.container}
           showsVerticalScrollIndicator={false}>
 
-          {/* 1. Header + racha + guardados */}
+          {/* 1. Header + guardados. La racha se sacó de acá el 05/10/2026 (Andre:
+              quedaba rara al lado del título); vive en Progreso. */}
           <View style={s.header}>
             <Text style={s.pageTitle}>Recursos</Text>
             <View style={s.headerActions}>
-              {streak > 0 && (
-                <StreakChip streak={streak} weekActivity={weekActivity} />
-              )}
               <TouchableOpacity
                 onPress={() => (user ? router.push('/mis-recordatorios' as any) : requestAuth('ver_recordatorios'))}
                 hitSlop={8}
@@ -652,28 +635,6 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: '#FFF6EC',
   },
-
-  // ── StreakChip ─────────────────────────────────────────────────────────────
-  streakChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: GLASS_BG,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    marginBottom: 4,
-  },
-  streakText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: FOREST,
-  },
-  streakDots:    { flexDirection: 'row', gap: 4 },
-  streakDot:     { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(63,81,47,0.18)' },
-  streakDotActive: { backgroundColor: TERRACOTTA },
 
   // ── MoodContextBlock — compacta (mood-hero-minimalista.html, opción A) ──────
   moodCardWrap: {

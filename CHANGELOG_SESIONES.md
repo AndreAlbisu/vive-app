@@ -1,6 +1,282 @@
+## 2026-10-06 — Andre (Claude · USDT: volver a dar la sesión de una reserva vencida)
+
+**Tocado:** `supabase/functions/admin-actions/index.ts` (v49 en producción), `lib/admin.ts`, `screens/AdminScreen.tsx`
+
+**Resumen:**
+- Andre preguntó si aprobar un comprobante no debería darle la sesión a la persona. Sí cuando la reserva sigue en espera; una vencida iba siempre a reintegro. **Decisión:** sumar una tercera salida.
+- Para un comprobante de una reserva vencida, el panel ahora dice si el horario sigue libre (todavía no empezó, sigue en la agenda del profesional, nadie más lo tiene pagado o confirmado). Si sí, aparece **"Acreditar y dar la sesión"** además de "Aprobar para reintegro".
+- Una reserva cancelada no se reabre (el guard de la base lo impide para cualquier rol, y está bien). Se crea una **reserva nueva** para el mismo turno, ya pagada con esa transferencia, y corre el circuito normal de un pago acreditado. La vieja queda cancelada; la auditoría guarda las dos.
+- Si las reglas de reserva lo impiden (bloqueo entre las dos personas, profesional suspendido, horario tomado en el medio), responde que no se puede reactivar y queda el reintegro.
+- Probado en `vita-pruebas`: horario libre → reserva nueva pagada y aviso al profesional; horario ocupado → rechazado; par bloqueado → rechazado. Sin migración.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el panel del iPhone.
+
+## 2026-10-06 — Andre (Claude · el checkout retoma un cobro USDT en curso)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`
+
+**Resumen:**
+- En la prueba real, volver a pasar por el checkout canceló la reserva anterior y creó una nueva con otro monto (tres reservas en diez minutos). Con USDT eso deja sin reserva a una transferencia que la persona ya pudo haber hecho.
+- Ahora, antes de limpiar el intento anterior, el checkout busca un cobro en USDT propio y en espera para ese mismo turno. Si la persona vuelve a elegir USDT, se retoma: misma reserva, mismo monto. Si elige otro medio, se le avisa ("Ya empezaste a pagar este turno con USDT") y puede volver al pago en USDT o seguir con el otro medio.
+- Mercado Pago y PayPal no cambian. 🟡 No se vio en el teléfono.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone: empezar un pago en USDT, volver atrás y reservar el mismo turno de nuevo.
+
+## 2026-10-06 — Andre (Claude · USDT: primera prueba con plata real)
+
+**Tocado:** `screens/UsdtPaymentScreen.tsx`, `supabase/functions/admin-actions/index.ts` (v48), `lib/admin.ts`, `lib/pagos.ts`, `screens/AdminScreen.tsx`
+
+**Resumen:**
+- Andre mandó 1 USDT desde Binance a la billetera nueva, con una reserva de prueba esperando 49,05. Recorrido completo del camino manual, verificado en producción en cada paso: el cron vio la transferencia y la registró `sin_dueno` sin acreditar la reserva; Andre cargó el comprobante desde la app; apareció en el panel ("llegaron 1,00, se esperaban 49,05"); lo aprobó para reintegro; la reserva quedó `reembolso_pendiente` con `charged_amount = 1`, la transferencia `acreditada` y la auditoría anotada.
+- Tres errores propios que destapó la prueba, corregidos en el momento: (1) el teclado tapaba el campo del comprobante; (2) al aprobar para reintegro, la lista mostraba el monto esperado y no el que llegó: ahora la aprobación guarda `charged_amount` y la lista y Mis pagos lo usan; (3) el panel mostraba la misma transferencia dos veces, una como "nadie la reclamó".
+- No se pudo hacer la prueba del camino automático con 1 USDT: el control de permisos bloqueó preparar el ajuste del monto esperado de una reserva en producción. Queda sin probar en vivo (cubierto por pruebas unitarias).
+- Observado: volver a pasar por el checkout crea una reserva nueva y cancela la anterior (tres reservas en diez minutos). Quien ya transfirió no pierde la plata (carga el comprobante desde Mis pagos), pero puede confundir.
+
+**Pendiente para la próxima sesión:**
+- Probar el camino automático con el monto exacto de una reserva.
+- Para devolver o pagar desde la billetera nueva hace falta tener TRX en ella (la comisión de la red se paga en TRX).
+- Revisar que el checkout no cancele la reserva anterior cuando ya hay un cobro USDT en espera.
+- Consulta con abogado y contador antes de un cliente real.
+
+## 2026-10-06 — Andre (Claude · USDT prendido en producción)
+
+**Tocado:** nada del repo (configuración de producción).
+
+**Resumen:**
+- Andre creó una billetera nueva en Trust Wallet y pasó la dirección pública (`THRT99…xUdQ`, TRC20). Validada: formato y dígito verificador correctos, sin transferencias previas.
+- Cargados `USDT_WALLET_TRC20` y `USDT_LEDGER_WALLET` con esa dirección: **el riel de USDT quedó PRENDIDO en producción** (06/10, 03:20 UTC). `usdt-claim` dejó de responder "en revisión" y el cron `usdt-check-payments` pasó de 503 a 200 (`pendientes 0, transfers 0`).
+- La billetera anterior ya no se mira: lo que llegue ahí no se acredita.
+
+**Pendiente para la próxima sesión:**
+- Transferencia real de prueba (el piso de precio es USD 20; el dinero cae en la billetera propia, se pierde solo la comisión de red).
+- Mirar en el iPhone la pantalla de pago, Mis pagos y la pestaña Reembolsos del panel.
+- Consulta con abogado y contador antes de cobrarle a un cliente real.
+
+## 2026-10-06 — Andre (Claude · USDT: producción, pasos 1 y 2)
+
+**Tocado:** `SCHEMA.md`
+
+**Resumen:**
+- 🗄️ Migraciones `20261005010000` y `20261005020000` **aplicadas en producción** (las corrió Andre), verificadas y registradas. Los 15 montos viejos quedaron en cuarentena.
+- Funciones desplegadas en producción: `usdt-claim` v1 (nueva), `usdt-check-payments` v34, `usdt-create-payment` v31, `admin-actions` v45. Antes se bajó la versión en vivo de las dos de cobro: idénticas al repo.
+- **USDT sigue apagado**: en producción solo existe `USDT_WALLET_TRC20`. `usdt-claim` responde "temporalmente en revisión".
+
+**Pendiente para la próxima sesión:**
+- Andre: crear una billetera TRC20 nueva y pasar la dirección pública. Cargar `USDT_WALLET_TRC20` y `USDT_LEDGER_WALLET` con esa dirección prende el riel.
+- Transferencia real chica de prueba; mirar las pantallas en el iPhone.
+
+## 2026-10-06 — Andre (Claude · USDT paso 3: pantallas del comprobante y de la revisión)
+
+**Tocado:** `screens/UsdtPaymentScreen.tsx`, `screens/MisPagosScreen.tsx`, `lib/pagos.ts`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `__tests__/pagos.test.ts`, `scripts/security-tests/endpoints.cjs`
+
+**Resumen:**
+- **Cliente:** en la pantalla de pago con USDT, debajo de "Esperando el pago", un enlace "¿Ya transferiste y no se confirmó? Cargá el comprobante" abre un campo para pegar el código de la transferencia. Muestra el estado después (en revisión, aprobado, o que hay que cargarlo de nuevo). Si la reserva ya venció, la pantalla lo dice y deja cargar el comprobante para que se devuelva el dinero.
+- **Mis pagos:** una reserva en USDT sin reconocer (en espera o vencida) tiene el botón "Cargar comprobante", que lleva a esa pantalla. Es la entrada para quien pagó tarde.
+- **Panel:** en la pestaña Reembolsos, arriba de los reintegros, aparecen los comprobantes en revisión (cuánto llegó, cuánto se esperaba, si la reserva sigue en espera o venció) con Acreditar o Aprobar para reintegro, y Rechazar con motivo. También las transferencias que llegaron sin reserva, con Descartar.
+- Pruebas: dos casos nuevos de `usdt-claim` en `test:security` y dos de `estadoDelPago`. 🟡 Las pantallas no se vieron en un teléfono.
+
+**Pendiente para la próxima sesión:**
+- Mirar las tres pantallas en el iPhone.
+- Producción, en este orden: (1) migraciones `20261005010000` y `20261005020000`; (2) desplegar `usdt-claim`, `usdt-check-payments`, `usdt-create-payment` y `admin-actions`; (3) billetera nueva en `USDT_WALLET_TRC20` y recién ahí `USDT_LEDGER_WALLET` igual a ella, que es lo que prende el riel; (4) transferencia real chica.
+- Antes de cobrarle a un cliente real: consulta con abogado y contador.
+
+## 2026-10-05 — Andre (Claude · USDT paso 2: centavos únicos, transferencias sin dueño y comprobantes)
+
+**Tocado:** `supabase/migrations/20261005020000_usdt_claims_and_unmatched.sql` (nuevo), `supabase/functions/usdt-claim/index.ts` (nuevo), `usdt-check-payments/index.ts`, `admin-actions/index.ts`, `_shared/usdt.ts`, `__tests__/usdt.test.ts`
+
+**Resumen:**
+- Andre preguntó si había que considerar que los precios son enteros. Sí, y destapó un riesgo: los exchanges descuentan su comisión en dólares enteros, así que quien manda 29,63 puede hacer llegar 28,63, que es el monto exacto de una reserva de USD 29 con los mismos centavos. **Decisión:** los centavos no se repiten entre cobros en espera, sin importar el precio (índice `bookings_usdt_pending_cents_uniq`). Pasa a haber 100 cobros USDT pendientes a la vez en todo Vita (cada uno espera hasta 60 minutos).
+- **Transferencias sin acreditar:** `usdt-check-payments` mira la billetera aunque no haya reservas esperando y deja en `usdt_transfers` lo que llegó y no se reconoció (sin dueño, o de menos con la reserva sugerida). Antes un pago tardío no dejaba rastro.
+- **Comprobantes:** función nueva `usdt-claim`. El cliente pega el hash de su transferencia; se comprueba en la red que existe, es USDT de verdad, fue a nuestra billetera y es posterior a la reserva. **No acredita**: queda en `usdt_claims` para que lo apruebe una persona, porque las transferencias son públicas y alguien podría adjudicarse la de otro. Tope de 5 intentos por hora.
+- **Panel (`admin-actions`):** `list_usdt_review`, `resolve_usdt_claim` (reserva en espera → se acredita con los mismos efectos que el cron; reserva vencida → queda en reembolso pendiente, en la lista de reintegros que ya existe) y `discard_usdt_transfer`.
+- 🗄️ Migración y funciones probadas de punta a punta en `vita-pruebas`, apuntando a una dirección pública con transferencias reales: comprobante inventado, ajeno y repetido rechazados; el real aceptado; aprobación con acreditación y con reintegro. **Nada aplicado ni desplegado en producción**; el riel sigue cerrado.
+- No se pudo probar en vivo el cron de acreditación (pide la clave de servicio del proyecto): queda cubierto por pruebas unitarias.
+
+**Pendiente para la próxima sesión:**
+- Paso 3: pantalla del cliente para pegar el comprobante, sección de revisión en el panel, pruebas de `usdt-claim` en `test:security`.
+- Producción al final: migraciones `20261005010000` y `20261005020000`, cuatro funciones, billetera nueva y los dos secretos.
+
+## 2026-10-05 — Andre (Claude · USDT: empieza la reactivación)
+
+**Tocado:** `supabase/migrations/20261005010000_usdt_recycle_amounts.sql` (nuevo), `supabase/functions/_shared/usdt.ts` (comentario), `scripts/security-tests/database.mjs`
+
+**Resumen:**
+- Andre preguntó si los pagos en USDT funcionan: **no**, están suspendidos desde el 22/09 (falta `USDT_LEDGER_WALLET` en producción a propósito). La app igual ofrece la opción a los clientes de los 2 profesionales que la aceptan, y el cron `usdt-check-payments` corre cada minuto contra un 503.
+- Decisión de Andre: reactivarlo. Descartados los cuatro decimales (las billeteras cortan en dos, como ya decía `_shared/usdt.ts`). Plan en tres pasos: (1) reciclar montos, (2) transferencias sin dueño y comprobante con aprobación en el panel, (3) pantalla del cliente y prueba con una transferencia real.
+- 🗄️ **Paso 1 escrito y probado (local y `vita-pruebas`), 🔴 NO aplicado en producción:** `usdt_amount_assignments.released_at`, trigger `release_usdt_amount`, cuarentena de 7 días (`usdt_cuarentena()`), y `usdt_montos_libres(precio)`. El límite pasa de 100 montos por precio para siempre a 100 cada 7 días. No reactiva el riel.
+- Andre avisó que hay que cambiarle el nombre a la app, así que USDT no llega al pitch del viernes ni hace falta que llegue.
+
+**Pendiente para la próxima sesión:**
+- Pasos 2 y 3. Aplicar las migraciones en producción todas juntas al final.
+- De Andre: una billetera TRC20 nueva para cobrar (la nota de la auditoría pide no reusar la anterior), una transferencia chica de prueba, y consultar con abogado y contador cómo se factura.
+- Mientras tanto la opción USDT sigue visible en el checkout y falla al final: decidir si se oculta hasta reactivar.
+
+## 2026-10-05 — Andre (Claude · Recursos sin la racha en el encabezado)
+
+**Tocado:** `app/(tabs)/recursos.tsx`
+
+**Resumen:**
+- Andre: "hay una racha rara al lado de Recursos". Era una pastilla "3 días" con siete puntitos, sin decir qué contaba, pegada a la campana y al marcador y un poco desalineada. Se sacó del encabezado. La racha sigue en Progreso ("Racha actual").
+- Sin simulador abierto: no se vio en pantalla.
+
+**Pendiente para la próxima sesión:**
+- Mirar el encabezado de Recursos en el iPhone.
+
+## 2026-10-05 — Andre (Claude · cifrado del diario y la gratitud)
+
+**Tocado:** `lib/wellbeingCrypto.ts` (nuevo), `supabase/functions/wellbeing-key/index.ts` (nueva, v1 en producción), `app/diario.tsx`, `app/gratitud.tsx`, `context/AuthContext.tsx`, `lib/encryption.ts` (solo exporta un helper), `scripts/crear-secreto-bienestar.sh` (nuevo), `scripts/decodificar-export.mjs`, `__tests__/wellbeingCrypto.test.ts` (nuevo), `package.json` (`@noble/ciphers`), `docs/paquete-abogado.md` (B.8), `docs/pedido-de-datos.md`, `SCHEMA.md`
+
+**Resumen (decisión de Andre: opción "B"):**
+- **El texto del diario y de la gratitud se cifra en el teléfono antes de subir.** En la base queda ilegible. El ánimo, las fechas, los mensajes y las notas del profesional quedan como estaban.
+- **No es de extremo a extremo:** la clave de cada persona la calcula el servidor a partir de un secreto maestro. Se eligió para que el diario sobreviva a un teléfono robado y para poder contestar un pedido de acceso a los datos. Ningún texto visible puede prometer "ni Vita puede leerlo".
+- **Entradas viejas:** se leen igual y se cifran solas la primera vez que la persona abre Diario o Gratitud.
+- **Sin clave no se guarda** (la pantalla avisa), nunca se sube texto en claro.
+- **Legal:** investigado. La Ley 25.326 (art. 9) pide medidas "necesarias" sin nombrar el cifrado y la Res. AAIP 47/2018 lo deja como recomendación; no encontré norma vigente que lo obligue. Sumado al paquete del abogado como B.8.
+- 🗄️ **Base de datos: sin cambios de tablas ni policies.** Función nueva `wellbeing-key` desplegada en producción; SCHEMA.md actualizado.
+- ⚠️ **No verificado de punta a punta:** el entorno no me deja cargar secretos, así que la función está desplegada pero responde "configuración incompleta" hasta que Andre corra el script. Verificado: pruebas automáticas (cifrado, clave, formato contra el script del pedido de datos) y que la función rechaza a quien no tiene sesión.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Andre: correr `bash scripts/crear-secreto-bienestar.sh` antes de usar el Diario** (hasta entonces Diario y Gratitud no guardan) y pegar la copia del secreto en el gestor de contraseñas.
+- Después: probar en el teléfono guardar y releer una entrada, y mirar en la base que empiece con `vd1.`.
+- Recién con eso verificado, cambiar la Política §8.2 para que diga que diario y gratitud se almacenan cifrados (hoy dice que no, y es cierto hasta que el secreto esté cargado) y correr `npm run sync:legal`.
+- Evaluar después: notas privadas del profesional con el mismo esquema, y Face ID para abrir el Diario.
+
+## 2026-10-05 — Andre (Claude · "Para qué sirve" más discreto)
+
+**Tocado:** `components/ParaQueSirve.tsx`
+
+**Resumen:**
+- A Andre le molestaba ver la tarjeta "Para qué sirve" plegada en cada herramienta (Diario, Gratitud, Respiración, Sonidos). La primera vez sigue apareciendo abierta, como tarjeta. Después ya no queda la caja: queda un enlace chico y apagado, a la derecha, que la vuelve a abrir.
+- Se descartó mostrarla una sola vez y sacarla del todo: el texto dice cosas que conviene poder releer ("Tu profesional no lo ve").
+- Sin cambios de base de datos ni de textos.
+
+**Pendiente para la próxima sesión:**
+- Andre: mirarlo en el teléfono en las cuatro herramientas y decir si el enlace quedó bien ubicado (está a la derecha) o si lo prefiere en otro lado.
+- `docs/pitch-feria-21.md` (contexto y guion del pitch de Feria 21) está escrito pero sin commitear: Andre decide si va al repo, que es público, o a Notion.
+
+## 2026-10-04 — Andre (Claude · decisiones abiertas de la auditoría)
+
+**Tocado:** `supabase/migrations/20261004040000_decisiones_parte_1_funciones.sql` y `20261004050000_decisiones_parte_2_cierres.sql` (nuevos), `supabase/functions/delete-account/index.ts` (v32), `lib/suspendidos.ts` (nuevo), `lib/coachesCache.ts`, `lib/coachVisibilityData.ts`, `app/search3.tsx`, `screens/ProfesionalScreen.tsx`, `screens/AdminScreen.tsx`, `context/AuthContext.tsx`, `web/c/index.html`, `api/c.js`, `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, legales generados
+
+**Resumen (decisiones de Andre):**
+- **Datos de cobro de bajas, a los 180 días:** la baja conserva CBU, billetera y conexión con Mercado Pago si hay algo abierto o un cobro de los últimos 180 días (margen para contracargos), y la tarea diaria `limpiar_cobro_de_bajas()` los borra después. Política y página de eliminar cuenta lo dicen.
+- **Fecha de suspensión (L15):** el catálogo, la ficha, `/c` y la vista previa ya no leen `coaches.suspendido_hasta`; preguntan `profesionales_suspendidos()`, que devuelve solo quiénes están suspendidos hoy. El profesional ve la suya con `mi_suspension()`.
+- **Edad y términos (L17):** la constancia la escribe el servidor (`registrar_aceptacion`), con su reloj y sin pisar una aceptación anterior. La app y `/c` dejaron de hacer el UPDATE directo.
+- **Garantías:** el panel avisa que el motivo de rechazo lo puede leer la persona.
+- **Mensaje al reservar:** Política §8.2 dice que recibe el mismo trato que los mensajes del chat. El panel no lo muestra. Ocultarlo de verdad a quien administra la base pide cifrado en el teléfono (pendiente post-lanzamiento, junto con chat y diario).
+- 🐛 **Error propio corregido:** en `delete-account` v31 una variable local se llamaba igual que el helper de errores, y algunos fallos de la baja de un profesional devolvían "Error inesperado" en vez de su mensaje. Seguía fallando cerrado. Arreglado en v32, con una aserción nueva en la prueba.
+- 🗄️ **Dos migraciones, las dos ✅ aplicadas en producción por Andre el 04/10** (parte 1, deploy de la web, parte 2), verificadas y registradas; SCHEMA.md actualizado. Probadas antes en `vita-pruebas`, con las 112 pruebas por rol en verde.
+
+**Pendiente para la próxima sesión:**
+- Recargar la app en el teléfono con el código nuevo y mirar el catálogo y una ficha (la versión vieja pide una columna que ya no se puede leer).
+- Ayuda en crisis a un toque (L14): falta decidir el diseño.
+
+## 2026-10-04 — Andre (Claude · fase 7: etiquetas de tiendas, política y pedido de datos)
+
+**Tocado:** `docs/etiquetas-privacidad-tiendas.md`, `docs/politica-de-privacidad.md`, `constants/legal.ts` y `web/legal/*` (generados), `docs/pedido-de-datos.md` (nuevo), `scripts/exportar-datos-de-usuario.sql` (nuevo), `scripts/decodificar-export.mjs` (nuevo)
+
+**Resumen:**
+- **Etiquetas de las tiendas** al día con lo que la app recolecta: documento de identidad y selfie, datos de cobro de profesionales, credenciales, errores de la app (antes decía "no" a diagnóstico) y zona horaria. Encargados de tratamiento alineados con Política §6. Sacado el pendiente viejo de "no hay borrado de cuenta".
+- **Política §2.3** suma zona horaria al reservar, dirección IP para limitar intentos (se borra a los 2 días, verificado: cron `purge-rate-limits`) e informes de error de la app. Cambió `LEGAL_VERSION`.
+- **Pedido de datos:** procedimiento en `docs/pedido-de-datos.md` y consulta de solo lectura que arma un JSON con todo lo de una persona, sin datos de terceros ni registros internos. Probado en `vita-pruebas` con un cliente y un profesional inventados; la decodificación de mensajes se probó de ida y vuelta con la clave real.
+
+**Pendiente para la próxima sesión:**
+- Que el abogado mire `docs/pedido-de-datos.md` (plazo de 10 días, notas privadas del profesional).
+- Cargar las etiquetas actualizadas en App Store Connect y Play Console cuando se publique.
+- Fases 8 (cuentas y operación) y 9 (teléfono).
+
+## 2026-10-04 — Andre (Claude · auditoría fases 6 y 7: Strix y privacidad comprobable)
+
+**Tocado:** nada del repo.
+
+**Resumen:**
+- **Fase 6 (Strix): no se pudo correr.** Arrancó contra `vita-pruebas` y el modelo se negó en el primer paso por el filtro de contenido del proveedor. Sin hallazgos y sin reintentos. Queda instalado; la copia limpia del código está en `~/vita-strix/` (Strix no monta carpetas bajo `.config`). Si se quiere una mirada externa, la alternativa es una prueba de intrusión hecha por una persona sobre el proyecto de prueba.
+- **Fase 7, retirar el consentimiento:** probado en `vita-pruebas`. Al retirarlo, la base rechaza nuevas entradas de diario y de ánimo; lo ya guardado queda y la persona lo puede borrar. Coincide con Política §3.3.
+- **Fase 7, etiquetas de las tiendas (`docs/etiquetas-privacidad-tiendas.md`, del 06/08 al 13/08): desactualizadas.** No declaran: fotos del documento de identidad y selfie (desde el 01/10), datos de cobro de profesionales (CBU, alias, PayPal, billetera), credenciales y matrículas, y los errores de la app que desde el 23/09 salen del teléfono (`error_app`), que hoy contradicen el "no" a datos de diagnóstico. El pendiente "no hay borrado de cuenta dentro de la app" ya no es cierto.
+- **Fase 7, Política:** no menciona la zona horaria que se guarda con cada reserva, la dirección IP que se usa para los topes de intentos ni los informes de error de la app.
+- **Fase 7, pedido de datos:** el derecho de acceso se ejerce por mail y no hay un procedimiento ni una herramienta para armar la respuesta.
+
+**Pendiente para la próxima sesión:**
+- Actualizar las etiquetas de las tiendas y sumar los tres puntos a la Política (espera OK de Andre).
+- Procedimiento para responder un pedido de datos.
+- Fases 8 (cuentas y operación, de Andre) y 9 (teléfono, Joaquín). Revocar la clave de API que se usó para Strix.
+
+## 2026-10-04 — Andre (Claude · auditoría fase 5: pruebas por rol)
+
+**Tocado:** nada del repo. Fuera del repo: `~/.config/vita-pruebas/roles-lectura.py`, `roles-escritura.py`, `seed-extra.sql`.
+
+**Resumen:**
+- Pruebas por la API del proyecto `vita-pruebas` con siete identidades (visitante, dos clientes, dos profesionales, una profesional suspendida, admin) y datos marcados en 37 tablas.
+- **Lecturas:** cada cuenta ve solo lo suyo. Ningún dato marcado como secreto apareció en una cuenta que no fuera su dueña, su contraparte en la sesión o la admin.
+- **Escrituras:** 112 intentos de modificar lo ajeno o escalar privilegios (hacerse admin, tocar montos y estados de pago, hablar en nombre de otro, falsificar avisos, publicarse, verificarse la matrícula, levantarse una sanción, correr tareas programadas, leer o pisar documentos de identidad). Rebotaron todos. Reservar con una profesional suspendida rebota por el motivo correcto, y `send-push` ignora el texto que manda el cliente.
+- Dos observaciones, sin arreglar: (1) el cliente puede leer por la API el campo `notes` de su reclamo de garantía, donde queda el motivo de rechazo que escribe el admin; (2) la admin ve `bookings.user_message` (lo que el cliente le escribió al profesional al reservar).
+- Los dos scripts se pueden volver a correr después de cada cambio de permisos.
+
+**Pendiente para la próxima sesión:**
+- Decidir qué hacer con las dos observaciones.
+- Fase 6 (Strix): falta la clave de API. Después, privacidad comprobable, cuentas y operación, y la prueba en teléfono.
+
+## 2026-10-04 — Andre (Claude · auditoría fase 4: checklist de endurecimiento)
+
+**Tocado:** `supabase/functions/delete-account/index.ts` (v31), `supabase/functions/mp-oauth-start/index.ts` (v28), `web/sala/index.html`, `web/vendor/daily-js-0.92.2.esm.js` (nuevo), `vercel.json`, `docs/politica-de-privacidad.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
+
+**Resumen:**
+- Checklist `security-and-hardening` (agent-skills) sobre lo que las fases 1 a 3 no cubrían. Bien: sin secretos en el repo ni en el historial, cabeceras de la web completas, CORS acotado, tope diario en la función con IA. Veredicto del plugin: ordena, no encontró nada nuevo de fondo.
+- **`mp-oauth-start`** ya no acepta cualquier origen (era el único con `*`). Antes de desplegar se bajó la versión en vivo: lo único que difería del repo era `verifyWebhookSignature`, que esta función no usa.
+- **`delete-account`** deja el detalle técnico del error en el log y a la persona le devuelve solo el mensaje.
+- **Sala web:** el componente de videollamada (`daily-js` 0.92.2) se sirve desde nuestro dominio en vez de unpkg.com. Es el archivo del paquete oficial, verificado contra la integridad de npm. `unpkg.com` sale del CSP y de la Política §6 y §7 (cambió `LEGAL_VERSION`). 🟡 Se comprobó que el módulo carga y expone lo que usa la sala; **no se probó una videollamada real**. Si la carga falla, la sala ya caía al iframe directo.
+- ⚠️ **Regla nueva de trabajo:** el repo es público. Un arreglo que depende de que Andre corra un comando en producción no se commitea con su descripción hasta que esté aplicado (el 04/10 quedó publicado unas horas un hallazgo todavía abierto).
+- En el historial público quedó un token de sesión de una cuenta de prueba de junio (vencido), con su mail. No se reescribió el historial.
+
+**Pendiente para la próxima sesión:**
+- Probar una videollamada real por la sala web después del próximo deploy de la web.
+- Andre, en el panel de Supabase → Authentication: largo mínimo de contraseña, contraseñas filtradas, vencimiento de códigos y captcha.
+- Fase 5 (pruebas por rol) y fase 6 (Strix, falta la clave de API).
+
+## 2026-10-04 — Andre (Claude · auditoría fase 3, tanda 3: web y pantallas)
+
+**Tocado:** `supabase/migrations/20261004030000_media_urls_only_own_storage.sql` (nuevo)
+
+**Resumen:**
+- Web sin hallazgos (lo que escribe un profesional se pinta como texto; los parámetros de URL solo buscan la reserva o el código de invitación). Pantallas revisadas por patrones sobre lo agregado desde el 24/09, no línea por línea.
+- Hallazgo: `profiles.avatar_url` y `coaches.video_url` aceptaban cualquier dirección por la API. Apuntándolas a un servidor propio, un profesional veía la IP y la hora de cada persona que abría su perfil (también en `/c`, sin cuenta), y un cliente las de su profesional. `application_video_url` aceptaba cualquier esquema por edición directa, y el admin la abre con un toque.
+- 🗄️ **Migración `20261004030000` probada en `vita-pruebas` y ✅ aplicada en producción** (la corrió Andre; verificada y registrada; SCHEMA.md actualizado): triggers `trg_guard_profile_media` y `trg_guard_coach_media`. Desde el cliente, foto y video solo en nuestro Storage y en la carpeta de la propia cuenta; el link de postulación, solo `https`. `base_de_archivos()` lleva el ref del proyecto (en `vita-pruebas` se aplicó con el suyo). Las fotos de Google ya guardadas no se tocan; en producción las 3 fotos y el video subidos por la app cumplen la regla.
+- Con esto la fase 3 queda terminada.
+
+**Pendiente para la próxima sesión:**
+- Fases 4 (checklist de endurecimiento), 5 (pruebas por rol) y 6 (Strix, falta la clave de API).
+
+## 2026-10-04 — Andre (Claude · volver a publicar a un profesional despublicado)
+
+**Tocado:** `supabase/migrations/20261004020000_republish_coach.sql` (nuevo), `supabase/functions/admin-actions/index.ts` (v43 en producción)
+
+**Resumen:**
+- Decisión de Andre: despublicar desde el panel tiene que tener vuelta. `approve_coach_application` acepta también a quien ya estuvo aprobado y hoy no está publicado, con las mismas exigencias que una aprobación (entrevista, identidad, matrícula) y sin pisar las notas ni la fecha de la revisión original. Una cuenta eliminada no se republica.
+- `admin-actions`: al republicar, el profesional recibe "Tu perfil vuelve a estar publicado" (tipo `sancion_levantada`, que no dispara el mail de postulación aprobada) y la auditoría anota `republicado`.
+- 🗄️ **Migración `20261004020000` probada en `vita-pruebas` y ✅ aplicada en producción** (la corrió Andre; verificada y registrada; SCHEMA.md actualizado). Probado en prueba: quien cumple todo se republica; sin entrevista o identidad, o con la cuenta eliminada, se rechaza.
+
+**Pendiente para la próxima sesión:**
+- Fase 3, tanda 3: pantallas y web.
+
+## 2026-10-04 — Andre (Claude · auditoría fase 3, tanda 2: reglas de la base y lib)
+
+**Tocado:** `supabase/migrations/20261004010000_lock_specialty_and_identity_name.sql` (nuevo), `lib/cambioDeNombre.ts`, `__tests__/cambioDeNombre.test.ts`
+
+**Resumen:**
+- Revisión de las migraciones nuevas y de `lib/` desde el 24/09. Sin hallazgos en notas de sesión, consentimiento, subida de identidad, panel de admin y privacidad de postulaciones pendientes.
+- 🗄️ **Migración `20261004010000`, probada en `vita-pruebas` y ✅ aplicada en producción** (la corrió Andre el 04/10; verificada y registrada; SCHEMA.md actualizado): (1) `trg_guard_coach_specialty`: desde el cliente, `coaches.specialty` solo nace con uno de los tres valores del formulario y después no se cambia (un profesional sin matrícula podía ponerse "Psicóloga clínica y psiquiatra" por la API, y ese texto se muestra en Favoritos, "tus profesionales", la reseña y Conexiones); (2) `limitar_cambio_de_nombre` bloquea el nombre desde que hay fila en `identity_verifications` (antes se podía cambiar entre la verificación del DNI y la aprobación). La app muestra el motivo.
+- Probado por la API de prueba: el cambio de especialidad y el alta con título libre rebotan, la bio se sigue pudiendo editar, la postulación normal sigue andando, y el nombre queda fijo solo para quien ya envió su identidad.
+- **Confirmado, sin arreglar:** un profesional despublicado desde el panel (`set_coach_verified` false) no se puede volver a publicar: `approve_coach_application` exige postulación `pendiente` y devuelve `solicitud_no_pendiente`. Las sanciones no pasan por ahí (usan `suspendido_hasta`).
+
+**Pendiente para la próxima sesión:**
+- Decidir si volver a publicar a un despublicado tiene que ser posible desde el panel.
+- Fase 3, tanda 3: pantallas y web. En producción hay valores viejos de `specialty` en texto libre (datos de prueba).
+
 ## 2026-10-04 — Joaquín (limpieza automática de datos de cobro de bajas — pendiente de Andre)
 
-**Tocado:** `supabase/migrations/20261004010000_cleanup_deleted_coach_payment_data.sql` (nueva, NO aplicada en prod).
+**Tocado:** `supabase/migrations/20261006010000_cleanup_deleted_coach_payment_data.sql` (nueva, NO aplicada en prod; renombrada desde 20261004010000→040000→060000 por colisiones de timestamp con migraciones de Andre).
 
 **Resumen:**
 - Cierra el pendiente del 03/10: `delete-account` §3b conserva los datos de cobro de un profesional dado de baja si queda "plata en movimiento", pero **nada los borra después** de que se liquidan → quedan colgados para siempre (privacidad, contra Política §10).

@@ -11,7 +11,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { USDT_TRC20_CONTRACT, findPayment, type TronTransfer } from '../_shared/usdt.ts'
+import { USDT_TRC20_CONTRACT, findPayment, transferenciasSinAcreditar, type TronTransfer } from '../_shared/usdt.ts'
 import { processPaidBookingEffects } from '../_shared/paid-effects-recovery.ts'
 import { esServiceRole } from '../_shared/service-role.ts'
 
@@ -70,9 +70,9 @@ serve(async (req) => {
     console.error('[usdt-check] no se pudieron leer las pendientes:', errPend.message)
     return new Response('db error', { status: 502 })
   }
-  if (!pendientes?.length) {
-    return new Response(JSON.stringify({ pendientes: 0, acreditadas: 0 }), { status: 200 })
-  }
+  // 📌 Sin reservas en espera se sigue igual (05/10/2026): hay que mirar la
+  // billetera para registrar lo que llegó sin dueño. Un pago tardío llega
+  // justamente cuando su reserva ya venció y esta lista está vacía.
 
   // Transferencias recientes hacia la wallet. `only_to=true` descarta las
   // salidas: nos interesan los cobros, no los pagos a coaches desde la misma
@@ -102,8 +102,10 @@ serve(async (req) => {
 
   let acreditadas = 0
   const menores: unknown[] = []
+  // tx → reserva cuyos centavos coinciden pero llegó de menos.
+  const menoresPorTx = new Map<string, string>()
 
-  for (const b of pendientes) {
+  for (const b of pendientes ?? []) {
     const { data: assignment, error: assignmentError } = await supabase.from('usdt_amount_assignments')
       .select('assigned_at').eq('booking_id', b.id).eq('amount', b.usdt_amount).maybeSingle()
     if (assignmentError || !assignment) {
@@ -124,6 +126,7 @@ serve(async (req) => {
         booking: b.id, recibido: r.recibido, esperado: r.esperado, tx: r.transfer.transaction_id,
       })
       menores.push({ booking: b.id, recibido: r.recibido, esperado: r.esperado })
+      menoresPorTx.set(r.transfer.transaction_id, b.id as string)
       continue
     }
     if (r.kind !== 'match') continue
@@ -169,8 +172,20 @@ serve(async (req) => {
     console.log('[usdt-check] acreditada', b.id, r.transfer.transaction_id)
   }
 
+  // ── Lo que llegó y no se acreditó: queda a la vista en el panel ──────────────
+  // `ignoreDuplicates`: una transferencia ya registrada no se pisa, así no se
+  // pierde lo que alguien resolvió a mano (descartada, acreditada por comprobante).
+  const sinAcreditar = transferenciasSinAcreditar(transfers, {
+    direccion: USDT_WALLET, acreditadas: hashesUsados, menores: menoresPorTx,
+  })
+  if (sinAcreditar.length) {
+    const { error: errReg } = await supabase.from('usdt_transfers')
+      .upsert(sinAcreditar, { onConflict: 'tx_id', ignoreDuplicates: true })
+    if (errReg) console.error('[usdt-check] no se pudieron registrar las transferencias sin acreditar:', errReg.message)
+  }
+
   return new Response(
-    JSON.stringify({ pendientes: pendientes.length, transfers: transfers.length, acreditadas, menores }),
+    JSON.stringify({ pendientes: pendientes?.length ?? 0, transfers: transfers.length, acreditadas, menores, sin_acreditar: sinAcreditar.length }),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
   )
 })

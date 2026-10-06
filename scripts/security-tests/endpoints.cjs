@@ -134,6 +134,17 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS'
   const admin=db();const {handler}=load('usdt-create-payment/index.ts',{admin},{USDT_LEDGER_WALLET:'not-the-wallet'});
   assert.equal((await handler(req({booking_id:'booking'}))).status,503);assert.equal(admin.writes.length,0);
  });
+ await test('USDT proof is gated with the rest of the rail and never writes when closed',async()=>{
+  const admin=db();const {handler}=load('usdt-claim/index.ts',{admin},{USDT_LEDGER_WALLET:'not-the-wallet'});
+  assert.equal((await handler(req({booking_id:'booking',tx_id:'ab'.repeat(32)}))).status,503);assert.equal(admin.writes.length,0);
+ });
+ await test('USDT proof rejects a malformed hash and another user\'s booking without writing',async()=>{
+  const ajena=db({bookings:{id:'booking',user_id:'otra-persona',status:'pendiente',payment_status:'pendiente',payment_provider:'usdt',usdt_amount:29.63,created_at:'2026-01-01T00:00:00Z'}});
+  const {handler}=load('usdt-claim/index.ts',{admin:ajena});
+  assert.equal((await handler(req({booking_id:'booking',tx_id:'no-es-un-hash'}))).status,400);
+  assert.equal((await handler(req({booking_id:'booking',tx_id:'ab'.repeat(32)}))).status,403);
+  assert.equal(ajena.writes.length,0);
+ });
  await test('USDT legacy instruction is not reissued after cutover',async()=>{
   const admin=db({bookings:{id:'booking',user_id:'user',status:'pendiente',payment_status:'pendiente',payment_provider:'usdt',usdt_amount:49.99}});
   const {handler}=load('usdt-create-payment/index.ts',{admin});assert.equal((await handler(req({booking_id:'booking'}))).status,409);
