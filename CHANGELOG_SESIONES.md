@@ -274,6 +274,16 @@
 - Decidir si volver a publicar a un despublicado tiene que ser posible desde el panel.
 - Fase 3, tanda 3: pantallas y web. En producción hay valores viejos de `specialty` en texto libre (datos de prueba).
 
+## 2026-10-04 — Joaquín (limpieza automática de datos de cobro de bajas — pendiente de Andre)
+
+**Tocado:** `supabase/migrations/20261006010000_cleanup_deleted_coach_payment_data.sql` (nueva, NO aplicada en prod; renombrada desde 20261004010000→040000→060000 por colisiones de timestamp con migraciones de Andre).
+
+**Resumen:**
+- Cierra el pendiente del 03/10: `delete-account` §3b conserva los datos de cobro de un profesional dado de baja si queda "plata en movimiento", pero **nada los borra después** de que se liquidan → quedan colgados para siempre (privacidad, contra Política §10).
+- **Fix:** función `limpiar_cobro_profesionales_baja()` (SECURITY DEFINER) + **cron diario** (05:00 UTC). Re-corre los **mismos 4 criterios del §3b** (cobros/reintegros en curso, ventana de garantía 3 días, payouts PayPal/USDT sin transferir, reclamos de garantía sin resolver) sobre los profesionales con `profiles.deleted_at` no nulo que todavía tienen datos de cobro, y borra `coach_payout_accounts` + `coach_mp_accounts` + `mp_connected=false` en cuanto no queda nada abierto. Devuelve qué coaches limpió (observabilidad).
+- Validado: dry-run read-only contra producción OK (0 instancias hoy, query sin errores → columnas correctas); pg_cron disponible (15 crons). La función `revoke` de anon/authenticated (solo la corre el cron).
+- 🔴 **Pendiente de Andre:** aplicar la migración en prod (el entorno bloquea escrituras a prod, igual que sus migraciones) e idealmente probar el camino de borrado en `vita-pruebas`. Misma lógica que `delete-account` §3b — si cambia allá, cambia acá.
+
 ## 2026-10-03 — Andre (Claude · auditoría fase 3, tanda 1: funciones del servidor)
 
 **Tocado:** `supabase/functions/delete-account/index.ts` (v30), `admin-actions/index.ts` (v42), `guarantee-claim/index.ts` (v33), `scripts/security-tests/coach-deletion.cjs`, `docs/politica-de-privacidad.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` y `web/legal/*` (generados), `SCHEMA.md`
