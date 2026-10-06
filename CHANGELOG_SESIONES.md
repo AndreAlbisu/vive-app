@@ -1,3 +1,16 @@
+## 2026-10-06 — Andre (Claude · USDT: producción, pasos 1 y 2)
+
+**Tocado:** `SCHEMA.md`
+
+**Resumen:**
+- 🗄️ Migraciones `20261005010000` y `20261005020000` **aplicadas en producción** (las corrió Andre), verificadas y registradas. Los 15 montos viejos quedaron en cuarentena.
+- Funciones desplegadas en producción: `usdt-claim` v1 (nueva), `usdt-check-payments` v34, `usdt-create-payment` v31, `admin-actions` v45. Antes se bajó la versión en vivo de las dos de cobro: idénticas al repo.
+- **USDT sigue apagado**: en producción solo existe `USDT_WALLET_TRC20`. `usdt-claim` responde "temporalmente en revisión".
+
+**Pendiente para la próxima sesión:**
+- Andre: crear una billetera TRC20 nueva y pasar la dirección pública. Cargar `USDT_WALLET_TRC20` y `USDT_LEDGER_WALLET` con esa dirección prende el riel.
+- Transferencia real chica de prueba; mirar las pantallas en el iPhone.
+
 ## 2026-10-06 — Andre (Claude · USDT paso 3: pantallas del comprobante y de la revisión)
 
 **Tocado:** `screens/UsdtPaymentScreen.tsx`, `screens/MisPagosScreen.tsx`, `lib/pagos.ts`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `__tests__/pagos.test.ts`, `scripts/security-tests/endpoints.cjs`
