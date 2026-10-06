@@ -1,3 +1,17 @@
+## 2026-10-06 — Andre (Claude · USDT prendido en producción)
+
+**Tocado:** nada del repo (configuración de producción).
+
+**Resumen:**
+- Andre creó una billetera nueva en Trust Wallet y pasó la dirección pública (`THRT99…xUdQ`, TRC20). Validada: formato y dígito verificador correctos, sin transferencias previas.
+- Cargados `USDT_WALLET_TRC20` y `USDT_LEDGER_WALLET` con esa dirección: **el riel de USDT quedó PRENDIDO en producción** (06/10, 03:20 UTC). `usdt-claim` dejó de responder "en revisión" y el cron `usdt-check-payments` pasó de 503 a 200 (`pendientes 0, transfers 0`).
+- La billetera anterior ya no se mira: lo que llegue ahí no se acredita.
+
+**Pendiente para la próxima sesión:**
+- Transferencia real de prueba (el piso de precio es USD 20; el dinero cae en la billetera propia, se pierde solo la comisión de red).
+- Mirar en el iPhone la pantalla de pago, Mis pagos y la pestaña Reembolsos del panel.
+- Consulta con abogado y contador antes de cobrarle a un cliente real.
+
 ## 2026-10-06 — Andre (Claude · USDT: producción, pasos 1 y 2)
 
 **Tocado:** `SCHEMA.md`
