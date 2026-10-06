@@ -1,3 +1,19 @@
+## 2026-10-06 — Andre (Claude · USDT: primera prueba con plata real)
+
+**Tocado:** `screens/UsdtPaymentScreen.tsx`, `supabase/functions/admin-actions/index.ts` (v48), `lib/admin.ts`, `lib/pagos.ts`, `screens/AdminScreen.tsx`
+
+**Resumen:**
+- Andre mandó 1 USDT desde Binance a la billetera nueva, con una reserva de prueba esperando 49,05. Recorrido completo del camino manual, verificado en producción en cada paso: el cron vio la transferencia y la registró `sin_dueno` sin acreditar la reserva; Andre cargó el comprobante desde la app; apareció en el panel ("llegaron 1,00, se esperaban 49,05"); lo aprobó para reintegro; la reserva quedó `reembolso_pendiente` con `charged_amount = 1`, la transferencia `acreditada` y la auditoría anotada.
+- Tres errores propios que destapó la prueba, corregidos en el momento: (1) el teclado tapaba el campo del comprobante; (2) al aprobar para reintegro, la lista mostraba el monto esperado y no el que llegó: ahora la aprobación guarda `charged_amount` y la lista y Mis pagos lo usan; (3) el panel mostraba la misma transferencia dos veces, una como "nadie la reclamó".
+- No se pudo hacer la prueba del camino automático con 1 USDT: el control de permisos bloqueó preparar el ajuste del monto esperado de una reserva en producción. Queda sin probar en vivo (cubierto por pruebas unitarias).
+- Observado: volver a pasar por el checkout crea una reserva nueva y cancela la anterior (tres reservas en diez minutos). Quien ya transfirió no pierde la plata (carga el comprobante desde Mis pagos), pero puede confundir.
+
+**Pendiente para la próxima sesión:**
+- Probar el camino automático con el monto exacto de una reserva.
+- Para devolver o pagar desde la billetera nueva hace falta tener TRX en ella (la comisión de la red se paga en TRX).
+- Revisar que el checkout no cancele la reserva anterior cuando ya hay un cobro USDT en espera.
+- Consulta con abogado y contador antes de un cliente real.
+
 ## 2026-10-06 — Andre (Claude · USDT prendido en producción)
 
 **Tocado:** nada del repo (configuración de producción).
