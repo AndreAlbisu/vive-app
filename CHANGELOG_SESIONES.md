@@ -3,15 +3,18 @@
 **Tocado:** `screens/OnboardingScreen1.tsx`
 
 **Resumen:**
-- Seguimos puliendo la animación de inicio (rama `fix-onboarding-tipografia`, PR #8) con Joaquín, skill `animate-expo`.
-- **Orbes:** gradiente de "luz suave" — se bajó el pico de opacidad (0.95→0.55→**0.45**, mid proporcional) + stop intermedio, para que los 3 orbes se superpongan como luz y no quemen el centro. **Sacados los anillos finos** (Layer 3 + hook `useRingAnimProps` + token `PAL.ring`): se veían berreta.
-- **Tono de los orbes:** naranja → **durazno calmo** (`#F39A7E…`); el naranja se sentía fuerte.
-- **Tipografía "vita"/tagline:** verde/oliva → terracota → **espresso cálido** (`#3A2A20` / `#5A463A`). Joaquín rechazó marrón, verde y terracota; el espresso da máximo contraste y deja que el color lo lleven los orbes.
-- **Laboratorio HTML (artifact):** para romper el loop del device (Metro servía el checkout principal desatrasado), armé un mockup que reproduce la animación 1:1 (misma geometría/gradientes/tiempos, tipografías reales embebidas) con controles en vivo de color/intensidad/tono. Ahí Joaquín eligió la combinación final sin tocar el teléfono.
+- Varias iteraciones de la animación de inicio con Joaquín (rama `fix-onboarding-tipografia`, PR #8, skill `animate-expo`), **todas decididas en un laboratorio HTML** (artifact) que reproduce la animación 1:1 (misma geometría/gradientes/tiempos, tipografías reales embebidas) — se eligió en el navegador sin depender del device.
+- **Estado final:**
+  - **Círculos NÍTIDOS**: gradiente de núcleo plano (offsets 0/72/100, opacidad 0.67/0.62) + glow exterior a 0.3 → cada orbe se lee como un disco (un Venn), no como niebla. (Antes "aura suave": a Joaquín no le gustaba, quería ver los círculos.) Sin anillos finos (fuera Layer 3, `useRingAnimProps`, `PAL.ring`).
+  - **Orbes** en **durazno** (`#F39A7E…`), antes naranja.
+  - **Texto "vita"/tagline**: verde/oliva → terracota → espresso → **terracota de marca** (`#C1694F`/`#9E5742`), donde quedó.
+  - **"vita" entra con tracking-in** ("letras que se juntan"): en la 2da mitad de la entrada aparece con las letras separadas y se juntan (letterSpacing 30→0 + fade), medido con `entryP`, en paralelo a los círculos entrando.
+- 🟡 **Verificar en device**: el `letterSpacing` animado en `react-native-svg` conviene mirarlo en el teléfono (debería andar, no se probó en RN acá).
+- **Raíz del "sigue todo igual" (resuelta):** Metro corre desde el checkout principal `/Users/apple/vive-app-andre` (rama `build-anim`), que estaba **15 commits atrás** (`d42d8680`) → mostraba el verde original pese a todo lo pusheado. Se adelanta con `git pull --ff-only`; además un pull de Andre trajo `@noble/ciphers` (de su `lib/wellbeingCrypto.ts`) que pedía `npm install`. Ver [[reference_preview_device_build_anim]].
 - No se tocó base de datos ni schema.
 
 **Pendiente para la próxima sesión:**
-- Confirmar la combinación final en device (o en el laboratorio) y mergear PR #8.
+- Joaquín confirma el tracking-in en device (recargar Metro, ya está sincronizado) y se mergea PR #8.
 
 ## 2026-10-06 — Andre (Claude · USDT: volver a dar la sesión de una reserva vencida)
 
