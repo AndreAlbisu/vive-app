@@ -150,3 +150,52 @@ export function findPayment(
   }
   return parcial ?? { kind: 'sin_match' };
 }
+
+export type TransferSinAcreditar = {
+  tx_id: string;
+  from_address: string;
+  amount: number;
+  block_time: string;
+  estado: 'sin_dueno' | 'monto_menor';
+  booking_sugerida: string | null;
+};
+
+/**
+ * Lo que llegó a la billetera y NO se acreditó solo, para dejarlo a la vista de
+ * quien revisa (tabla `usdt_transfers`).
+ *
+ * Antes una transferencia que no coincidía con ninguna reserva en espera —un
+ * pago tardío, uno con la comisión del exchange descontada, uno con el monto mal
+ * tipeado— no dejaba ningún rastro: la plata estaba en la billetera y nadie se
+ * enteraba hasta que la persona escribía.
+ *
+ * `acreditadas` son los hashes que ya pagaron una reserva (incluidos los de esta
+ * corrida). `menores` son las que coincidieron por centavos con una reserva pero
+ * llegaron de menos: van con esa reserva como sugerencia.
+ */
+export function transferenciasSinAcreditar(
+  transfers: TronTransfer[],
+  opts: { direccion: string; acreditadas: Set<string>; menores?: Map<string, string> },
+): TransferSinAcreditar[] {
+  const out: TransferSinAcreditar[] = [];
+  const vistos = new Set<string>();
+  for (const t of transfers) {
+    if (t.type !== 'Transfer') continue;
+    if ((t.token_info?.address ?? '') !== USDT_TRC20_CONTRACT) continue;   // contrato, no símbolo
+    if (t.to !== opts.direccion) continue;
+    if (!/^[0-9a-f]{64}$/.test(t.transaction_id)) continue;
+    if (opts.acreditadas.has(t.transaction_id) || vistos.has(t.transaction_id)) continue;
+    if (!Number.isFinite(t.block_timestamp)) continue;
+    vistos.add(t.transaction_id);
+    const sugerida = opts.menores?.get(t.transaction_id) ?? null;
+    out.push({
+      tx_id: t.transaction_id,
+      from_address: t.from,
+      amount: fromRaw(t.value),
+      block_time: new Date(t.block_timestamp).toISOString(),
+      estado: sugerida ? 'monto_menor' : 'sin_dueno',
+      booking_sugerida: sugerida,
+    });
+  }
+  return out;
+}

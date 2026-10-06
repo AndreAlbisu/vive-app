@@ -1,4 +1,5 @@
 import {
+  transferenciasSinAcreditar,
   USDT_TRC20_CONTRACT, fromRaw, uniqueAmount, nonceOf, findPayment, type TronTransfer,
 } from '../supabase/functions/_shared/usdt';
 
@@ -140,5 +141,46 @@ describe('findPayment', () => {
 
   it('sin transferencias, no hay match', () => {
     expect(findPayment([], { direccion: VIVE, monto: 50 }).kind).toBe('sin_match');
+  });
+});
+
+describe('transferenciasSinAcreditar', () => {
+  const HEX = (c: string) => c.repeat(64);
+  const WALLET = 'TWalletDeVita';
+  const t = (id: string, monto: number, extra: Record<string, unknown> = {}) => ({
+    transaction_id: id,
+    from: 'TQuienPaga',
+    to: WALLET,
+    value: String(Math.round(monto * 1e6)),
+    type: 'Transfer',
+    block_timestamp: 1_760_000_000_000,
+    token_info: { symbol: 'USDT', decimals: 6, address: USDT_TRC20_CONTRACT },
+    ...extra,
+  });
+
+  it('deja afuera lo que ya pagó una reserva', () => {
+    const r = transferenciasSinAcreditar([t(HEX('a'), 29.63), t(HEX('b'), 40)], { direccion: WALLET, acreditadas: new Set([HEX('a')]) });
+    expect(r.map(x => x.tx_id)).toEqual([HEX('b')]);
+    expect(r[0]).toMatchObject({ estado: 'sin_dueno', booking_sugerida: null, amount: 40, from_address: 'TQuienPaga' });
+  });
+
+  it('lo que llegó de menos va con la reserva sugerida', () => {
+    const r = transferenciasSinAcreditar([t(HEX('c'), 28.63)], {
+      direccion: WALLET, acreditadas: new Set(), menores: new Map([[HEX('c'), 'reserva-1']]),
+    });
+    expect(r[0]).toMatchObject({ estado: 'monto_menor', booking_sugerida: 'reserva-1' });
+  });
+
+  it('🔴 ignora un token que se llama USDT pero no es el contrato', () => {
+    const falso = t(HEX('d'), 50, { token_info: { symbol: 'USDT', decimals: 6, address: 'TContratoFalso' } });
+    expect(transferenciasSinAcreditar([falso], { direccion: WALLET, acreditadas: new Set() })).toEqual([]);
+  });
+
+  it('ignora lo que no vino a nuestra billetera, lo repetido y los hashes raros', () => {
+    const r = transferenciasSinAcreditar(
+      [t(HEX('e'), 10, { to: 'TOtra' }), t(HEX('f'), 10), t(HEX('f'), 10), t('no-es-un-hash', 10)],
+      { direccion: WALLET, acreditadas: new Set() },
+    );
+    expect(r.map(x => x.tx_id)).toEqual([HEX('f')]);
   });
 });

@@ -1,3 +1,19 @@
+## 2026-10-05 — Andre (Claude · USDT paso 2: centavos únicos, transferencias sin dueño y comprobantes)
+
+**Tocado:** `supabase/migrations/20261005020000_usdt_claims_and_unmatched.sql` (nuevo), `supabase/functions/usdt-claim/index.ts` (nuevo), `usdt-check-payments/index.ts`, `admin-actions/index.ts`, `_shared/usdt.ts`, `__tests__/usdt.test.ts`
+
+**Resumen:**
+- Andre preguntó si había que considerar que los precios son enteros. Sí, y destapó un riesgo: los exchanges descuentan su comisión en dólares enteros, así que quien manda 29,63 puede hacer llegar 28,63, que es el monto exacto de una reserva de USD 29 con los mismos centavos. **Decisión:** los centavos no se repiten entre cobros en espera, sin importar el precio (índice `bookings_usdt_pending_cents_uniq`). Pasa a haber 100 cobros USDT pendientes a la vez en todo Vita (cada uno espera hasta 60 minutos).
+- **Transferencias sin acreditar:** `usdt-check-payments` mira la billetera aunque no haya reservas esperando y deja en `usdt_transfers` lo que llegó y no se reconoció (sin dueño, o de menos con la reserva sugerida). Antes un pago tardío no dejaba rastro.
+- **Comprobantes:** función nueva `usdt-claim`. El cliente pega el hash de su transferencia; se comprueba en la red que existe, es USDT de verdad, fue a nuestra billetera y es posterior a la reserva. **No acredita**: queda en `usdt_claims` para que lo apruebe una persona, porque las transferencias son públicas y alguien podría adjudicarse la de otro. Tope de 5 intentos por hora.
+- **Panel (`admin-actions`):** `list_usdt_review`, `resolve_usdt_claim` (reserva en espera → se acredita con los mismos efectos que el cron; reserva vencida → queda en reembolso pendiente, en la lista de reintegros que ya existe) y `discard_usdt_transfer`.
+- 🗄️ Migración y funciones probadas de punta a punta en `vita-pruebas`, apuntando a una dirección pública con transferencias reales: comprobante inventado, ajeno y repetido rechazados; el real aceptado; aprobación con acreditación y con reintegro. **Nada aplicado ni desplegado en producción**; el riel sigue cerrado.
+- No se pudo probar en vivo el cron de acreditación (pide la clave de servicio del proyecto): queda cubierto por pruebas unitarias.
+
+**Pendiente para la próxima sesión:**
+- Paso 3: pantalla del cliente para pegar el comprobante, sección de revisión en el panel, pruebas de `usdt-claim` en `test:security`.
+- Producción al final: migraciones `20261005010000` y `20261005020000`, cuatro funciones, billetera nueva y los dos secretos.
+
 ## 2026-10-05 — Andre (Claude · USDT: empieza la reactivación)
 
 **Tocado:** `supabase/migrations/20261005010000_usdt_recycle_amounts.sql` (nuevo), `supabase/functions/_shared/usdt.ts` (comentario), `scripts/security-tests/database.mjs`
