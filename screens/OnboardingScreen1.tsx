@@ -208,12 +208,19 @@ export default function OnboardingScreen1() {
   const ig1 = useCircleAnimProps(1, 0.88, 1.0, entryP, mergeP);
   const ig2 = useCircleAnimProps(2, 0.88, 1.0, entryP, mergeP);
 
-  // Brand name: y slides from CY-92 down to CY; fontSize grows 28→34
+  // Brand name: y slides from CY-90 down to CY; fontSize grows 52→62.
+  // "Letras que se juntan" (tracking-in, elegido por Joaquín 06/10 en el
+  // laboratorio): en la segunda mitad de la entrada el wordmark aparece con las
+  // letras separadas y se juntan a su lugar (letterSpacing 30→0 + fade). Se mide
+  // con entryP, así que pasa mientras los círculos terminan de entrar.
   const brandProps = useAnimatedProps(() => {
     const me = eioq(mergeP.value);
+    const wp = eioq(Math.min(1, Math.max(0, (entryP.value - 0.45) / 0.5)));
     return {
-      y:        lerp(CY - 90, CY, me),
-      fontSize: lerp(52, 62, me),
+      y:             lerp(CY - 90, CY, me),
+      fontSize:      lerp(52, 62, me),
+      letterSpacing: lerp(30, 0, wp),
+      opacity:       wp,
     } as any;
   });
 
