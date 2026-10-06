@@ -1041,7 +1041,10 @@ serve(async (req) => {
             refundAddress: b?.refund_address ?? null,
           }
         }),
-        transfers: (transfers ?? []).map((t: any) => ({
+        // Una transferencia que ya tiene un comprobante en revisión se resuelve
+        // desde ese comprobante: mostrarla también como "sin reserva, nadie la
+        // reclamó" era contradictorio (visto en la primera prueba real, 06/10).
+        transfers: (transfers ?? []).filter((t: any) => !(claims ?? []).some((c: any) => c.tx_id === t.tx_id)).map((t: any) => ({
           txId: t.tx_id, desde: t.from_address, monto: Number(t.amount), fecha: t.block_time,
           estado: t.estado, bookingSugerida: t.booking_sugerida,
         })),

@@ -1237,7 +1237,7 @@ function UsdtReviewPanel({ onChanged }: { onChanged: () => void }) {
           <Text style={s.cardTitle}>Comprobante en revisión · {c.recibido.toFixed(2)} USDT</Text>
           <Text style={s.cardMeta}>
             {c.esperado != null ? `Se esperaban ${c.esperado.toFixed(2)}` : 'Monto esperado desconocido'}
-            {c.fecha ? ` · sesión del ${c.fecha} ${String(c.hora ?? '').slice(0, 5)} hs` : ''}
+            {c.fecha ? ` · sesión del ${c.fecha.split('-').reverse().join('/')} ${String(c.hora ?? '').slice(0, 5)} hs` : ''}
             {c.coachName ? ` · ${c.coachName}` : ''}
           </Text>
           <Text style={s.cardBody}>
