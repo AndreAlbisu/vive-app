@@ -20,7 +20,7 @@ certeza histórica del resto del documento ni declara esos objetos desplegados.
   devuelve edad (sin fecha de nacimiento) solo a profesionales relacionados.
   `register_push_token(text)` reasigna dispositivo entre cuentas.
 - `push_rate_limits` + `claim_push(uuid,uuid)` (solo service role): bloqueo y cuota.
-- `usdt_amount_assignments`: asignaciones permanentes, montos históricos sin dueño
+- `usdt_amount_assignments`: asignaciones de montos; **desde el 05/10/2026 se reciclan** tras 7 días de cuarentena (ver "Cobro en USDT"); montos históricos sin dueño
   automático. USDT queda cerrado por defecto por la nueva comprobación
   `USDT_LEDGER_WALLET`; la reactivación y conciliación requieren trabajo operativo.
   **100 montos por precio en toda la vida del registro: no es un diseño escalable.**
@@ -101,6 +101,13 @@ Detectado el 03/09/2026 verificando `add-user-consents.sql`. Supabase concede es
 - `deleted_at` (timestamptz, nullable) — no nulo = **lápida**: el usuario se dio de baja, la fila quedó vaciada de datos personales (`name = 'Usuario eliminado'`, el resto en NULL) y la cuenta de `auth.users` ya no existe.
 - ⚠️ **`email` es NOT NULL** (verificado en la primera baja real, 06/08/2026: `email: null` hacía fallar la anonimización). Por eso la lápida escribe un placeholder opaco `deleted-<uuid>@vita.invalid` en vez de NULL — un literal fijo chocaría contra el UNIQUE en la segunda baja, y `.invalid` es un TLD reservado que nunca resuelve. Efecto secundario deseable: **libera el email original** para que la persona pueda registrarse de nuevo.
 - Usuarios y coaches viven en la misma tabla, diferenciados por `role`
+
+#### Cobro en USDT: montos, transferencias sin dueño y comprobantes (05 y 06/10/2026, migraciones `20261005010000` y `20261005020000`, aplicadas y verificadas)
+🔴 **El riel sigue APAGADO** hasta que `USDT_LEDGER_WALLET` valga lo mismo que `USDT_WALLET_TRC20`. Todo esto existe para poder prenderlo.
+- **`usdt_amount_assignments.released_at`**: los montos se reciclan. Cuando la reserva deja de esperar el pago (trigger `release_usdt_amount`), su monto queda 7 días en cuarentena (`usdt_cuarentena()`) y después `reserve_usdt_amount` lo puede reasignar. Antes quedaban reservados para siempre (100 por precio en toda la vida del sistema). `usdt_montos_libres(precio)` cuenta el stock.
+- **`bookings_usdt_pending_cents_uniq`**: entre cobros USDT en espera no se repiten los CENTAVOS, sin importar el precio. Los precios son enteros y los exchanges descuentan su comisión en dólares enteros: 29,63 enviado puede llegar como 28,63, que sería el monto exacto de una reserva de USD 29. Tope: 100 cobros USDT en espera a la vez.
+- **`usdt_transfers`** (sin grants al cliente): lo que llegó a la billetera y `usdt-check-payments` no pudo acreditar. `estado`: `sin_dueno` / `monto_menor` (con `booking_sugerida`) / `acreditada` / `descartada`.
+- **`usdt_claims`**: comprobantes que carga el cliente con `usdt-claim` (hash de su transferencia, verificado contra la red). **No acredita**: lo resuelve un admin con `admin-actions` → `resolve_usdt_claim`. Reserva en espera → `aprobado` + efectos de pago; reserva vencida → `reembolso_pendiente`. El cliente ve solo el estado del suyo (grant por columnas, sin `motivo` ni `from_address`).
 
 #### Nombre y especialidad de profesionales (04/10/2026, migración `20261004010000`, aplicada y verificada)
 - 🔒 **`coaches.specialty` no se escribe libre desde el cliente** (`trg_guard_coach_specialty`, security invoker, mira `current_user`). Al crear la fila solo valen `'Psicólogo/a'`, `'Coach'`, `'Nutricionista'`; después no se cambia (`ESPECIALIDAD_BLOQUEADA`). `submit_coach_application` y el service role no pasan por el trigger. Motivo: ese texto se muestra tal cual en Favoritos, "tus profesionales", la reseña y Conexiones, y la exigencia de matrícula al aprobar depende de su valor exacto. ⚠️ Quedan filas viejas de prueba con texto libre; el trigger no las toca.
