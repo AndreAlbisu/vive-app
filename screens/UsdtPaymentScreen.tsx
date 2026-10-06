@@ -13,7 +13,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView,
-  ActivityIndicator, StatusBar, Alert,
+  ActivityIndicator, StatusBar, TextInput, KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -24,6 +24,18 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 
+type EstadoComprobante = 'pendiente' | 'aprobado' | 'rechazado';
+
+/** El mensaje de error que devuelve una edge function viene en `error.context`
+ *  (la Response cruda), no en `data`. */
+async function mensajeDeError(error: unknown, porDefecto: string): Promise<string> {
+  try {
+    const body = await (error as { context?: Response })?.context?.json();
+    if (typeof body?.error === 'string') return body.error;
+  } catch { /* cuerpo no-JSON */ }
+  return porDefecto;
+}
+
 export default function UsdtPaymentScreen() {
   const router = useRouter();
   const { booking_id } = useLocalSearchParams<{ booking_id?: string }>();
@@ -33,6 +45,20 @@ export default function UsdtPaymentScreen() {
   const [error, setError] = useState<string | null>(null);
   const [acreditado, setAcreditado] = useState(false);
   const sondeo = useRef<ReturnType<typeof setInterval> | null>(null);
+  // El campo del comprobante está al final: con el teclado abierto quedaba tapado.
+  const scrollRef = useRef<ScrollView>(null);
+  const subirAlCampo = () => { setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250); };
+
+  // ── Comprobante: "pagué y no se confirmó" (05/10/2026) ──────────────────────
+  // La reserva se reconoce sola por el monto exacto. Si el exchange descontó su
+  // comisión, o la transferencia llegó cuando la reserva ya había vencido, la
+  // persona pega el código de su transferencia y lo revisa alguien del equipo.
+  const [vencida, setVencida] = useState(false);
+  const [formAbierto, setFormAbierto] = useState(false);
+  const [codigo, setCodigo] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [errorComprobante, setErrorComprobante] = useState<string | null>(null);
+  const [comprobante, setComprobante] = useState<{ estado: EstadoComprobante; resultado: string | null } | null>(null);
 
   useEffect(() => {
     if (!booking_id) { setError('Falta la reserva'); setLoading(false); return; }
@@ -40,14 +66,124 @@ export default function UsdtPaymentScreen() {
       const { data, error: err } = await supabase.functions.invoke('usdt-create-payment', {
         body: { booking_id },
       });
-      setLoading(false);
+      // ¿Ya había un comprobante cargado para esta reserva?
+      const { data: previo } = await supabase
+        .from('usdt_claims')
+        .select('estado, resultado')
+        .eq('booking_id', booking_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (previo) setComprobante({ estado: previo.estado as EstadoComprobante, resultado: (previo.resultado ?? null) as string | null });
+
       if (err || !data?.address) {
-        setError(data?.error ?? 'No se pudo preparar el pago');
+        // La instrucción de pago no se puede armar para una reserva que venció,
+        // pero la persona pudo haber transferido igual: se le deja cargar el comprobante.
+        const { data: reserva } = await supabase
+          .from('bookings')
+          .select('status, payment_status, payment_provider, usdt_amount')
+          .eq('id', booking_id)
+          .maybeSingle();
+        setLoading(false);
+        if (reserva?.payment_provider === 'usdt' && reserva.usdt_amount != null
+            && reserva.payment_status === 'pendiente' && reserva.status === 'cancelada') {
+          setVencida(true);
+          return;
+        }
+        setError(await mensajeDeError(err, data?.error ?? 'No se pudo preparar el pago'));
         return;
       }
+      setLoading(false);
       setCobro(data);
     })();
   }, [booking_id]);
+
+  async function enviarComprobante() {
+    const limpio = codigo.trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(limpio)) {
+      setErrorComprobante('El código de la transferencia tiene 64 letras y números. Copialo completo desde tu billetera.');
+      return;
+    }
+    setEnviando(true);
+    setErrorComprobante(null);
+    const { data, error: err } = await supabase.functions.invoke('usdt-claim', {
+      body: { booking_id, tx_id: limpio },
+    });
+    setEnviando(false);
+    if (err || !data?.ok) {
+      setErrorComprobante(await mensajeDeError(err, data?.error ?? 'No se pudo enviar el comprobante. Probá de nuevo.'));
+      return;
+    }
+    setComprobante({ estado: 'pendiente', resultado: null });
+    setFormAbierto(false);
+    setCodigo('');
+  }
+
+  /** El bloque del comprobante: su estado si ya hay uno, o el formulario. */
+  function bloqueComprobante() {
+    if (comprobante?.estado === 'pendiente') {
+      return (
+        <View style={s.esperando}>
+          <MaterialCommunityIcons name="file-check-outline" size={20} color={ViveColors.primary} />
+          <Text style={s.esperandoText}>
+            Recibimos tu comprobante. Lo revisa una persona del equipo y te avisamos cuando esté resuelto.
+          </Text>
+        </View>
+      );
+    }
+    if (comprobante?.estado === 'aprobado') {
+      return (
+        <View style={s.esperando}>
+          <MaterialCommunityIcons name="check-circle-outline" size={20} color={ViveColors.accent} />
+          <Text style={s.esperandoText}>
+            {comprobante.resultado === 'reintegro'
+              ? 'Aprobamos tu comprobante. Como la reserva había vencido, te devolvemos el dinero: seguilo desde Mis pagos.'
+              : 'Aprobamos tu comprobante y acreditamos el pago.'}
+          </Text>
+        </View>
+      );
+    }
+    return (
+      <View style={s.comprobante}>
+        {comprobante?.estado === 'rechazado' && (
+          <Text style={s.errorComprobante}>
+            No pudimos validar el comprobante anterior. Revisá el código y cargalo de nuevo, o escribinos desde Mis pagos.
+          </Text>
+        )}
+        {!formAbierto ? (
+          <TouchableOpacity onPress={() => { setFormAbierto(true); subirAlCampo(); }} activeOpacity={0.7} hitSlop={8}>
+            <Text style={s.linkComprobante}>¿Ya transferiste y no se confirmó? Cargá el comprobante</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <Text style={s.label}>Código de la transferencia</Text>
+            <Text style={s.hint}>
+              Lo encontrás en tu billetera o exchange, en el detalle de la transferencia. Suele llamarse hash o TXID.
+            </Text>
+            <TextInput
+              style={s.inputCodigo}
+              value={codigo}
+              onChangeText={setCodigo}
+              onFocus={subirAlCampo}
+              placeholder="Pegá el código acá"
+              placeholderTextColor="rgba(135,131,92,0.45)"
+              autoCapitalize="none"
+              autoCorrect={false}
+              multiline
+            />
+            {!!errorComprobante && <Text style={s.errorComprobante}>{errorComprobante}</Text>}
+            <TouchableOpacity
+              style={[s.btn, s.btnComprobante, enviando && s.btnApagado]}
+              onPress={enviarComprobante}
+              disabled={enviando}
+              activeOpacity={0.85}>
+              <Text style={s.btnText}>{enviando ? 'Enviando' : 'Enviar comprobante'}</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    );
+  }
 
   // Sondeo del estado. El cron tarda hasta un minuto, así que esto corre hasta
   // que la persona se va — sin timeout: irse de la pantalla no cancela el pago,
@@ -84,8 +220,17 @@ export default function UsdtPaymentScreen() {
           <View style={s.headerSpacer} />
         </View>
 
+        <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {loading ? (
           <View style={s.centro}><ActivityIndicator size="large" color={ViveColors.primary} /></View>
+        ) : vencida ? (
+          <ScrollView ref={scrollRef} contentContainerStyle={s.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+            <Text style={s.label}>Esta reserva venció</Text>
+            <Text style={s.montoNota}>
+              Pasó el tiempo para pagarla y el horario quedó libre. Si llegaste a transferir, cargá el comprobante y te devolvemos el dinero.
+            </Text>
+            {bloqueComprobante()}
+          </ScrollView>
         ) : error ? (
           <View style={s.centro}><Text style={s.errorText}>{error}</Text></View>
         ) : acreditado ? (
@@ -98,7 +243,7 @@ export default function UsdtPaymentScreen() {
             </TouchableOpacity>
           </View>
         ) : cobro ? (
-          <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+          <ScrollView ref={scrollRef} contentContainerStyle={s.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
             <Text style={s.label}>Mandá exactamente</Text>
             {/* 2 decimales, que es lo máximo que las billeteras dejan tipear
                 (verificado en Belo). El identificador son los centavos. */}
@@ -137,8 +282,10 @@ export default function UsdtPaymentScreen() {
                 Esperando el pago. Se confirma solo, en un minuto o menos. Podés cerrar esta pantalla.
               </Text>
             </View>
+            {bloqueComprobante()}
           </ScrollView>
         ) : null}
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </AppBg>
   );
@@ -146,6 +293,7 @@ export default function UsdtPaymentScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
+  flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14 },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -163,7 +311,7 @@ const s = StyleSheet.create({
   okTitle: { fontFamily: ViveFonts.semibold, fontSize: 20, color: '#565E32', marginTop: 8 },
   okDesc: { fontFamily: ViveFonts.regular, fontSize: 14, color: 'rgba(135,131,92,0.80)' },
 
-  content: { paddingHorizontal: 20, paddingBottom: 48 },
+  content: { paddingHorizontal: 20, paddingBottom: 96 },
   label: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#565E32', marginTop: 22, marginBottom: 8 },
   monto: { fontFamily: ViveFonts.semibold, fontSize: 30, color: '#565E32', letterSpacing: -0.5 },
   montoNota: { fontFamily: ViveFonts.regular, fontSize: 12, lineHeight: 17, color: 'rgba(135,131,92,0.78)', marginTop: 6 },
@@ -188,6 +336,17 @@ const s = StyleSheet.create({
     marginTop: 28, backgroundColor: 'rgba(255,248,240,0.55)', borderRadius: 14, padding: 14,
   },
   esperandoText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 12.5, lineHeight: 18, color: 'rgba(135,131,92,0.85)' },
+
+  comprobante: { marginTop: 22 },
+  linkComprobante: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#565E32', textDecorationLine: 'underline' },
+  inputCodigo: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 13, lineHeight: 20, color: '#565E32', minHeight: 64, textAlignVertical: 'top',
+    backgroundColor: 'rgba(255,248,240,0.72)', borderRadius: 14, padding: 14, marginTop: 10,
+  },
+  errorComprobante: { fontFamily: ViveFonts.regular, fontSize: 12.5, lineHeight: 18, color: '#B5533A', marginTop: 8 },
+  btnComprobante: { alignSelf: 'flex-start', marginTop: 14 },
+  btnApagado: { opacity: 0.6 },
 
   btn: { marginTop: 18, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 42, backgroundColor: ViveColors.primary },
   btnText: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#FFF8F0' },

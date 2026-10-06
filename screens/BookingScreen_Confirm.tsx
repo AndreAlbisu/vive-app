@@ -465,6 +465,48 @@ export default function BookingScreen_Confirm() {
         return Number(precioAhora?.price_per_session ?? precioReal);
       };
 
+      // 🔴 ¿Ya hay un cobro en USDT esperando por ESTE mismo turno? (06/10/2026)
+      //
+      // `limpiarIntentoAnterior` cancela el intento previo y abajo se crea una
+      // reserva nueva, con otro monto. Con Mercado Pago o PayPal no pasa nada: el
+      // checkout viejo queda sin usar. Con USDT sí: la persona pudo haber
+      // transferido ya el monto que le mostramos, y al volver a entrar le
+      // cancelábamos la reserva que esa plata iba a pagar (visto en la primera
+      // prueba real: tres reservas en diez minutos). Si existe, se RETOMA: misma
+      // reserva, mismo monto.
+      const { data: usdtEnCurso } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('coach_id', coachId)
+        .eq('scheduled_date', dateStr)
+        .eq('scheduled_time', time)
+        .eq('status', 'pendiente')
+        .eq('payment_status', 'pendiente')
+        .eq('payment_provider', 'usdt')
+        .not('usdt_amount', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (usdtEnCurso?.id) {
+        const volverAlPago = metodoPago === 'usdt' || await new Promise<boolean>(resolve => {
+          Alert.alert(
+            'Ya empezaste a pagar este turno con USDT',
+            'Si ya hiciste la transferencia, no elijas otro medio: volvé al pago en USDT para esperar la confirmación o cargar el comprobante.',
+            [
+              { text: 'Volver al pago en USDT', onPress: () => resolve(true) },
+              { text: 'Pagar con otro medio', style: 'destructive', onPress: () => resolve(false) },
+            ],
+            { cancelable: false },
+          );
+        });
+        if (volverAlPago) {
+          setLoading(false);
+          router.replace({ pathname: '/pago-usdt', params: { booking_id: usdtEnCurso.id as string } });
+          return;
+        }
+      }
+
       const [sala, durationMinutes, , montoReserva] = await Promise.all([
         resolverSala(),
         resolverDuracion(),

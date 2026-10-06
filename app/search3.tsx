@@ -27,6 +27,7 @@ import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
 import { topicOptionsFrom } from '@/constants/conexionesDoors';
 import { supabase } from '@/lib/supabase';
+import { idsSuspendidos } from '@/lib/suspendidos';
 import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 import { lineaProximoLugar } from '@/lib/perfilProfesional';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
@@ -173,16 +174,15 @@ export default function SearchScreen3() {
       // esto, con el caché frío esta consulta de respaldo volvía a mostrar
       // coaches sin ningún riel de cobro configurado.
       .or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')
-      // Mismo filtro que `coachesCache.ts`: un coach suspendido no aparece. Va
-      // acá también porque esta consulta es el respaldo con el caché frío.
-      .or(`suspendido_hasta.is.null,suspendido_hasta.lt.${new Date().toISOString()}`)
+      // Mismo filtro que `coachesCache.ts`: un coach suspendido no aparece (se
+      // saca abajo con `idsSuspendidos`). Esta consulta es el respaldo con el caché frío.
       .order('created_at', { ascending: true })
       .limit(200)
       .then(async ({ data, error }) => {
-        const turnoPorCoach = await turnos;
+        const [turnoPorCoach, suspendidos] = await Promise.all([turnos, idsSuspendidos()]);
         if (cancelled) return;
         if (error) console.error('[Search3] coaches fetch:', error.message);
-        const all: CachedCoach[] = (data ?? []).map((c: any) => {
+        const all: CachedCoach[] = (data ?? []).filter((c: any) => !suspendidos.has(c.id)).map((c: any) => {
           const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
           return {
             id: profile?.id as string,

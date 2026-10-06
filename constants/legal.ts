@@ -270,6 +270,9 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 
 **2.3. Datos técnicos y de uso:**
 - Identificadores de dispositivo y **token de notificaciones push**; datos de uso y eventos de la aplicación (analítica); datos técnicos de conexión.
+- **Zona horaria del dispositivo** al momento de reservar, para mostrar el horario de la Sesión correctamente a cada parte.
+- **Dirección IP**, únicamente para limitar intentos repetidos o automatizados (por ejemplo, al anotarse en la lista de espera o al crear una cuenta). Se conserva asociada a ese contador por un máximo de **dos (2) días** y no se utiliza para ubicar al Usuario.
+- **Informes de error de la aplicación**: cuando algo falla, la aplicación registra en qué pantalla ocurrió y el mensaje técnico del error, para poder corregirlo. No incluyen el contenido que el Usuario escribió.
 
 **2.4. Accesos al dispositivo que la aplicación solicita.** En todos los casos el sistema operativo pide autorización previa, el Usuario puede negarla o revocarla en cualquier momento desde los ajustes del dispositivo, y la aplicación sigue funcionando sin ellos (solo deja de estar disponible la función asociada):
 - **Fotos y cámara:** para subir la foto de perfil y, en el caso de Profesionales, el video de presentación y las imágenes de verificación de identidad. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.
@@ -345,7 +348,7 @@ Brasil y los Estados Unidos no integran la nómina de países con nivel adecuado
 
 8.1. Vita aplica medidas técnicas y organizativas razonables para proteger los datos, incluyendo controles de acceso a nivel de base de datos que restringen el acceso a la información de cada Usuario.
 
-8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.
+8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales. El mensaje que el Cliente puede escribirle al Profesional al reservar recibe el mismo trato: va dirigido al Profesional, y Vita no lo consulta salvo en los casos indicados.
 
 **Sobre el diario y los registros de bienestar:** las entradas de diario, de gratitud y de estado de ánimo se almacenan con controles de acceso que impiden que otros Usuarios, incluidos los Profesionales, accedan a ellas, salvo lo que el propio Usuario decida compartir conforme a la sección 3.4. **Tampoco cuentan con cifrado de extremo a extremo**, por lo que quienes administran la infraestructura de Vita podrían técnicamente acceder a su contenido. Vita se compromete a no hacerlo salvo que resulte indispensable para resolver una falla a pedido del Usuario, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar ese contenido con fines comerciales. La aplicación no ofrece al equipo de Vita ninguna función para leerlos.
 
@@ -374,7 +377,7 @@ Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el trat
 - **Registros de detección de datos de contacto y de pago** (ver 8.3): se conservan **doce (12) meses** desde que se generan y luego se suprimen.
 - **Correos de la lista de espera** (ver 2.5): se suprimen una vez enviado el aviso, o antes si el titular lo pide por los medios de contacto.
 - **Imágenes de verificación de identidad** (ver 2.6): se suprimen al confirmarse la identidad. La constancia de la verificación se conserva mientras exista la cuenta y se suprime al darse de baja.
-- **Datos del Profesional que se da de baja**: su agenda, el enlace de calendario y las notas privadas que escribió **se suprimen de inmediato**. Sus datos de cobro (CBU, alias, cuenta de PayPal, billetera) y la conexión con Mercado Pago se suprimen en el mismo momento, **salvo que existan cobros, reintegros o reclamos en curso**, caso en el cual se conservan hasta completarlos. Las notas que compartió con un Cliente se conservan, porque también pertenecen a ese Cliente. El nombre con el que prestó cada Sesión queda en el registro de esa reserva.
+- **Datos del Profesional que se da de baja**: su agenda, el enlace de calendario y las notas privadas que escribió **se suprimen de inmediato**. Sus datos de cobro (CBU, alias, cuenta de PayPal, billetera) y la conexión con Mercado Pago se suprimen en el mismo momento si no registra cobros recientes. Si existen cobros, reintegros o reclamos en curso, o cobró alguna Sesión en los últimos ciento ochenta (180) días, se conservan hasta que se completen y transcurra ese plazo, para poder atender reintegros y desconocimientos de pago, y luego se suprimen de forma automática. Las notas que compartió con un Cliente se conservan, porque también pertenecen a ese Cliente. El nombre con el que prestó cada Sesión queda en el registro de esa reserva.
 - **Medidas aplicadas a un Profesional y su documentación** (advertencias, suspensiones y bajas): se conservan mientras exista la cuenta del Profesional, para poder considerar la reiteración, y tras la baja quedan **disociadas de su identidad**, como el resto de su ficha.
 
 Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente. El reintegro sigue la regla de cancelación de los Términos: corresponde si faltan veinticuatro (24) horas o más para la Sesión. Una Sesión ya iniciada no se cancela. La ficha de perfil no se elimina: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.
@@ -522,7 +525,7 @@ export const LEGAL_PLACEHOLDERS: string[] = [];
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '77d3d5face30';
+export const LEGAL_VERSION = '56b2d89b326d';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

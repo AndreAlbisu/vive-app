@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { idsSuspendidos } from './suspendidos';
 import { etiquetaProfesionalPublica } from './tipoProfesional';
 
 export type CachedCoach = {
@@ -77,7 +78,7 @@ let lastFailAt: number | null = null;
 const REINTENTO_MS = 5_000;
 
 async function _doFetch(): Promise<void> {
-  const { data, error } = await supabase
+  const [{ data, error }, suspendidos] = await Promise.all([supabase
     .from('coaches')
     .select('id, created_at, specialty, bio, price_per_session, nationality, verified, has_matricula, profesion, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, estilo, enfoques, guia, focos, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
@@ -89,12 +90,10 @@ async function _doFetch(): Promise<void> {
     // pantallas después. Debe reflejar la MISMA condición que usa
     // `BookingScreen_Confirm` para decidir qué botón de pago dibujar.
     .or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')
-    // 🔴 Un coach suspendido no aparece. El filtro va con la hora del CLIENTE
-    // porque PostgREST no evalúa `now()` — no es la defensa, es la UX: la
-    // defensa real es `trg_block_bookings_coach_suspendido`, que rebota la
-    // reserva del lado del servidor aunque alguien llegue por un link guardado
-    // o por una consulta hecha a mano.
-    .or(`suspendido_hasta.is.null,suspendido_hasta.lt.${new Date().toISOString()}`)
+    // 🔴 Un coach suspendido no aparece (se filtra abajo con `idsSuspendidos`).
+    // No es la defensa, es la UX: la defensa real es
+    // `trg_block_bookings_coach_suspendido`, que rebota la reserva del lado del
+    // servidor aunque alguien llegue por un link guardado.
     // El `.limit()` estaba sin `order`: Postgres devolvía N filas ARBITRARIAS, así
     // que pasado el tope algunos coaches simplemente no existían para Conexiones —
     // y cuáles podía cambiar entre consultas. Con el deck v3 (pools + sorteo) eso
@@ -102,12 +101,12 @@ async function _doFetch(): Promise<void> {
     // Arreglo de fondo pendiente: traer por puerta desde el server en vez de
     // bajarse el catálogo entero al cliente.
     .order('created_at', { ascending: true })
-    .limit(200);
+    .limit(200), idsSuspendidos()]);
 
   if (error) { console.error('[coachesCache] fetch:', error.message); lastFailAt = Date.now(); return; }
   lastFailAt = null;
 
-  const initial: CachedCoach[] = (data ?? []).map((c: any) => {
+  const initial: CachedCoach[] = (data ?? []).filter((c: any) => !suspendidos.has(c.id)).map((c: any) => {
     const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
     return {
       id:          profile?.id as string,

@@ -9,7 +9,7 @@ const file = path.resolve(__dirname, '../../supabase/functions/delete-account/in
 const userId = '11111111-1111-4111-8111-111111111111';
 const coachId = '22222222-2222-4222-8222-222222222222';
 
-function fixture({ futureBooking = false, failCredentialsOnce = false, openRefund = false } = {}) {
+function fixture({ futureBooking = false, failCredentialsOnce = false, openRefund = false, cobroReciente = false } = {}) {
   const tables = {
     coaches: [{ id: coachId, profile_id: userId, verified: true, availability_status: 'activo',
       bio: 'Identificable', slug: 'nombre-real', application_video_url: 'https://example.com/video' }],
@@ -17,6 +17,9 @@ function fixture({ futureBooking = false, failCredentialsOnce = false, openRefun
     bookings: [
       ...(futureBooking ? [{ id: 'booking', coach_id: coachId, user_id: 'client',
         status: 'confirmada', scheduled_date: '2099-01-01' }] : []),
+      // Sesión cobrada hace 30 días: sin nada abierto, pero dentro del margen de contracargos.
+      ...(cobroReciente ? [{ id: 'reciente', coach_id: coachId, user_id: 'client', status: 'completada',
+        scheduled_date: new Date(Date.now() - 30 * 86400e3).toISOString().slice(0, 10), payment_status: 'aprobado', payment_provider: 'mp' }] : []),
       // Reintegro en curso de una sesión cancelada: necesita el token de MP del profesional.
       ...(openRefund ? [{ id: 'reintegro', coach_id: coachId, user_id: 'client', status: 'cancelada',
         scheduled_date: '2020-01-01', payment_status: 'reembolso_pendiente', payment_provider: 'mp' }] : []),
@@ -136,7 +139,11 @@ function fixture({ futureBooking = false, failCredentialsOnce = false, openRefun
   assert.equal(blocked.authDeleted, false);
 
   const retry = fixture({ failCredentialsOnce: true });
-  assert.equal((await retry.handler(retry.request())).status, 500);
+  const primerIntento = await retry.handler(retry.request());
+  assert.equal(primerIntento.status, 500);
+  // El mensaje tiene que ser el del paso que falló, sin el detalle técnico. Un
+  // 'Error inesperado' acá delató una variable local que tapaba al helper `fallo`.
+  assert.deepEqual(await primerIntento.json(), { error: 'No se pudieron borrar los documentos profesionales' });
   assert.equal(retry.tables.coaches[0].verified, false);
   assert.equal(retry.authDeleted, false);
   assert.equal((await retry.handler(retry.request())).status, 200);
@@ -173,6 +180,11 @@ function fixture({ futureBooking = false, failCredentialsOnce = false, openRefun
   assert.equal(conPlata.tables.coach_mp_accounts.length, 1);
   assert.equal(conPlata.tables.coach_calendar_feeds.length, 0);
   assert.equal(conPlata.authDeleted, true);
+
+  const reciente = fixture({ cobroReciente: true });
+  assert.equal((await reciente.handler(reciente.request())).status, 200);
+  assert.equal(reciente.tables.coach_mp_accounts.length, 1);
+  assert.equal(reciente.tables.coach_payout_accounts.length, 1);
 
   console.log('PASS baja: bloqueo por reserva, despublicación, limpieza, texto de reservas y notas, agenda y datos de cobro, reintento');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -460,7 +460,7 @@ export type UsdtRefund = {
 export async function listUsdtRefunds(): Promise<UsdtRefund[]> {
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, usdt_amount, scheduled_date, scheduled_time, coach_name, refund_address, refund_network')
+    .select('id, usdt_amount, charged_amount, scheduled_date, scheduled_time, coach_name, refund_address, refund_network')
     .eq('payment_provider', 'usdt')
     .eq('payment_status', 'reembolso_pendiente')
     .order('scheduled_date', { ascending: true })
@@ -472,7 +472,8 @@ export async function listUsdtRefunds(): Promise<UsdtRefund[]> {
   }
   return (data ?? []).map(b => ({
     bookingId: b.id,
-    monto: b.usdt_amount != null ? Number(b.usdt_amount) : null,
+    // Lo que efectivamente llegó, si se acreditó por comprobante con un monto distinto.
+    monto: b.charged_amount != null ? Number(b.charged_amount) : b.usdt_amount != null ? Number(b.usdt_amount) : null,
     fecha: b.scheduled_date,
     hora: String(b.scheduled_time ?? '').slice(0, 5),
     coachName: b.coach_name ?? null,
@@ -489,6 +490,57 @@ export function markUsdtRefunded(bookingId: string, refundTxId: string) {
     booking_id: bookingId,
     refund_tx_id: refundTxId.trim(),
   });
+}
+
+// ─── USDT en revisión (05/10/2026) ───────────────────────────────────────────
+//
+// Lo que llegó a la billetera y no se acreditó solo: comprobantes que presentó
+// un cliente y transferencias que nadie reclamó todavía. Aprobar un comprobante
+// acredita la sesión si la reserva sigue esperando; si ya venció, la deja para
+// reintegro en la lista de arriba.
+
+export type UsdtClaim = {
+  id: string;
+  bookingId: string;
+  txId: string;
+  recibido: number;
+  esperado: number | null;
+  desde: string;
+  fechaTransferencia: string;
+  presentado: string;
+  reservaVencida: boolean;
+  /** Reserva vencida cuyo horario sigue libre: se puede volver a dar la sesión. */
+  puedeReactivar: boolean;
+  coachName: string | null;
+  fecha: string | null;
+  hora: string | null;
+};
+
+export type UsdtLooseTransfer = {
+  txId: string;
+  desde: string;
+  monto: number;
+  fecha: string;
+  estado: 'sin_dueno' | 'monto_menor';
+  bookingSugerida: string | null;
+};
+
+export async function listUsdtReview(): Promise<{ claims: UsdtClaim[]; transfers: UsdtLooseTransfer[]; error: string | null }> {
+  const res = await callAdmin({ action: 'list_usdt_review' });
+  if (!res.ok) return { claims: [], transfers: [], error: res.error ?? 'No se pudo leer la revisión de USDT' };
+  return {
+    claims: (res.data?.claims ?? []) as UsdtClaim[],
+    transfers: (res.data?.transfers ?? []) as UsdtLooseTransfer[],
+    error: null,
+  };
+}
+
+export function resolveUsdtClaim(claimId: string, approve: boolean, motivo?: string, reactivar = false) {
+  return callAdmin({ action: 'resolve_usdt_claim', claim_id: claimId, approve, motivo: motivo?.trim() || undefined, reactivar: reactivar || undefined });
+}
+
+export function discardUsdtTransfer(txId: string, nota: string) {
+  return callAdmin({ action: 'discard_usdt_transfer', tx_id: txId, nota: nota.trim() });
 }
 
 // ─── Pagos a coaches (riel internacional) ────────────────────────────────────

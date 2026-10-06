@@ -2,6 +2,7 @@
 //
 // 📌 Abierto la primera vez que se entra a esa herramienta y plegado después:
 // quien ya la conoce no tiene que leerlo cada vez, pero puede volver a abrirlo.
+// Abierto es una tarjeta; plegado es solo un enlace chico, sin caja.
 // La marca es del teléfono (AsyncStorage), como las tarjetas de la guía.
 
 import { useEffect, useState } from 'react';
@@ -35,6 +36,25 @@ export default function ParaQueSirve({ toolId, style }: { toolId: string; style?
 
   if (!texto || abierto === null) return null;
 
+  // Plegado no es una tarjeta: para quien ya lo leyó era un bloque más en cada
+  // pantalla (Andre, 05/10/2026). Queda un enlace chico para volver a abrirlo.
+  if (!abierto) {
+    return (
+      <View style={style}>
+        <TouchableOpacity
+          style={s.enlace}
+          onPress={() => setAbierto(true)}
+          activeOpacity={0.6}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: false }}>
+          <MaterialCommunityIcons name="information-outline" size={14} color={FOREST_SOFT} />
+          <Text style={s.enlaceTexto}>Para qué sirve</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={[s.wrap, style]}>
       <TouchableOpacity
@@ -67,6 +87,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
+  enlace: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 5, opacity: 0.75 },
+  enlaceTexto: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: FOREST_SOFT },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   titulo: { flex: 1, fontFamily: ViveFonts.semibold, fontSize: 13.5, color: FOREST },
   cuerpo: { marginTop: 8 },
