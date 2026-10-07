@@ -52,11 +52,10 @@ const BRAND_GROW_MS = 1100;
 const PAL = {
   bg:        '#FBF3E7',
   bgTo:      '#F4E2C8',
-  // Wordmark "vita" (07/10, Joaquín): relleno CREMA con borde fino terracota.
-  // El crema es apenas más claro que el fondo, así las letras tienen cuerpo
-  // crema y el contorno terracota las dibuja.
-  textColor:  '#FFF7EC',   // relleno crema
-  textStroke: '#C1694F',   // borde fino terracota
+  // Wordmark "vita" (07/10, Joaquín): relleno TERRACOTA con borde fino crema
+  // (invertido respecto a la primera prueba crema + borde terracota).
+  textColor:  '#C1694F',   // relleno terracota de marca
+  textStroke: '#FFF7EC',   // borde fino crema
   // Tagline en terracota sólido (sin borde; en 12px un contorno ensuciaría).
   subColor:   '#9E5742',
 } as const;
