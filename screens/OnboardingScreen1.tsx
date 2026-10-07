@@ -52,10 +52,11 @@ const BRAND_GROW_MS = 1100;
 const PAL = {
   bg:        '#FBF3E7',
   bgTo:      '#F4E2C8',
-  // Wordmark "vita" (07/10, Joaquín): relleno TERRACOTA con borde fino crema
-  // (invertido respecto a la primera prueba crema + borde terracota).
+  // Wordmark "vita" (07/10, Joaquín): relleno TERRACOTA con borde fino VERDE
+  // OLIVA. El borde se dibuja con doble capa (trazo redondeado abajo + relleno
+  // arriba) para que no haga el pico raro en la "v".
   textColor:  '#C1694F',   // relleno terracota de marca
-  textStroke: '#FFF7EC',   // borde fino crema
+  textStroke: '#6E7A3C',   // borde fino verde oliva
   // Tagline en terracota sólido (sin borde; en 12px un contorno ensuciaría).
   subColor:   '#9E5742',
 } as const;
@@ -298,7 +299,25 @@ export default function OnboardingScreen1() {
             <AnimatedCircle animatedProps={ig1} fill={`url(#${GRAD_IDS[1]})`} />
             <AnimatedCircle animatedProps={ig2} fill={`url(#${GRAD_IDS[2]})`} />
 
-            {/* ── Brand name: floats above, glides to center on merge ── */}
+            {/* ── Brand name: floats above, glides to center on merge.
+                Doble capa para un contorno limpio: (1) solo-trazo abajo, con
+                juntas/puntas redondeadas (si no, la "v" hace un pico feo), y
+                (2) el relleno arriba, que tapa la mitad interior del trazo —
+                así el borde queda parejo y fino por fuera. ── */}
+            <AnimatedSvgText
+              animatedProps={brandProps}
+              x={CX}
+              textAnchor="middle"
+              fontFamily="PlusJakartaSans_800ExtraBold"
+              fontWeight="800"
+              fill="none"
+              stroke={PAL.textStroke}
+              strokeWidth={3}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            >
+              {'vita'}
+            </AnimatedSvgText>
             <AnimatedSvgText
               animatedProps={brandProps}
               x={CX}
@@ -306,8 +325,6 @@ export default function OnboardingScreen1() {
               fontFamily="PlusJakartaSans_800ExtraBold"
               fontWeight="800"
               fill={PAL.textColor}
-              stroke={PAL.textStroke}
-              strokeWidth={1.4}
             >
               {'vita'}
             </AnimatedSvgText>
