@@ -98,9 +98,8 @@ const BASE = {
 // ese mismo path, así superficie y líneas no pueden desincronizarse.
 const LINEAS = [
   { punta: 0.238, cuello: 0.532 },
-  { punta: 0.266, cuello: 0.539 },
-  { punta: 0.295, cuello: 0.546 },
-  { punta: 0.325, cuello: 0.553 },
+  { punta: 0.279, cuello: 0.541 },
+  { punta: 0.320, cuello: 0.551 },
   { punta: 0.360, cuello: 0.560 },
 ];
 const BORDE_COLOR = LINEAS.length - 1;
