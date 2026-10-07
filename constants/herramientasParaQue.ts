@@ -25,7 +25,8 @@ export const PARA_QUE: Record<string, ParaQue> = {
     cuando: 'Al terminar el día. Son cinco minutos.',
     // Antes repetía "alcanza con que sean tuyas", que ya está en el subtítulo
     // (GRATITUD_SUBTITULO). Se cambió por un dato que no estaba en ningún lado.
-    saber: 'Lo que anotás es privado: solo lo ves vos.',
+    // Texto de Andre (07/10/2026).
+    saber: 'Queda guardado en tu cuenta, solo lo ves vos.',
   },
   respiracion: {
     para: 'Frenar un momento y concentrarte en algo simple: el ritmo de tu respiración.',

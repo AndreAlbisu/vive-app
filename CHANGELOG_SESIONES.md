@@ -1,3 +1,15 @@
+## 2026-10-07 — Andre (Claude · texto de privacidad de Gratitud + revisión de la rama de limpieza de cobros)
+
+**Tocado:** `constants/herramientasParaQue.ts`. **Sin migraciones.**
+
+**Resumen:**
+- **Gratitud, "para qué sirve":** la línea de privacidad pasa de "Lo que anotás es privado: solo lo ves vos." a **"Queda guardado en tu cuenta, solo lo ves vos."** (texto de Andre). Cierra el pendiente de voz que dejó Joaquín el 07/10.
+- **Rama `fix-cleanup-cobro-bajas` (Joaquín, 04/10): revisada, NO se integra.** Duplica `limpiar_cobro_de_bajas()` (migración `20261004040000`, ya aplicada; cron `limpiar-cobro-de-bajas` verificado activo en producción hoy) y usa la ventana vieja de 3 días en lugar de los 180 que decidió Andre el 04/10 por los contracargos. Aplicarla anularía ese margen y contradiría la Política §10. No se tocó la rama ni la base.
+
+**Pendiente para la próxima sesión:**
+- **Joaquín:** cerrar `fix-cleanup-cobro-bajas` sin mergear ni aplicar su migración.
+- Probar en iPhone la splash nueva y el rediseño de Gratitud/Diario (pendientes de las entradas de Joaquín del 07/10 y 08/10).
+
 ## 2026-10-08 — Joaquín (Claude · rediseño de la splash: fondo impreso + wordmark)
 
 **Tocado:** `screens/OnboardingScreen1.tsx`, `components/ui/Grain.tsx` (nuevo), `components/ui/PrintLines.tsx` (nuevo). Directo en `main` (rama única). **Sin migraciones.**
