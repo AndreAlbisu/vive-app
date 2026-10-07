@@ -1,3 +1,20 @@
+## 2026-10-07 — Joaquín (Claude · rediseño de Gratitud y Diario como pantallas hermanas)
+
+**Tocado:** `app/gratitud.tsx`, `app/diario.tsx`, `components/ui/ToolWash.tsx` (nuevo), `components/ui/RachaPill.tsx` (nuevo), `components/ui/NumberBadge.tsx` (nuevo), `components/ui/SaveScreen.tsx` (nuevo), `hooks/useMoodHistory.ts`, `components/ParaQueSirve.tsx`, `constants/herramientasParaQue.ts`. Rama `rediseno-gratitud-diario` (PR draft). **Sin migraciones.**
+
+**Resumen:**
+- Rediseño para que las dos herramientas se sientan hermanas. Piezas compartidas nuevas: `ToolWash` (lavado de color superior), `RachaPill`, `NumberBadge` (círculo con rebote), `SaveScreen` (pantalla de guardado full con gradiente + grano + check "pop" + recap + invitación cruzada una sola vez).
+- **1.1 (decidido con Joaquín — "mantener ambos"):** el ánimo POR ENTRADA de Andre (`journal_entries.mood`) queda **intacto**; NO se eliminó nada ni se unificaron datos. Se SUMÓ arriba la fila del check-in del día (`mood_entries`): si ya existe, se lee "Hoy registraste: X · hora" con **Cambiar** (upsert, como Inicio). Si no existe, no se duplica el picker: el selector por-entrada cubre el ánimo y el guardado crea el check-in como hoy (comportamiento ya existente). `useMoodHistory` ahora trae `created_at` (la columna ya existía) para la hora.
+- **1.2:** `ParaQueSirve` ya estaba unificado/plegable (Andre 05/10) — se sumó el chevron al plegado y se deduplicó "sean tuyas" (el `saber` de gratitud pasó a un dato de privacidad; el subtítulo queda como la voz). **1.3:** fuera el corazón decorativo.
+- **2.1:** Gratitud pasa de 3 cajas con íconos a 3 filas en una `SurfaceCard` con grano, separadas por pelo, con `NumberBadge` que se rellena con rebote (respeta reduced-motion) y contador "Con una alcanza"/"N de 3". **2.2:** activar-con-uno ya estaba; se ajustó el estilo del botón apagado (cream-deep 55%).
+- **3.1:** lavado durazno (Gratitud) / salvia (Diario) desde los tokens PASTEL_*. **3.2:** pastilla de racha (Gratitud "N días seguidos" 🔥; Diario "N entradas este mes" ✏️), degrada si falta el dato. **3.3:** `SaveScreen` al guardar (antes no pasaba nada), con recap en `ViveFonts.feedback` (no hay serif en el proyecto desde la migración del 24/08 — se usó el token designado para reflexión), invitación cruzada chica una sola vez.
+- **Analítica** (`anotar`/`registrarEvento`, solo metadatos): `gratitud_guardada {cantidad}`, `diario_guardado {largo_caracteres}`, `invitacion_cruzada_tomada {origen}`. Nunca el texto.
+- Tipografía y colores salen de `ViveFonts`/`ViveColors`/`PASTEL_*`/`theme/tokens` (sin familias ni colores nuevos). tsc sin errores nuevos (los 2 que quedan son las rutas `coach-postulacion-estado` pre-existentes).
+
+**Pendiente para la próxima sesión:**
+- Probar las dos pantallas en device (no se pudo correr acá). Mirar: el rebote del `NumberBadge`, el "pop" del check, la fila de check-in y su "Cambiar", y la invitación cruzada (que aparezca una sola vez).
+- Decisión de voz menor: el `saber` de gratitud ahora dice "Lo que anotás es privado: solo lo ves vos" — confirmar con Andre si le cierra.
+
 ## 2026-10-06 — Andre (Claude · USDT: volver a dar la sesión de una reserva vencida)
 
 **Tocado:** `supabase/functions/admin-actions/index.ts` (v49 en producción), `lib/admin.ts`, `screens/AdminScreen.tsx`

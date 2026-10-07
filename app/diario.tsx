@@ -26,6 +26,12 @@ import { ToolHeader } from '@/components/ui/ToolHeader';
 import { PinButton } from '@/components/PinButton';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 import { AppBg } from '@/components/ui/AppBg';
+import { ToolWash } from '@/components/ui/ToolWash';
+import { RachaPill } from '@/components/ui/RachaPill';
+import { SaveScreen } from '@/components/ui/SaveScreen';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { anotar } from '@/lib/analytics';
+import { PASTEL_SALVIA } from '@/constants/tools';
 import { localDayKey } from '@/lib/dates';
 import { semanaDeEscritura } from '@/lib/semanaDiario';
 import { MOOD_PROMPTS, PROMPT_BIENVENIDA, CIERRE_DEFAULT, type Prompt } from '@/lib/vozCompartida';
@@ -81,6 +87,13 @@ const shadow = Platform.select({
   },
   android: { elevation: 2 },
 });
+
+// Salvia para la racha y la invitación cruzada del Diario — variantes del token
+// salvia, no colores nuevos.
+const SALVIA_INK = '#566B3F';
+const SALVIA_TINT = 'rgba(86,107,63,0.14)';
+// Gradiente salvia de la pantalla de guardado.
+const SAVE_GRADIENT: [string, string] = ['#D8E3C6', '#EEF1E6'];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function DiarioScreen() {
@@ -142,7 +155,10 @@ export default function DiarioScreen() {
   // Avisa —dentro de la card de guardado— que esta entrada también dejó
   // registrado el día. Sin esto, la carita aparecería sola en Inicio mañana y
   // se leería como que la app decidió por vos.
-  const [avisoCheckin, setAvisoCheckin] = useState(false);
+  const reduced = useReducedMotion();
+  const [recapTexto, setRecapTexto] = useState('');
+  // Picker inline para corregir el check-in del día (1.1 "Cambiar").
+  const [cambiarAbierto, setCambiarAbierto] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   // Qué está desplegado del bloque colapsado mientras se escribe. Uno por vez:
   // abrir los dos comería el espacio que el colapso vino a ganar.
@@ -241,8 +257,6 @@ export default function DiarioScreen() {
     promptFijado.current = null;
     setJournalText('');
     setErrorGuardado(null);
-    setAvisoCheckin(false);
-    setSaved(true);
 
     // 🔴 Falla cerrado: si no hay clave o no se puede cifrar, NO se guarda en
     // claro. Cae en el mismo camino de error de abajo, que devuelve el texto.
@@ -283,6 +297,13 @@ export default function DiarioScreen() {
     // Diario es "libre" (sin duración) → completación sin duration_seconds.
     recordCompletion(user.id, 'diario').catch(() => {});
 
+    // Recap + analítica (solo el largo, nunca el texto) + pantalla de guardado.
+    // Va tras CONFIRMAR el guardado: una pantalla "Entrada guardada" optimista
+    // que después se cae por un error de red sería peor que no tenerla.
+    setRecapTexto(texto.length > 120 ? texto.slice(0, 120).trimEnd() + '…' : texto);
+    anotar('diario_guardado', { largo_caracteres: texto.length });
+    setSaved(true);
+
     // El check-in del día va después y SIN bloquear: es una consecuencia de
     // haber escrito, no parte de guardar la entrada, y no tiene por qué hacer
     // esperar al botón.
@@ -306,7 +327,6 @@ export default function DiarioScreen() {
         .then(({ error: moodErr }) => {
           if (moodErr) return;
           setCheckinHoy(moodDeLaEntrada);
-          setAvisoCheckin(true);
         });
     }
   }
@@ -324,15 +344,42 @@ export default function DiarioScreen() {
     [entries],
   );
 
-  function escribirOtra() {
+  function cerrarGuardado() {
     setSaved(false);
-    setAvisoCheckin(false);
     setErrorGuardado(null);
     // La entrada siguiente arranca de cero: el ánimo vuelve al del día, no al
     // de lo que se acaba de escribir.
     moodTocado.current = false;
     setEntryMood(checkinHoy ?? 3);
   }
+
+  function irAGratitud() {
+    anotar('invitacion_cruzada_tomada', { origen: 'diario' });
+    cerrarGuardado();
+    router.push('/gratitud');
+  }
+
+  // Cambiar el check-in del DÍA (1.1). Upsert como Inicio (MoodCheckIn): acá sí
+  // se puede corregir, a diferencia del create-si-falta de `handleSave`.
+  async function guardarCheckinDia(moodId: number) {
+    setCambiarAbierto(false);
+    setCheckinHoy(moodId);
+    if (!user) return;
+    await supabase.from('mood_entries').upsert(
+      { user_id: user.id, mood_id: moodId, mood_label: labelDeMood(moodId), entry_date: todayStr },
+      { onConflict: 'user_id,entry_date' },
+    );
+  }
+
+  // Entradas de ESTE MES (criterio del Diario, distinto a la racha diaria de
+  // Gratitud a propósito). En hora local para no errarle cerca del cambio de mes.
+  const mesHoy = new Date().toLocaleDateString('en-CA').slice(0, 7);
+  const entradasMes = entries.filter(
+    e => new Date(e.created_at).toLocaleDateString('en-CA').slice(0, 7) === mesHoy,
+  ).length;
+
+  // Fila de check-in del día (1.1): el mood_entries de hoy, con su hora.
+  const checkinRow = moodEntries.find(e => e.entry_date === todayStr) ?? null;
 
   function renderMoodRow() {
     return (
@@ -371,9 +418,59 @@ export default function DiarioScreen() {
     );
   }
 
+  // 1.1 — El check-in del DÍA (cómo venís hoy), que ya vive en Inicio. Si existe,
+  // se LEE acá en vez de re-preguntarlo; "Cambiar" lo corrige (upsert). Es otra
+  // cosa que el selector "¿cómo estás ahora?" de abajo (ánimo de esta entrada).
+  function renderCheckinDia() {
+    if (checkinHoy === null) return null;
+    const hora = checkinRow?.created_at
+      ? new Date(checkinRow.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      : null;
+    return (
+      <View style={[s.section, s.checkinWrap]}>
+        <View style={s.checkinRow}>
+          <View style={[s.checkinDot, { backgroundColor: ViveMoodColors[checkinHoy] }]} />
+          <Text style={s.checkinText} numberOfLines={1}>
+            Hoy registraste: <Text style={s.checkinMood}>{labelDeMood(checkinHoy)}</Text>
+            {hora ? <Text style={s.checkinHora}>{'  ·  '}{hora}</Text> : null}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setCambiarAbierto(v => !v)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+          >
+            <Text style={s.checkinCambiar}>{cambiarAbierto ? 'Cerrar' : 'Cambiar'}</Text>
+          </TouchableOpacity>
+        </View>
+        {cambiarAbierto && (
+          <View style={s.checkinPicker}>
+            {ViveMoods.map(m => (
+              <TouchableOpacity
+                key={m.id}
+                style={s.moodOption}
+                onPress={() => guardarCheckinDia(m.id)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={`Cambiar a ${m.label}`}
+              >
+                <View style={[s.moodRing, checkinHoy === m.id && s.moodRingActive]}>
+                  <View style={[s.moodDot, { backgroundColor: ViveMoodColors[m.id] }]} />
+                </View>
+                <Text style={[s.moodLabel, checkinHoy === m.id && s.moodLabelActive]} numberOfLines={1}>
+                  {m.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  }
+
   return (
     <AppBg>
       <SafeAreaView style={s.safe} edges={['top']}>
+        <ToolWash color={PASTEL_SALVIA} opacity={0.45} />
         {/* ── Header ──────────────────────────────────────────────── */}
         <ToolHeader
           title="Diario"
@@ -388,6 +485,18 @@ export default function DiarioScreen() {
             </>
           }
         />
+        {/* Racha: "N entradas este mes" (criterio del Diario, no días seguidos).
+            Degrada sin romper: si no hay entradas del mes, no se muestra. */}
+        {entradasMes > 0 && (
+          <View style={s.rachaRow}>
+            <RachaPill
+              icon="pencil-outline"
+              label={`${entradasMes} ${entradasMes === 1 ? 'entrada' : 'entradas'} este mes`}
+              color={SALVIA_INK}
+              tint={SALVIA_TINT}
+            />
+          </View>
+        )}
         <View style={s.headerDivider} />
 
         <KeyboardAvoidingView
@@ -400,38 +509,10 @@ export default function DiarioScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {saved ? (
-              <>
-                {renderAnimo()}
-                {/* ── Guardado ──────────────────────────────────────── */}
-                {/* Estado, no un cartel de 2,5 segundos: la entrada se cerró y
-                    la pantalla lo acompaña. Se sale escribiendo otra. */}
-                <View style={[s.section, s.guardadoCard]}>
-                  <View style={s.guardadoCheck}>
-                    <MaterialCommunityIcons name="check" size={18} color={ViveColors.accent} />
-                  </View>
-                  <View style={s.guardadoTexto}>
-                    <Text style={s.guardadoTitulo}>Guardado.</Text>
-                    <Text style={s.guardadoFrase}>
-                      A veces, escribir ya es una forma de cuidarte.
-                    </Text>
-                    {avisoCheckin && (
-                      <Text style={s.guardadoFrase}>
-                        También quedó registrado cómo venís hoy.
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={[s.saveBtn, { marginBottom: 32 }]}
-                  onPress={escribirOtra}
-                  activeOpacity={0.85}
-                >
-                  <Text style={s.saveBtnText}>Escribir otra entrada</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
+            {/* Check-in del día (1.1): si ya lo registró hoy, se LEE arriba
+                (no se re-pregunta). Se oculta con el teclado como el resto. */}
+            {!textFocused && renderCheckinDia()}
+            <>
                 {/* Para qué sirve: abierto la primera vez, plegado después. Se
                     esconde con el teclado, por el mismo motivo que el ánimo. */}
                 {!textFocused && <ParaQueSirve toolId="diario" style={{ marginBottom: 16 }} />}
@@ -541,7 +622,6 @@ export default function DiarioScreen() {
                   </View>
                 )}
               </>
-            )}
 
 
             {/* ── Esta semana ──────────────────────────────────────── */}
@@ -653,6 +733,23 @@ export default function DiarioScreen() {
           </SafeAreaView>
         </Modal>
 
+        <SaveScreen
+          visible={saved}
+          onDone={cerrarGuardado}
+          gradient={SAVE_GRADIENT}
+          title="Entrada guardada"
+          racha={entradasMes > 0 ? {
+            icon: 'pencil-outline',
+            label: `${entradasMes} ${entradasMes === 1 ? 'entrada' : 'entradas'} este mes`,
+            color: SALVIA_INK,
+            tint: SALVIA_TINT,
+          } : null}
+          recap={<Text style={s.recapText}>{recapTexto}</Text>}
+          crossInvite={{ label: '¿Y tres cosas buenas de hoy?', onPress: irAGratitud }}
+          origen="diario"
+          reduced={reduced}
+        />
+
         <ConsentSheet {...consentGate.sheetProps} />
       </SafeAreaView>
     </AppBg>
@@ -696,6 +793,34 @@ const s = StyleSheet.create({
 
   section: {
     marginBottom: 20,
+  },
+
+  rachaRow: { alignItems: 'center', marginTop: 4, marginBottom: 8 },
+
+  // Check-in del día (1.1) — fila de lectura con "Cambiar".
+  checkinWrap: {
+    backgroundColor: 'rgba(255,248,240,0.70)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.12)',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  checkinRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkinDot: { width: 14, height: 14, borderRadius: 7, flexShrink: 0 },
+  checkinText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 13.5, color: ViveColors.text },
+  checkinMood: { fontFamily: ViveFonts.semibold },
+  checkinHora: { fontFamily: ViveFonts.regular, color: ViveColors.calm },
+  checkinCambiar: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.primary },
+  checkinPicker: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+
+  // Recap de la pantalla de guardado.
+  recapText: {
+    fontFamily: ViveFonts.feedback,
+    fontSize: 15,
+    color: ViveColors.text,
+    lineHeight: 24,
+    textAlign: 'center',
   },
 
   // Ánimo de esta entrada — 5 niveles, un toque (el hold-to-confirm es del

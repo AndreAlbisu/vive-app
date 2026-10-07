@@ -13,23 +13,34 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { PASTEL_SALVIA, PASTEL_DURAZNO } from '@/constants/tools';
+import { PASTEL_DURAZNO } from '@/constants/tools';
 import { ToolHeader } from '@/components/ui/ToolHeader';
 import { PinButton } from '@/components/PinButton';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ToolWash } from '@/components/ui/ToolWash';
+import { RachaPill } from '@/components/ui/RachaPill';
+import { NumberBadge } from '@/components/ui/NumberBadge';
+import { SaveScreen } from '@/components/ui/SaveScreen';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/context/AuthContext';
 import { useConsentGate } from '@/hooks/useConsentGate';
 import { ConsentSheet } from '@/components/ConsentSheet';
 import { supabase } from '@/lib/supabase';
 import { cifrar, descifrar, estaCifrado, obtenerClave, obtenerClaveSiSePuede } from '@/lib/wellbeingCrypto';
 import { logError } from '@/lib/logging';
+import { anotar } from '@/lib/analytics';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 import { GRATITUD_TITULO, GRATITUD_SUBTITULO } from '@/lib/vozCompartida';
 import ParaQueSirve from '@/components/ParaQueSirve';
 
 const CREAM_DEEP = '#EAE2D0';
+const TERRACOTA = '#C1694F';
+const TERRACOTA_TINT = 'rgba(193,105,79,0.12)';
+// Gradiente durazno de la pantalla de guardado — variantes del token durazno,
+// no un color nuevo.
+const SAVE_GRADIENT: [string, string] = ['#F3CDB7', '#F8EADF'];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface GratitudeEntry {
@@ -42,15 +53,6 @@ interface GratitudeEntry {
 
 const CAMPOS = ['item_1', 'item_2', 'item_3'] as const;
 
-// Ícono + color por campo (ver PLACEHOLDERS) — mismo lenguaje visual que los
-// cards pastel de Sonidos/Recursos, rediseño herramientas sesión 76.
-const FIELD_META: { icon: keyof typeof MaterialCommunityIcons.glyphMap; bg: string }[] = [
-  { icon: 'clock-outline',   bg: PASTEL_DURAZNO },
-  { icon: 'account-outline', bg: PASTEL_SALVIA },
-  { icon: 'leaf',            bg: CREAM_DEEP },
-];
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
 const PLACEHOLDERS: [string, string, string] = [
   'Algo que pasó hoy...',
   'Alguien que te importa...',
@@ -67,26 +69,25 @@ function formatTodayShort() {
     .replace('.', '');
 }
 
-// ─── Shadow ───────────────────────────────────────────────────────────────────
-const shadow = Platform.select({
-  ios: {
-    shadowColor: ViveColors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-  },
-  android: { elevation: 2 },
-});
+function dayKey(iso: string) {
+  return iso.split('T')[0];
+}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function GratitudScreen() {
   useRecursoAbierto('gratitud');
   const router = useRouter();
+  const reduced = useReducedMotion();
   const [items, setItems] = useState<[string, string, string]>(['', '', '']);
   const [focused, setFocused] = useState<[boolean, boolean, boolean]>([false, false, false]);
-  const [saved, setSaved] = useState(false);
   const [entries, setEntries] = useState<GratitudeEntry[]>([]);
   const [streak, setStreak] = useState(0);
+
+  // Pantalla de guardado (la pieza principal) + datos congelados para su recap.
+  const [showSave, setShowSave] = useState(false);
+  const [savedItems, setSavedItems] = useState<string[]>([]);
+  const [rachaGuardado, setRachaGuardado] = useState(0);
+  const [savedTick, setSavedTick] = useState(0);
 
   const { user, isLoggedIn, requestAuth } = useAuth();
   // Mismo criterio que el diario y el check-in: es dato sensible, así que el
@@ -94,7 +95,8 @@ export default function GratitudScreen() {
   const consentGate = useConsentGate(user?.id);
   const saveScale = useRef(new Animated.Value(1)).current;
 
-  const canSave = items.some(i => i.trim().length > 0);
+  const filled = items.filter(i => i.trim().length > 0).length;
+  const canSave = filled > 0;
 
   useEffect(() => {
     if (!user) return;
@@ -145,17 +147,17 @@ export default function GratitudScreen() {
       .gte('completed_at', from.toISOString())
       .then(({ data }) => {
         const dates = new Set((data ?? []).map(r => (r.completed_at as string).split('T')[0]));
-        let s = 0;
+        let streakCount = 0;
         const today = new Date();
         for (let i = 0; i < 30; i++) {
           const d = new Date(today);
           d.setDate(d.getDate() - i);
-          if (dates.has(d.toISOString().split('T')[0])) s++;
+          if (dates.has(d.toISOString().split('T')[0])) streakCount++;
           else break;
         }
-        setStreak(s);
+        setStreak(streakCount);
       });
-  }, [user, saved]);
+  }, [user, savedTick]);
 
   function updateItem(index: 0 | 1 | 2, value: string) {
     setItems(prev => {
@@ -174,11 +176,9 @@ export default function GratitudScreen() {
   }
 
   async function handleSave() {
-    if (!canSave || saved) return;
+    if (!canSave || showSave) return;
     if (!isLoggedIn || !user) { requestAuth('guardar_gratitud'); return; }
 
-    // Antes de la animación a propósito: si dice que no, el botón no tiene que
-    // haber hecho el gesto de guardar algo que no se guardó.
     if (!(await consentGate.pedir())) return;
 
     Animated.sequence([
@@ -188,6 +188,7 @@ export default function GratitudScreen() {
 
     // 🔴 Falla cerrado: sin clave no se guarda en claro; cae en el error de abajo.
     const textos = items.map(i => i.trim());
+    const cantidad = textos.filter(t => t.length > 0).length;
     let cifrados: string[] | null = null;
     try {
       const clave = await obtenerClave(user.id);
@@ -217,30 +218,64 @@ export default function GratitudScreen() {
       return;
     }
 
+    // Racha a mostrar en el guardado: si hoy es la primera, +1. Número fijo para
+    // que no parpadee con el refetch asíncrono.
+    const primeraHoy = !entries.some(e => dayKey(e.created_at) === dayKey(new Date().toISOString()));
+    setRachaGuardado(primeraHoy ? streak + 1 : streak);
+
     setEntries(prev => [data, ...prev]);
     recordCompletion(user.id, 'gratitud', 300).catch(() => {});
+    setSavedTick(t => t + 1); // refetch de la racha real para el resto de la pantalla
 
-    setItems(['', '', '']);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    // Analítica: SOLO la cantidad, nunca el texto.
+    anotar('gratitud_guardada', { cantidad });
+
+    setSavedItems(textos.filter(t => t.length > 0));
+    setShowSave(true);
   }
+
+  function cerrarGuardado() {
+    setShowSave(false);
+    setItems(['', '', '']);
+    setFocused([false, false, false]);
+  }
+
+  function irAlDiario() {
+    anotar('invitacion_cruzada_tomada', { origen: 'gratitud' });
+    setShowSave(false);
+    setItems(['', '', '']);
+    router.push('/diario');
+  }
+
+  const counterText = filled === 0 ? 'Con una alcanza' : `${filled} de 3`;
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
+      <ToolWash color={PASTEL_DURAZNO} opacity={0.55} />
+
       {/* ── Header ──────────────────────────────────────────────── */}
       <ToolHeader
         title="Gratitud"
         onBack={() => router.back()}
         right={
-          // La pastilla de fecha va primero y el marcador último: en las otras
-          // ocho herramientas el pin es SIEMPRE lo más a la derecha del header,
-          // y esa posición es la que se busca sin mirar.
           <>
             <Text style={s.datePillText}>{formatTodayShort()}</Text>
             <PinButton resourceId="gratitud" inline />
           </>
         }
       />
+
+      {/* Racha, arriba y chica. Degrada sin romper: si no hay, no se muestra. */}
+      {streak > 0 && (
+        <View style={s.rachaRow}>
+          <RachaPill
+            icon="fire"
+            label={`${streak} ${streak === 1 ? 'día seguido' : 'días seguidos'}`}
+            color={TERRACOTA}
+            tint={TERRACOTA_TINT}
+          />
+        </View>
+      )}
       <View style={s.headerDivider} />
 
       <KeyboardAvoidingView
@@ -256,64 +291,45 @@ export default function GratitudScreen() {
           {/* ── Intro ────────────────────────────────────────────── */}
           <ParaQueSirve toolId="gratitud" style={{ marginBottom: 16 }} />
           <View style={s.intro}>
-            <View style={s.introIconWrap}>
-              <MaterialCommunityIcons name="heart-outline" size={26} color="#C1694F" />
-            </View>
-            {/* 🔴 El título decía *"¿Por qué estás agradecido hoy?"* — le asignaba
-                género a quien lee (misma familia que "cansado" en el Diario). Vive
-                en `@/lib/vozCompartida`, que lo barre con el guardarraíl transversal
-                para que no reaparezca (`problemas-abiertos.md` C7). */}
             <Text style={s.introTitle}>{GRATITUD_TITULO}</Text>
             <Text style={s.introSubtitle}>{GRATITUD_SUBTITULO}</Text>
-            {streak > 0 && (
-              <View style={s.streakPill}>
-                <MaterialCommunityIcons name="fire" size={14} color="#C1694F" />
-                <Text style={s.streakText}>{streak} {streak === 1 ? 'día seguido' : 'días seguidos'}</Text>
-              </View>
-            )}
           </View>
 
-          {/* ── Campos de gratitud ───────────────────────────────── */}
-          {([0, 1, 2] as const).map(i => (
-            <View key={i} style={[s.fieldCard, focused[i] && s.fieldCardFocused]}>
-              <View style={[s.fieldIconWrap, { backgroundColor: FIELD_META[i].bg }]}>
-                <MaterialCommunityIcons name={FIELD_META[i].icon} size={17} color={ViveColors.primary} />
-              </View>
-              <TextInput
-                style={s.fieldInput}
-                value={items[i]}
-                onChangeText={v => updateItem(i, v)}
-                onFocus={() => setFieldFocused(i, true)}
-                onBlur={() => setFieldFocused(i, false)}
-                placeholder={PLACEHOLDERS[i]}
-                placeholderTextColor={`${ViveColors.text}55`}
-                multiline
-                textAlignVertical="top"
-                maxLength={300}
-              />
-            </View>
-          ))}
+          {/* ── Campos: tres filas en una card ───────────────────── */}
+          <SurfaceCard variant="elevated" backgroundColor="rgba(255,248,240,0.88)" borderRadius={20}>
+            {([0, 1, 2] as const).map(i => {
+              const tiene = items[i].trim().length > 0;
+              return (
+                <View key={i} style={[s.fieldRow, i > 0 && s.fieldRowDivider]}>
+                  <NumberBadge n={i + 1} filled={tiene} reduced={reduced} />
+                  <TextInput
+                    style={s.fieldInput}
+                    value={items[i]}
+                    onChangeText={v => updateItem(i, v)}
+                    onFocus={() => setFieldFocused(i, true)}
+                    onBlur={() => setFieldFocused(i, false)}
+                    placeholder={PLACEHOLDERS[i]}
+                    placeholderTextColor={`${ViveColors.text}55`}
+                    multiline
+                    textAlignVertical="top"
+                    maxLength={300}
+                  />
+                </View>
+              );
+            })}
+          </SurfaceCard>
+
+          <Text style={s.counter}>{counterText}</Text>
 
           {/* ── Botón guardar ────────────────────────────────────── */}
           <Animated.View style={[s.saveBtnWrap, { transform: [{ scale: saveScale }] }]}>
             <TouchableOpacity
-              style={[
-                s.saveBtn,
-                !canSave && !saved && s.saveBtnDisabled,
-                saved && s.saveBtnSaved,
-              ]}
+              style={[s.saveBtn, !canSave && s.saveBtnDisabled]}
               onPress={handleSave}
-              disabled={!canSave || saved}
+              disabled={!canSave}
               activeOpacity={0.85}
             >
-              {saved ? (
-                <View style={s.savedRow}>
-                  <MaterialCommunityIcons name="check-circle-outline" size={18} color="#F7EFE4" />
-                  <Text style={s.saveBtnText}>Guardado. Gracias por tomarte este momento</Text>
-                </View>
-              ) : (
-                <Text style={[s.saveBtnText, !canSave && s.saveBtnTextDisabled]}>Guardar</Text>
-              )}
+              <Text style={[s.saveBtnText, !canSave && s.saveBtnTextDisabled]}>Guardar</Text>
             </TouchableOpacity>
           </Animated.View>
 
@@ -344,6 +360,32 @@ export default function GratitudScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      <SaveScreen
+        visible={showSave}
+        onDone={cerrarGuardado}
+        gradient={SAVE_GRADIENT}
+        title="Quedó guardado"
+        racha={rachaGuardado > 0 ? {
+          icon: 'fire',
+          label: `${rachaGuardado} ${rachaGuardado === 1 ? 'día seguido' : 'días seguidos'}`,
+          color: TERRACOTA,
+          tint: TERRACOTA_TINT,
+        } : null}
+        recap={
+          <>
+            {savedItems.map((t, i) => (
+              <View key={i} style={s.recapRow}>
+                <Text style={s.recapNum}>{i + 1}</Text>
+                <Text style={s.recapText}>{t}</Text>
+              </View>
+            ))}
+          </>
+        }
+        crossInvite={{ label: '¿Querés escribir en el diario?', onPress: irAlDiario }}
+        origen="gratitud"
+        reduced={reduced}
+      />
+
       <ConsentSheet {...consentGate.sheetProps} />
     </SafeAreaView>
   );
@@ -351,13 +393,9 @@ export default function GratitudScreen() {
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: ViveColors.background,
-  },
+  safe: { flex: 1, backgroundColor: ViveColors.background },
   flex: { flex: 1 },
 
-  // Header — layout compartido en ToolHeader; acá solo queda el contenido del slot `right`
   datePillText: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
@@ -370,50 +408,15 @@ const s = StyleSheet.create({
     paddingVertical: 5,
     overflow: 'hidden',
   },
-  headerDivider: {
-    height: 1,
-    backgroundColor: `${ViveColors.text}0D`,
-  },
+  rachaRow: { alignItems: 'center', marginTop: 4, marginBottom: 8 },
+  headerDivider: { height: 1, backgroundColor: `${ViveColors.text}0D` },
 
-  // Scroll
   scroll: { flex: 1 },
-  container: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-  },
+  container: { paddingHorizontal: 20, paddingTop: 24 },
 
-  // Intro
-  intro: {
-    alignItems: 'center',
-    marginBottom: 32,
-    gap: 10,
-  },
-  introIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(193,105,79,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  streakPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(193,105,79,0.12)',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 4,
-  },
-  streakText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: '#C1694F',
-  },
+  intro: { alignItems: 'center', marginBottom: 20, gap: 8 },
   introTitle: {
-    fontFamily: ViveFonts.semibold,
+    fontFamily: ViveFonts.title,
     fontSize: 20,
     color: ViveColors.text,
     textAlign: 'center',
@@ -427,29 +430,16 @@ const s = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Gratitude fields
-  fieldCard: {
-    backgroundColor: 'rgba(255,248,240,0.80)',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(193,105,79,0.25)',
-    padding: 16,
+  // Campos (3 filas en una card)
+  fieldRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 14,
-    marginBottom: 12,
-    ...shadow,
+    paddingVertical: 14,
   },
-  fieldCardFocused: {
-    borderColor: '#C1694F',
-  },
-  fieldIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+  fieldRowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(86,94,50,0.16)',
   },
   fieldInput: {
     flex: 1,
@@ -457,16 +447,21 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: ViveColors.text,
     lineHeight: 23,
-    minHeight: 52,
+    minHeight: 24,
+    paddingTop: 1,
     padding: 0,
     textAlignVertical: 'top',
   },
+  counter: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12.5,
+    color: `${ViveColors.text}88`,
+    textAlign: 'right',
+    marginTop: 8,
+  },
 
   // Save button
-  saveBtnWrap: {
-    marginTop: 8,
-    marginBottom: 36,
-  },
+  saveBtnWrap: { marginTop: 16, marginBottom: 36 },
   saveBtn: {
     backgroundColor: ViveColors.accent,
     borderRadius: 16,
@@ -475,48 +470,23 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
-      ios: {
-        shadowColor: ViveColors.accent,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.28,
-        shadowRadius: 8,
-      },
+      ios: { shadowColor: ViveColors.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.28, shadowRadius: 8 },
       android: { elevation: 4 },
     }),
   },
   saveBtnDisabled: {
     backgroundColor: CREAM_DEEP,
-    ...Platform.select({
-      ios: { shadowOpacity: 0 },
-      android: { elevation: 0 },
-    }),
-  },
-  saveBtnSaved: {
-    backgroundColor: ViveColors.accent,
-    ...Platform.select({
-      ios: {
-        shadowColor: ViveColors.accent,
-        shadowOpacity: 0.28,
-      },
-      android: { elevation: 4 },
-    }),
+    opacity: 0.55,
+    ...Platform.select({ ios: { shadowOpacity: 0 }, android: { elevation: 0 } }),
   },
   saveBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: '#F7EFE4',
+    color: ViveColors.onPrimaryInk,
     textAlign: 'center',
     lineHeight: 22,
   },
-  saveBtnTextDisabled: {
-    color: 'rgba(86,94,50,0.40)',
-  },
-  savedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
+  saveBtnTextDisabled: { color: 'rgba(86,94,50,0.45)' },
 
   // History
   sectionTitle: {
@@ -533,7 +503,6 @@ const s = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     gap: 8,
-    ...shadow,
   },
   entryDate: {
     fontFamily: ViveFonts.medium,
@@ -542,11 +511,7 @@ const s = StyleSheet.create({
     textTransform: 'capitalize',
     marginBottom: 2,
   },
-  entryRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
+  entryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   entryBullet: {
     fontFamily: ViveFonts.bold,
     fontSize: 12,
@@ -561,5 +526,23 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: ViveColors.text,
     lineHeight: 20,
+  },
+
+  // Recap de la pantalla de guardado
+  recapRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  recapNum: {
+    fontFamily: ViveFonts.feedback,
+    fontSize: 15,
+    color: TERRACOTA,
+    lineHeight: 24,
+    width: 16,
+    flexShrink: 0,
+  },
+  recapText: {
+    flex: 1,
+    fontFamily: ViveFonts.feedback,
+    fontSize: 15,
+    color: ViveColors.text,
+    lineHeight: 24,
   },
 });

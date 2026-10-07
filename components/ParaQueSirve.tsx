@@ -50,6 +50,7 @@ export default function ParaQueSirve({ toolId, style }: { toolId: string; style?
           accessibilityState={{ expanded: false }}>
           <MaterialCommunityIcons name="information-outline" size={14} color={FOREST_SOFT} />
           <Text style={s.enlaceTexto}>Para qué sirve</Text>
+          <MaterialCommunityIcons name="chevron-down" size={16} color={FOREST_SOFT} />
         </TouchableOpacity>
       </View>
     );

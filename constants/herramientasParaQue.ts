@@ -23,7 +23,9 @@ export const PARA_QUE: Record<string, ParaQue> = {
   gratitud: {
     para: 'Anotar tres cosas que estuvieron bien, para que el día no quede solo con lo que salió mal.',
     cuando: 'Al terminar el día. Son cinco minutos.',
-    saber: 'No tienen que ser grandes: alcanza con que sean tuyas.',
+    // Antes repetía "alcanza con que sean tuyas", que ya está en el subtítulo
+    // (GRATITUD_SUBTITULO). Se cambió por un dato que no estaba en ningún lado.
+    saber: 'Lo que anotás es privado: solo lo ves vos.',
   },
   respiracion: {
     para: 'Frenar un momento y concentrarte en algo simple: el ritmo de tu respiración.',

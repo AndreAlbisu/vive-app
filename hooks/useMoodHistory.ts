@@ -6,6 +6,9 @@ export interface MoodEntry {
   mood_id: number;
   mood_label: string;
   entry_date: string;
+  // Timestamp real del check-in. El Diario lo usa para mostrar "la hora" en la
+  // fila "Hoy registraste…". Opcional: los consumidores viejos no lo piden.
+  created_at?: string;
 }
 
 export function useMoodHistory(userId: string | undefined, days = 7) {
@@ -25,7 +28,7 @@ export function useMoodHistory(userId: string | undefined, days = 7) {
 
     supabase
       .from('mood_entries')
-      .select('id, mood_id, mood_label, entry_date')
+      .select('id, mood_id, mood_label, entry_date, created_at')
       .eq('user_id', userId)
       .gte('entry_date', fromStr)
       .order('entry_date', { ascending: false })
