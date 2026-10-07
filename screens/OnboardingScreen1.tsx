@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { AppBg } from '@/components/ui/AppBg';
-import { ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts } from '@/constants/theme';
+import { Grain } from '@/components/ui/Grain';
+import { PrintLines } from '@/components/ui/PrintLines';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
 import Animated, {
   useSharedValue,
@@ -49,17 +51,16 @@ const HOLD_MS       = 1500;
 const BRAND_GROW_MS = 1100;
 
 // ── Palette ───────────────────────────────────────────────────────────────────
+// El wordmark pasa a verde bosque sólido (ViveColors.accent) con un duplicado
+// terracota (ViveColors.primary) desplazado — "mala registración" de imprenta.
+// El fondo es crema plano del token (ViveColors.background), sin degradé.
 const PAL = {
-  bg:        '#FBF3E7',
-  bgTo:      '#F4E2C8',
-  // Wordmark "vita" (07/10, Joaquín): relleno TERRACOTA con borde fino VERDE
-  // OLIVA. El borde se dibuja con doble capa (trazo redondeado abajo + relleno
-  // arriba) para que no haga el pico raro en la "v".
-  textColor:  '#D4826A',   // relleno terracota más claro (07/10, Joaquín)
-  textStroke: '#6E7A3C',   // borde fino verde oliva
-  // Tagline en terracota sólido (sin borde; en 12px un contorno ensuciaría).
-  subColor:   '#9E5742',
+  subColor: '#9E5742',   // tagline "convive con vos"
 } as const;
+
+// Desfasaje de la mala registración, en unidades del viewBox (≈2px en pantalla).
+// Sutil a propósito: si se nota demasiado parece error.
+const MISREG = 2;
 
 // Durazno calmo (Joaquín, 06/10, laboratorio) — antes naranja (#FF9A52…), se
 // sentía fuerte; este tono es más suave y menos "neón" al superponerse.
@@ -140,6 +141,7 @@ export default function OnboardingScreen1() {
   const abandono = useRef(cronometro()).current;
   const [hintText, setHintText] = useState('mantené presionado');
   const [entryDone, setEntryDone] = useState(false);
+  const reduced = useReducedMotion();
 
   // ── Shared values ─────────────────────────────────────────────────────────
   const entryP = useSharedValue(0);
@@ -177,6 +179,17 @@ export default function OnboardingScreen1() {
       }
     });
   }, []);
+
+  // Reduced-motion: los círculos quedan quietos en su posición final (sin
+  // orbitar). El hook es async, así que si la preferencia resuelve DESPUÉS de
+  // montar, se corta la animación en curso y se salta al final.
+  useEffect(() => {
+    if (!reduced) return;
+    cancelAnimation(entryP);
+    entryP.value = 1;
+    hintOp.value = 1;
+    setEntryDone(true);
+  }, [reduced]);
 
   // ── Press handlers ────────────────────────────────────────────────────────
   const handlePressIn = useCallback(() => {
@@ -226,6 +239,20 @@ export default function OnboardingScreen1() {
     } as any;
   });
 
+  // Capa de atrás del wordmark: misma animación que brandProps, pero desplazada
+  // en y (+MISREG; el de x va en el elemento) y a 55% de opacidad. Es la "mala
+  // registración" de imprenta — una tinta corrida un pelo.
+  const brandBackProps = useAnimatedProps(() => {
+    const me = eioq(mergeP.value);
+    const wp = eioq(Math.min(1, Math.max(0, (entryP.value - 0.45) / 0.5)));
+    return {
+      y:             lerp(CY - 90, CY, me) + MISREG,
+      fontSize:      lerp(52, 62, me),
+      letterSpacing: lerp(30, 0, wp),
+      opacity:       wp * 0.55,
+    } as any;
+  });
+
   // Tagline: fades in when me > 0.85
   const taglineProps = useAnimatedProps(() => {
     const me = eioq(mergeP.value);
@@ -250,7 +277,7 @@ export default function OnboardingScreen1() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <AppBg>
+    <View style={styles.cream}>
       {/* Dark overlay fades in during reveal before navigating */}
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,8,38,0.88)' }, overlayStyle]}
@@ -265,7 +292,11 @@ export default function OnboardingScreen1() {
       >
         {/* Diagram group — scales out + fades on reveal */}
         <Animated.View style={[StyleSheet.absoluteFill, diagramStyle]}>
+          {/* ── Círculos: intactos (color, blur, tamaño, posición, animación,
+              tiempos). Solo se los movió a su propio SVG para poder meter las
+              texturas encima sin tocarlos. ── */}
           <Svg
+            style={StyleSheet.absoluteFill}
             viewBox={`0 0 ${VB_W} ${VB_H}`}
             width="100%"
             height="100%"
@@ -298,23 +329,33 @@ export default function OnboardingScreen1() {
             <AnimatedCircle animatedProps={ig0} fill={`url(#${GRAD_IDS[0]})`} />
             <AnimatedCircle animatedProps={ig1} fill={`url(#${GRAD_IDS[1]})`} />
             <AnimatedCircle animatedProps={ig2} fill={`url(#${GRAD_IDS[2]})`} />
+          </Svg>
 
-            {/* ── Brand name: floats above, glides to center on merge.
-                Doble capa para un contorno limpio: (1) solo-trazo abajo, con
-                juntas/puntas redondeadas (si no, la "v" hace un pico feo), y
-                (2) el relleno arriba, que tapa la mitad interior del trazo —
-                así el borde queda parejo y fino por fuera. ── */}
+          {/* ── Trama + grano: ENCIMA de los círculos, DEBAJO del wordmark, para
+              que todo se vea impreso sobre el mismo papel. Full-screen (cubren el
+              papel entero, no el SVG letterboxed). Muy tenues: no ensucian los
+              círculos. ── */}
+          <PrintLines color={ViveColors.accent} opacity={0.06} />
+          <Grain opacity={0.16} />
+
+          {/* ── Wordmark: su propio SVG, encima de las texturas. Dos capas con
+              "mala registración" de imprenta: atrás terracota corrida +MISREG a
+              55%, adelante verde bosque sólido (sin contorno). ── */}
+          <Svg
+            style={StyleSheet.absoluteFill}
+            viewBox={`0 0 ${VB_W} ${VB_H}`}
+            width="100%"
+            height="100%"
+            preserveAspectRatio="xMidYMid meet"
+            pointerEvents="none"
+          >
             <AnimatedSvgText
-              animatedProps={brandProps}
-              x={CX}
+              animatedProps={brandBackProps}
+              x={CX + MISREG}
               textAnchor="middle"
-              fontFamily="PlusJakartaSans_800ExtraBold"
+              fontFamily={ViveFonts.wordmark}
               fontWeight="800"
-              fill="none"
-              stroke={PAL.textStroke}
-              strokeWidth={3}
-              strokeLinejoin="round"
-              strokeLinecap="round"
+              fill={ViveColors.primary}
             >
               {'vita'}
             </AnimatedSvgText>
@@ -322,9 +363,9 @@ export default function OnboardingScreen1() {
               animatedProps={brandProps}
               x={CX}
               textAnchor="middle"
-              fontFamily="PlusJakartaSans_800ExtraBold"
+              fontFamily={ViveFonts.wordmark}
               fontWeight="800"
-              fill={PAL.textColor}
+              fill={ViveColors.accent}
             >
               {'vita'}
             </AnimatedSvgText>
@@ -352,7 +393,7 @@ export default function OnboardingScreen1() {
           </Animated.Text>
         </SafeAreaView>
       </Pressable>
-    </AppBg>
+    </View>
   );
 }
 
@@ -361,6 +402,11 @@ export default function OnboardingScreen1() {
 // =============================================================================
 
 const styles = StyleSheet.create({
+  // Crema PLANO del token (sin degradé — el riso no tiene degradés).
+  cream: {
+    flex: 1,
+    backgroundColor: ViveColors.background,
+  },
   pressable: {
     flex: 1,
   },

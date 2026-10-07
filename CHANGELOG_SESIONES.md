@@ -1,3 +1,18 @@
+## 2026-10-08 — Joaquín (Claude · rediseño de la splash: fondo impreso + wordmark)
+
+**Tocado:** `screens/OnboardingScreen1.tsx`, `components/ui/Grain.tsx` (nuevo), `components/ui/PrintLines.tsx` (nuevo). Directo en `main` (rama única). **Sin migraciones.**
+
+**Resumen:**
+- Cambian **solo** el fondo y el wordmark de la splash. **Los tres círculos y su animación NO se tocaron** (color/blur/tamaño/posición/tiempos iguales); solo se los movió a su propio SVG para poder meter las texturas encima sin modificarlos.
+- **Fondo:** de `AppBg` (degradé) a **crema plano** (`ViveColors.background`). Dos texturas full-screen **encima de los círculos, debajo del wordmark**: trama de líneas (1px cada 4px, bosque 6%) y grano fuerte (feTurbulence ~16%). Orden: crema → círculos → trama → grano → wordmark.
+- **Wordmark:** de la "calcomanía" (relleno + contorno) a **verde bosque sólido** (`ViveColors.accent`) con un duplicado **terracota** (`ViveColors.primary`) desplazado +2/+2 a 55% — mala registración de imprenta. En el display que ya existe (Plus Jakarta `ViveFonts.wordmark`; **no hay serif desde la migración del 24/08**), bold, minúsculas.
+- **Componentes reutilizables nuevos:** `Grain` (feTurbulence, intensidad por prop — pensado para subir a otras superficies más adelante) y `PrintLines` (trama). No se tocaron las cards (su grano es otro, de puntitos).
+- **Reduced-motion:** la splash ahora lo respeta — con la preferencia activa, los círculos quedan quietos en su posición final (se corta la entrada aun si la preferencia resuelve después de montar).
+
+**Pendiente para la próxima sesión:**
+- 🟡 **Probar en iOS y Android por separado** (no se pudo correr acá): las texturas y los modos de mezcla difieren entre plataformas. 🔴 **Riesgo Android:** los filtros SVG (feTurbulence) pueden flaquear; si el grano no se ve en Android, el fallback es un PNG de ruido tileable detrás de la misma API de `Grain`. El "multiply" se aproximó con ruido oscuro a 16% de opacidad.
+- Afinar el desfasaje (`MISREG`, hoy 2 unidades de viewBox ≈ 2px) si se nota mucho/poco en device.
+
 ## 2026-10-07 — Joaquín (Claude · rediseño de Gratitud y Diario como pantallas hermanas)
 
 **Tocado:** `app/gratitud.tsx`, `app/diario.tsx`, `components/ui/ToolWash.tsx` (nuevo), `components/ui/RachaPill.tsx` (nuevo), `components/ui/NumberBadge.tsx` (nuevo), `components/ui/SaveScreen.tsx` (nuevo), `hooks/useMoodHistory.ts`, `components/ParaQueSirve.tsx`, `constants/herramientasParaQue.ts`. Rama `rediseno-gratitud-diario` (PR draft). **Sin migraciones.**
