@@ -3,6 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { AppBg } from '@/components/ui/AppBg';
+import { ViveFonts } from '@/constants/theme';
 import { anotar, cronometro } from '@/lib/analytics';
 import Animated, {
   useSharedValue,
@@ -37,10 +38,11 @@ const R         = 66;    // resting circle radius
 const ORBIT_R   = 150;   // far orbital radius (entry start)
 const REST_DIST = 46;    // center→circle-center distance at rest
 
-// Classic Venn triangle: top, bottom-right, bottom-left (degrees, clockwise from right)
-const REST_ANGLES  = [270, 30, 150] as const;
-// Off-plane start angles so each circle swings in along its own arc
-const START_ANGLES = [200, -40, 80] as const;
+// Venn triangle INVERTIDO (apex abajo): bottom, top-right, top-left — reflejo
+// vertical del original [270,30,150] (degrees, clockwise from right; y+ = abajo).
+const REST_ANGLES  = [90, 330, 210] as const;
+// Start angles reflejados igual, para que cada círculo entre por su propio arco.
+const START_ANGLES = [160, 40, 280] as const;
 
 const ENTRY_MS      = 1900;
 const HOLD_MS       = 1500;
@@ -50,12 +52,18 @@ const BRAND_GROW_MS = 1100;
 const PAL = {
   bg:        '#FBF3E7',
   bgTo:      '#F4E2C8',
-  textColor: '#7A3D12',
-  subColor:  '#B97A3E',
-  ring:      'rgba(122,61,18,0.28)',
+  // Wordmark "vita" (07/10, Joaquín): relleno TERRACOTA con borde fino VERDE
+  // OLIVA. El borde se dibuja con doble capa (trazo redondeado abajo + relleno
+  // arriba) para que no haga el pico raro en la "v".
+  textColor:  '#D4826A',   // relleno terracota más claro (07/10, Joaquín)
+  textStroke: '#6E7A3C',   // borde fino verde oliva
+  // Tagline en terracota sólido (sin borde; en 12px un contorno ensuciaría).
+  subColor:   '#9E5742',
 } as const;
 
-const AURA_COLORS = ['#FF9A52', '#FFB36B', '#FFC98C'] as const;
+// Durazno calmo (Joaquín, 06/10, laboratorio) — antes naranja (#FF9A52…), se
+// sentía fuerte; este tono es más suave y menos "neón" al superponerse.
+const AURA_COLORS = ['#F39A7E', '#F7BBA6', '#FBD8CB'] as const;
 const GRAD_IDS    = ['vgA', 'vgB', 'vgC'] as const;
 const DEG         = Math.PI / 180;
 
@@ -115,30 +123,6 @@ function useCircleAnimProps(
       cy,
       r:       baseR * rMult,
       opacity: lerp(0.9, 1, me) * opacityMult,
-    };
-  });
-}
-
-function useRingAnimProps(
-  idx: 0 | 1 | 2,
-  entryP: SharedValue<number>,
-  mergeP: SharedValue<number>,
-) {
-  const sx = START_POS[idx].x;
-  const sy = START_POS[idx].y;
-  const rx = REST_POS[idx].x;
-  const ry = REST_POS[idx].y;
-
-  return useAnimatedProps(() => {
-    const ee = eioq(entryP.value);
-    const me = eioq(mergeP.value);
-    const cx = lerp(lerp(sx, rx, ee), CX, me);
-    const cy = lerp(lerp(sy, ry, ee), CY, me);
-    return {
-      cx,
-      cy,
-      r:           lerp(R, R * 1.5, me),
-      strokeWidth: lerp(1.2, 0, me),
     };
   });
 }
@@ -216,25 +200,29 @@ export default function OnboardingScreen1() {
 
   // ── Animated props (9 circle hooks — fixed call order) ───────────────────
 
-  // Outer deep glow — large blur, r × 1.15, 70 % opacity
-  const og0 = useCircleAnimProps(0, 1.15, 0.7, entryP, mergeP);
-  const og1 = useCircleAnimProps(1, 1.15, 0.7, entryP, mergeP);
-  const og2 = useCircleAnimProps(2, 1.15, 0.7, entryP, mergeP);
+  // Outer deep glow — r × 1.15, 30 % opacity (modo "nítido": halo tenue para
+  // que el disco interior defina el círculo en vez de difuminarse).
+  const og0 = useCircleAnimProps(0, 1.15, 0.3, entryP, mergeP);
+  const og1 = useCircleAnimProps(1, 1.15, 0.3, entryP, mergeP);
+  const og2 = useCircleAnimProps(2, 1.15, 0.3, entryP, mergeP);
   // Inner glow — medium blur, r × 0.88, 100 % opacity
   const ig0 = useCircleAnimProps(0, 0.88, 1.0, entryP, mergeP);
   const ig1 = useCircleAnimProps(1, 0.88, 1.0, entryP, mergeP);
   const ig2 = useCircleAnimProps(2, 0.88, 1.0, entryP, mergeP);
-  // Thin rings (stroke fades to 0 during merge)
-  const rg0 = useRingAnimProps(0, entryP, mergeP);
-  const rg1 = useRingAnimProps(1, entryP, mergeP);
-  const rg2 = useRingAnimProps(2, entryP, mergeP);
 
-  // Brand name: y slides from CY-92 down to CY; fontSize grows 28→34
+  // Brand name: y slides from CY-90 down to CY; fontSize grows 52→62.
+  // "Letras que se juntan" (tracking-in, elegido por Joaquín 06/10 en el
+  // laboratorio): en la segunda mitad de la entrada el wordmark aparece con las
+  // letras separadas y se juntan a su lugar (letterSpacing 30→0 + fade). Se mide
+  // con entryP, así que pasa mientras los círculos terminan de entrar.
   const brandProps = useAnimatedProps(() => {
     const me = eioq(mergeP.value);
+    const wp = eioq(Math.min(1, Math.max(0, (entryP.value - 0.45) / 0.5)));
     return {
-      y:        lerp(CY - 90, CY, me),
-      fontSize: lerp(52, 62, me),
+      y:             lerp(CY - 90, CY, me),
+      fontSize:      lerp(52, 62, me),
+      letterSpacing: lerp(30, 0, wp),
+      opacity:       wp,
     } as any;
   });
 
@@ -291,7 +279,11 @@ export default function OnboardingScreen1() {
                   cx="50%" cy="50%" r="55%"
                   fx="50%" fy="50%"
                 >
-                  <Stop offset="0%"   stopColor={color} stopOpacity="0.95" />
+                  {/* Modo "nítido" (Joaquín, 06/10): núcleo plano y opaco con
+                      caída recién cerca del borde, para que cada orbe se lea
+                      como un DISCO definido (un Venn), no como niebla. */}
+                  <Stop offset="0%"   stopColor={color} stopOpacity="0.67" />
+                  <Stop offset="72%"  stopColor={color} stopOpacity="0.62" />
                   <Stop offset="100%" stopColor={color} stopOpacity="0" />
                 </RadialGradient>
               ))}
@@ -307,12 +299,25 @@ export default function OnboardingScreen1() {
             <AnimatedCircle animatedProps={ig1} fill={`url(#${GRAD_IDS[1]})`} />
             <AnimatedCircle animatedProps={ig2} fill={`url(#${GRAD_IDS[2]})`} />
 
-            {/* ── Layer 3: thin rings (fade during merge) ── */}
-            <AnimatedCircle animatedProps={rg0} fill="none" stroke={PAL.ring} />
-            <AnimatedCircle animatedProps={rg1} fill="none" stroke={PAL.ring} />
-            <AnimatedCircle animatedProps={rg2} fill="none" stroke={PAL.ring} />
-
-            {/* ── Brand name: floats above, glides to center on merge ── */}
+            {/* ── Brand name: floats above, glides to center on merge.
+                Doble capa para un contorno limpio: (1) solo-trazo abajo, con
+                juntas/puntas redondeadas (si no, la "v" hace un pico feo), y
+                (2) el relleno arriba, que tapa la mitad interior del trazo —
+                así el borde queda parejo y fino por fuera. ── */}
+            <AnimatedSvgText
+              animatedProps={brandProps}
+              x={CX}
+              textAnchor="middle"
+              fontFamily="PlusJakartaSans_800ExtraBold"
+              fontWeight="800"
+              fill="none"
+              stroke={PAL.textStroke}
+              strokeWidth={3}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            >
+              {'vita'}
+            </AnimatedSvgText>
             <AnimatedSvgText
               animatedProps={brandProps}
               x={CX}
@@ -330,7 +335,7 @@ export default function OnboardingScreen1() {
               x={CX}
               y={CY + 28}
               textAnchor="middle"
-              fontFamily="SpaceGrotesk_400Regular"
+              fontFamily={ViveFonts.regular}
               fontSize={12}
               letterSpacing={0.8}
               fill={PAL.subColor}
@@ -368,7 +373,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   hint: {
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: ViveFonts.regular,
     fontSize: 11,
     letterSpacing: 1,
     color: '#87835C',

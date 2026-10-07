@@ -14,6 +14,23 @@
 **Pendiente para la próxima sesión:**
 - Probar las dos pantallas en device (no se pudo correr acá). Mirar: el rebote del `NumberBadge`, el "pop" del check, la fila de check-in y su "Cambiar", y la invitación cruzada (que aparezca una sola vez).
 - Decisión de voz menor: el `saber` de gratitud ahora dice "Lo que anotás es privado: solo lo ves vos" — confirmar con Andre si le cierra.
+## 2026-10-06 — Joaquín (Claude · animación de inicio: iteraciones 2 y 3 + laboratorio HTML)
+
+**Tocado:** `screens/OnboardingScreen1.tsx`
+
+**Resumen:**
+- Varias iteraciones de la animación de inicio con Joaquín (rama `fix-onboarding-tipografia`, PR #8, skill `animate-expo`), **todas decididas en un laboratorio HTML** (artifact) que reproduce la animación 1:1 (misma geometría/gradientes/tiempos, tipografías reales embebidas) — se eligió en el navegador sin depender del device.
+- **Estado final:**
+  - **Círculos NÍTIDOS**: gradiente de núcleo plano (offsets 0/72/100, opacidad 0.67/0.62) + glow exterior a 0.3 → cada orbe se lee como un disco (un Venn), no como niebla. (Antes "aura suave": a Joaquín no le gustaba, quería ver los círculos.) Sin anillos finos (fuera Layer 3, `useRingAnimProps`, `PAL.ring`).
+  - **Orbes** en **durazno** (`#F39A7E…`), antes naranja.
+  - **Texto "vita"/tagline**: verde/oliva → terracota → espresso → **terracota de marca** (`#C1694F`/`#9E5742`), donde quedó.
+  - **"vita" entra con tracking-in** ("letras que se juntan"): en la 2da mitad de la entrada aparece con las letras separadas y se juntan (letterSpacing 30→0 + fade), medido con `entryP`, en paralelo a los círculos entrando.
+- 🟡 **Verificar en device**: el `letterSpacing` animado en `react-native-svg` conviene mirarlo en el teléfono (debería andar, no se probó en RN acá).
+- **Raíz del "sigue todo igual" (resuelta):** Metro corre desde el checkout principal `/Users/apple/vive-app-andre` (rama `build-anim`), que estaba **15 commits atrás** (`d42d8680`) → mostraba el verde original pese a todo lo pusheado. Se adelanta con `git pull --ff-only`; además un pull de Andre trajo `@noble/ciphers` (de su `lib/wellbeingCrypto.ts`) que pedía `npm install`. Ver [[reference_preview_device_build_anim]].
+- No se tocó base de datos ni schema.
+
+**Pendiente para la próxima sesión:**
+- Joaquín confirma el tracking-in en device (recargar Metro, ya está sincronizado) y se mergea PR #8.
 
 ## 2026-10-06 — Andre (Claude · USDT: volver a dar la sesión de una reserva vencida)
 
