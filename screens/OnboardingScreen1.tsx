@@ -52,11 +52,13 @@ const BRAND_GROW_MS = 1100;
 const PAL = {
   bg:        '#FBF3E7',
   bgTo:      '#F4E2C8',
-  // Terracota de la marca (ViveColors.primary). Joaquín volvió al terracota el
-  // 06/10 (sobre espresso/verde/marrón), ahora que los círculos son nítidos.
-  textColor: '#C1694F',
-  // Tagline en una terracota más honda para que ceda jerarquía al wordmark.
-  subColor:  '#9E5742',
+  // Wordmark "vita" (07/10, Joaquín): relleno CREMA con borde fino terracota.
+  // El crema es apenas más claro que el fondo, así las letras tienen cuerpo
+  // crema y el contorno terracota las dibuja.
+  textColor:  '#FFF7EC',   // relleno crema
+  textStroke: '#C1694F',   // borde fino terracota
+  // Tagline en terracota sólido (sin borde; en 12px un contorno ensuciaría).
+  subColor:   '#9E5742',
 } as const;
 
 // Durazno calmo (Joaquín, 06/10, laboratorio) — antes naranja (#FF9A52…), se
@@ -305,6 +307,8 @@ export default function OnboardingScreen1() {
               fontFamily="PlusJakartaSans_800ExtraBold"
               fontWeight="800"
               fill={PAL.textColor}
+              stroke={PAL.textStroke}
+              strokeWidth={1.4}
             >
               {'vita'}
             </AnimatedSvgText>
