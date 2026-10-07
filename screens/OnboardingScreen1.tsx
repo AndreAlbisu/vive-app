@@ -55,7 +55,7 @@ const PAL = {
   // Wordmark "vita" (07/10, Joaquín): relleno TERRACOTA con borde fino VERDE
   // OLIVA. El borde se dibuja con doble capa (trazo redondeado abajo + relleno
   // arriba) para que no haga el pico raro en la "v".
-  textColor:  '#C1694F',   // relleno terracota de marca
+  textColor:  '#D4826A',   // relleno terracota más claro (07/10, Joaquín)
   textStroke: '#6E7A3C',   // borde fino verde oliva
   // Tagline en terracota sólido (sin borde; en 12px un contorno ensuciaría).
   subColor:   '#9E5742',
