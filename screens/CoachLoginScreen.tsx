@@ -435,21 +435,6 @@ export default function CoachLoginScreen() {
                 Tu cuenta de profesional se activa cuando Vita aprueba tu solicitud.
               </Text>
 
-              {/* Aceptación implícita: la cláusula anti-solicitación de los T&C
-                  (§10) sostiene la medida anti-fuga, así que importa que el
-                  profesional pase por acá. */}
-              <Text style={s.legalNote}>
-                {'Al continuar declarás tener 18 años o más y aceptás los '}
-                <Text style={s.legalLink} onPress={() => setLegalDoc('terminos')}>
-                  Términos y condiciones
-                </Text>
-                {' y la '}
-                <Text style={s.legalLink} onPress={() => setLegalDoc('privacidad')}>
-                  Política de privacidad
-                </Text>
-                {' de Vita.'}
-              </Text>
-
               {error && !showEmailForm && <Text style={s.serverError}>{error}</Text>}
 
               <DivisorConPunto />
@@ -523,6 +508,25 @@ export default function CoachLoginScreen() {
                   </ScaleCard>
                 </View>
               )}
+              {/* 07/10/2026 (Andre): el aviso va al final, debajo de "Usar email"
+                  (y del formulario cuando está abierto). Cubre los tres métodos. */}
+              {/* Aceptación implícita: la cláusula anti-solicitación de los T&C
+                  (§10) sostiene la medida anti-fuga, así que importa que el
+                  profesional pase por acá. */}
+              {/* En dos renglones (Andre, 07/10): usa un poco más de ancho que
+                  los botones y, si en un teléfono angosto igual no entra, se
+                  achica apenas en vez de pasar a un tercero. */}
+              <Text style={s.legalNote} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.85}>
+                {'Al continuar declarás tener 18 años o más y aceptás los '}
+                <Text style={s.legalLink} onPress={() => setLegalDoc('terminos')}>
+                  Términos y condiciones
+                </Text>
+                {' y la '}
+                <Text style={s.legalLink} onPress={() => setLegalDoc('privacidad')}>
+                  Política de privacidad
+                </Text>
+                {' de Vita.'}
+              </Text>
             </Animated.View>
 
             {/* Footer — volver a la pantalla anterior (la bifurcación) */}
@@ -610,6 +614,7 @@ const s = StyleSheet.create({
     color: 'rgba(135,131,92,0.62)',
     lineHeight: 17,
     textAlign: 'center',
+    marginHorizontal: -14,
   },
   legalLink: {
     fontFamily: ViveFonts.semibold,

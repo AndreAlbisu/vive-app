@@ -323,7 +323,7 @@ export default function RegisterScreen() {
           <Animated.View style={[s.headingArea, fadeUp(headingAnim)]}>
             <Text style={s.heading}>{etapa === 'crear' ? 'Creá tu cuenta' : 'Entrá o creá tu cuenta'}</Text>
             <Text style={s.subheading}>
-              {etapa === 'crear' ? 'Es rápido y gratuito.' : 'Si ya tenés cuenta, entrás. Si no, la creamos.'}
+              {etapa === 'crear' ? 'Es rápido y gratuito.' : 'Si ya tenés cuenta, entrás.\nSi no, la creamos.'}
             </Text>
           </Animated.View>
 
@@ -363,21 +363,6 @@ export default function RegisterScreen() {
                 <View style={s.btnIcon} />
               </TouchableOpacity>
             )}
-
-            {/* Aceptación implícita de los botones sociales, pegada a ellos para
-                que quede claro a qué se refiere "Al continuar". Mismo texto que
-                en `LoginScreen`. */}
-            <Text style={s.legalNote}>
-              {'Al continuar con Google o Apple declarás tener 18 años o más y aceptás los '}
-              <Text style={s.termsLink} onPress={() => setShowTermsModal(true)}>
-                Términos y condiciones
-              </Text>
-              {' y la '}
-              <Text style={s.termsLink} onPress={() => setShowPrivacyModal(true)}>
-                Política de privacidad
-              </Text>
-              {' de Vita.'}
-            </Text>
 
             {serverError && !showEmailForm && (
               <Text style={s.serverError}>{serverError}</Text>
@@ -650,6 +635,22 @@ export default function RegisterScreen() {
                 )}
               </View>
             )}
+            {/* 07/10/2026 (Andre): el aviso va al final, debajo de "Usar email"
+                (y del formulario cuando está abierto), no entre los botones. */}
+            {/* Aceptación implícita de los botones sociales. El texto nombra a
+                Google y Apple, así que se entiende a qué se refiere aunque no
+                esté pegado a ellos. Mismo texto que en `LoginScreen`. */}
+            <Text style={s.legalNote}>
+              {'Al continuar con Google o Apple declarás tener 18 años o más y aceptás los '}
+              <Text style={s.termsLink} onPress={() => setShowTermsModal(true)}>
+                Términos y condiciones
+              </Text>
+              {' y la '}
+              <Text style={s.termsLink} onPress={() => setShowPrivacyModal(true)}>
+                Política de privacidad
+              </Text>
+              {' de Vita.'}
+            </Text>
           </Animated.View>
 
           {/* ── Footer ───────────────────────────────────────────── */}

@@ -1,6 +1,6 @@
 ## 2026-10-07 — Andre (Claude · bifurcación: textos, círculos y barra de estado)
 
-**Tocado:** `screens/OnboardingBifurcacion.tsx`, `app/_layout.tsx`. **Sin migraciones.**
+**Tocado:** `screens/OnboardingBifurcacion.tsx`, `app/_layout.tsx`, `screens/RegisterScreen.tsx`, `screens/CoachLoginScreen.tsx`. **Sin migraciones.**
 
 **Resumen:**
 - **Textos (decisión de Andre):** el lado izquierdo pasa de "Quiero crecer" a **"Busco acompañamiento"** (crecer sonaba a superación personal y no le hablaba a quien llega mal), y su descripción a "Quiero encontrar un profesional y tener herramientas para el día a día." (antes solo nombraba herramientas). El `id` y el tono siguen siendo `crecer`. Los dos títulos bajan de 25 a 21 para que "acompañamiento" entre en la columna.
@@ -8,7 +8,10 @@
 - **Aire:** "vita" más cerca del título y las flechas más abajo (la descripción nueva tocaba la flecha y sobraba una franja al pie).
 - 🔴 **Barra de estado en toda la app:** el `<StatusBar style="auto" />` de la raíz seguía el modo del teléfono, así que con el iPhone en modo oscuro la hora y la batería salían en blanco sobre el crema; además montaba después de la primera pantalla y le ganaba a su `dark-content`. Ahora es `dark`. Las pantallas oscuras (Sueño, Meditación, foto ampliada) siguen pidiendo `light-content` por su cuenta.
 
+- **Pantallas de entrada (retoques pedidos por Andre):** el aviso legal de `RegisterScreen` y de `CoachLoginScreen` baja al final, debajo de "Usar email" (y del formulario cuando está abierto), para que los tres botones queden juntos. En la del profesional entra en dos renglones (usa un poco más de ancho y se achica apenas si no alcanza). El subtítulo de "entrá o creá tu cuenta" va en dos renglones.
+
 **Pendiente para la próxima sesión:**
+- 🟡 **Abogado:** en `RegisterScreen` el aviso de Google/Apple ya no está pegado a esos botones; sumarlo a la consulta sobre la constancia de edad.
 - Mirar en Android la barra de estado y los títulos a 21.
 - Siguen en pie los pendientes de la entrada de abajo (abogado, Joaquín con las tres bienvenidas, `CoachLoginScreen`, ícono de la app).
 
