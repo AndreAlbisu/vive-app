@@ -102,7 +102,7 @@ export default function SuenoScreen() {
         </View>
 
         {phase === 'idle' && (
-          <View style={s.idleContent}>
+          <View style={s.setupContent}>
             <Ionicons name="moon-outline" size={56} color={FOREST_SOFT} />
             <Text style={s.subtitle}>Relajación pre-sueño</Text>
             <Text style={s.description}>
@@ -167,6 +167,9 @@ const s = StyleSheet.create({
   titleLight: { color: CREAM_LIGHT },
 
   idleContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 18 },
+  // Setup arriba y ordenado (el `done` sigue usando idleContent, centrado). Antes
+  // el setup centrado dejaba un vacío enorme arriba — mismo fix que Respiración/Sonidos.
+  setupContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 28, paddingTop: 24, gap: 18 },
   subtitle:    { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST, textAlign: 'center' },
   description: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 
