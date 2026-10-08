@@ -300,23 +300,29 @@ export default function GratitudScreen() {
             {([0, 1, 2] as const).map(i => {
               const tiene = items[i].trim().length > 0;
               return (
-                <View key={i} style={[s.fieldRow, i > 0 && s.fieldRowDivider]}>
-                  <View style={s.badgeWrap}>
-                    <NumberBadge n={i + 1} filled={tiene} reduced={reduced} />
+                // La línea de pelo va como elemento aparte (no como borde de la
+                // fila): con el borde en las filas 2 y 3, esas quedaban a otra
+                // altura que la 1. Así las tres filas son idénticas y alinean.
+                <React.Fragment key={i}>
+                  {i > 0 && <View style={s.hairline} />}
+                  <View style={s.fieldRow}>
+                    <View style={s.badgeWrap}>
+                      <NumberBadge n={i + 1} filled={tiene} reduced={reduced} />
+                    </View>
+                    <TextInput
+                      style={s.fieldInput}
+                      value={items[i]}
+                      onChangeText={v => updateItem(i, v)}
+                      onFocus={() => setFieldFocused(i, true)}
+                      onBlur={() => setFieldFocused(i, false)}
+                      placeholder={PLACEHOLDERS[i]}
+                      placeholderTextColor={`${ViveColors.text}55`}
+                      multiline
+                      textAlignVertical="top"
+                      maxLength={300}
+                    />
                   </View>
-                  <TextInput
-                    style={s.fieldInput}
-                    value={items[i]}
-                    onChangeText={v => updateItem(i, v)}
-                    onFocus={() => setFieldFocused(i, true)}
-                    onBlur={() => setFieldFocused(i, false)}
-                    placeholder={PLACEHOLDERS[i]}
-                    placeholderTextColor={`${ViveColors.text}55`}
-                    multiline
-                    textAlignVertical="top"
-                    maxLength={300}
-                  />
-                </View>
+                </React.Fragment>
               );
             })}
           </SurfaceCard>
@@ -443,9 +449,9 @@ const s = StyleSheet.create({
   // El TextInput multilínea (iOS) baja el texto un toque respecto al borde;
   // este marginTop centra el número con la primera línea (Joaquín, 08/10).
   badgeWrap: { marginTop: 3 },
-  fieldRowDivider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(86,94,50,0.16)',
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(86,94,50,0.16)',
   },
   fieldInput: {
     flex: 1,
