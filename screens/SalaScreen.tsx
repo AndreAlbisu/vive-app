@@ -1420,18 +1420,10 @@ export default function SalaScreen() {
             la que está hablando. La re-reserva desde adentro sigue existiendo
             en la tarjeta de cierre de sesión, que es su momento. */}
 
-        {/* Notas de la sesión: solo el coach (recipientIsCoach false = la otra parte
-            es el usuario), y si hay una sesión sobre la cual anotar. */}
-        {!recipientIsCoach && notesBookingId && recipientProfile && (
-          <TouchableOpacity
-            style={styles.rebookPill}
-            onPress={() => setNotesOpen(true)}
-            activeOpacity={0.8}
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
-            <MaterialCommunityIcons name="note-edit-outline" size={15} color="#3A4F2A" />
-            <Text style={styles.rebookPillText}>Notas</Text>
-          </TouchableOpacity>
-        )}
+        {/* 📝 Acá había un botón "Notas" al lado del nombre (08/10/2026). Apretaba
+            el nombre de la persona y quedaba lejos del pulgar, en iOS y en
+            Android. Las notas pasaron al "+" de abajo, junto a recomendar un
+            recurso. */}
 
         <TouchableOpacity
           style={styles.menuBtn}
@@ -2061,10 +2053,25 @@ export default function SalaScreen() {
               {isCurrentUserCoach && coachInternalId && (
                 <TouchableOpacity
                   style={styles.recoBtn}
-                  onPress={openRecoSheet}
+                  // El "+" junta lo que el profesional agrega a la conversación.
+                  // Las notas solo aparecen si hay una sesión sobre la cual
+                  // anotar; sin eso, abre directo los recursos como antes.
+                  onPress={() => {
+                    if (!recipientIsCoach && notesBookingId && recipientProfile) {
+                      setMenuSesion({
+                        title: 'Agregar',
+                        opciones: [
+                          { text: 'Recomendar un recurso', onPress: () => { void openRecoSheet(); } },
+                          { text: 'Notas de la sesión', onPress: () => setNotesOpen(true) },
+                        ],
+                      });
+                    } else {
+                      void openRecoSheet();
+                    }
+                  }}
                   activeOpacity={0.75}
                   accessibilityRole="button"
-                  accessibilityLabel="Recomendar un recurso"
+                  accessibilityLabel="Agregar: recomendar un recurso o abrir las notas de la sesión"
                   hitSlop={8}>
                   <MaterialCommunityIcons name="plus" size={20} color="#87835C" />
                 </TouchableOpacity>

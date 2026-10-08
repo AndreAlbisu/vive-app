@@ -1,3 +1,16 @@
+## 2026-10-08 — Andre (Claude · las notas de la sesión pasan al "+" del chat)
+
+**Tocado:** `screens/SalaScreen.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- En el chat, el botón "Notas" al lado del nombre apretaba el nombre de la persona y quedaba lejos del pulgar (pedido de Andre, probando en iOS y Android). Se sacó de arriba.
+- El "+" de al lado del campo de escribir, que solo servía para recomendar un recurso, ahora abre un menú "Agregar" con dos opciones: "Recomendar un recurso" y "Notas de la sesión". Si no hay una sesión sobre la cual anotar, abre directo los recursos, como antes.
+- Sigue funcionando abrir el chat directo en las notas desde otras pantallas (`abrir_notas=1`).
+
+**Pendiente para la próxima sesión:**
+- 🟡 El "+" solo se muestra cuando se puede escribir. Si el chat está deshabilitado (solicitud pendiente o bloqueo), las notas ya no tienen botón adentro del chat. Decidir si en ese caso hace falta otra entrada.
+- Probarlo en un teléfono: no se pudo correr acá.
+
 ## 2026-10-08 — Andre (Claude · primera prueba en Android: teclado y botón de la próxima sesión)
 
 **Tocado:** `screens/CoachHomeScreen.tsx` y los 18 archivos que usan `KeyboardAvoidingView` (login, registro, chat, diario, gratitud, hojas de notas y reportes, entre otros). **Sin migraciones.**
