@@ -16,12 +16,13 @@ import {
 } from 'react-native';
 import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, ERR_CREDENCIALES, ERR_MAIL_SIN_CONFIRMAR, ERR_YA_REGISTRADO } from '@/context/AuthContext';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
+import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
 import { supabase } from '@/lib/supabase';
@@ -47,12 +48,39 @@ const fadeUp = (anim: Animated.Value) => ({
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
 });
 
+// 🔴 Entrar y crear cuenta en UNA sola pantalla (07/10/2026, decisión de Andre).
+// Antes esta pantalla solo creaba cuentas y quien ya tenía una tenía que
+// encontrar el link al pie; del lado del profesional (`CoachLoginScreen`) ya
+// era un solo formulario. Ahora los dos lados funcionan igual:
+//
+//   · `entrar`        mail + contraseña → se intenta ENTRAR.
+//   · `no-encontrada` no coincidieron con ninguna cuenta. Supabase contesta lo
+//                     mismo si la cuenta no existe y si la contraseña está mal
+//                     (para que no se pueda averiguar qué mails hay), así que
+//                     acá NO se crea nada en silencio: se dice y se ofrece
+//                     crear, reintentar, recuperar la contraseña o un código.
+//   · `crear`         el alta de siempre: nombre, repetir contraseña, código de
+//                     invitación y los dos tildes (Términos y edad).
+//
+// Google y Apple no distinguen entrar de crear, así que su constancia va por
+// el aviso legal pegado a los botones, igual que en `LoginScreen` y en
+// `CoachLoginScreen`. Los tildes explícitos quedan donde SÍ se sabe que se está
+// creando una cuenta: el alta por mail.
+type Etapa = 'entrar' | 'no-encontrada' | 'crear';
+
 export default function RegisterScreen() {
   const router = useRouter();
   // El color del camino elegido en la bifurcación.
   const tonoOnboarding = useTonoOnboarding();
-  const { signUpWithEmail, signInWithGoogle, signInWithApple } = useAuth();
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  // Llega desde la bifurcación con la pantalla tapada por el color del ala.
+  // `modo=crear`: se llega desde "crear cuenta" del inicio de sesión, ya
+  // sabiendo que no hay cuenta. Se abre directo en el alta.
+  const { tono, modo } = useLocalSearchParams<{ tono?: string; modo?: string }>();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, resetPassword } = useAuth();
+  const [etapa, setEtapa] = useState<Etapa>(modo === 'crear' ? 'crear' : 'entrar');
+  const [showEmailForm, setShowEmailForm] = useState(modo === 'crear');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -100,7 +128,78 @@ export default function RegisterScreen() {
       setPassword('');
       setConfirmPassword('');
       setErrors({});
+      setServerError(null);
+      setResetMsg(null);
+      setEtapa('entrar');
     }
+  }
+
+  function irA(e: Etapa) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setServerError(null);
+    setResetMsg(null);
+    setErrors({});
+    setEtapa(e);
+  }
+
+  /** Primer paso: intentar ENTRAR con lo que escribió. */
+  async function handleContinuar() {
+    const mail = email.trim().toLowerCase();
+    const newErrors = { email: !mail, password: !password.trim() };
+    setErrors(newErrors);
+    setServerError(null);
+    setResetMsg(null);
+    if (newErrors.email || newErrors.password) return;
+
+    setLoading(true);
+    const error = await signInWithEmail(mail, password);
+    setLoading(false);
+
+    // Entró: no se navega desde acá, `AuthRedirect` decide a dónde (igual que
+    // en `LoginScreen`; navegar también acá generaba dos `replace` a la vez).
+    if (!error) return;
+
+    // La cuenta existe pero nunca confirmó el mail: a la pantalla del código.
+    if (error === ERR_MAIL_SIN_CONFIRMAR) {
+      router.push({ pathname: '/verificar-mail', params: { email: mail, modo: 'confirmar' } } as any);
+      return;
+    }
+    // 🔴 SOLO credenciales inválidas es el caso ambiguo (cuenta nueva o
+    // contraseña mal escrita). Un límite de intentos o una caída de red NO
+    // significan "esta cuenta no existe": se muestran tal cual.
+    if (error === ERR_CREDENCIALES) { irA('no-encontrada'); return; }
+    setServerError(error);
+  }
+
+  /** Recuperar la contraseña con el mail ya escrito. El mensaje NO confirma si
+   *  la cuenta existe (mismo criterio que `LoginScreen`). */
+  async function handleForgot() {
+    setServerError(null);
+    setResetMsg(null);
+    const mail = email.trim();
+    if (!mail) {
+      setErrors(prev => ({ ...prev, email: true }));
+      setResetMsg('Escribí tu email arriba y volvé a tocar acá.');
+      return;
+    }
+    setResetLoading(true);
+    const err = await resetPassword(mail);
+    setResetLoading(false);
+    setResetMsg(err ?? `Si hay una cuenta con ${mail}, te llega un mail con el link. Abrilo en este mismo teléfono.`);
+  }
+
+  /** Entrar con un código por mail, sin contraseña: la puerta de quien reservó
+   *  desde el link de un profesional (esa cuenta nace sin contraseña). */
+  function entrarConCodigo() {
+    setServerError(null);
+    setResetMsg(null);
+    const mail = email.trim();
+    if (!mail) {
+      setErrors(prev => ({ ...prev, email: true }));
+      setResetMsg('Escribí tu email arriba y volvé a tocar acá.');
+      return;
+    }
+    router.push({ pathname: '/verificar-mail', params: { email: mail, modo: 'entrar' } } as any);
   }
 
   function clearError(field: string) {
@@ -153,7 +252,10 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (error) {
-      setServerError(error);
+      // La cuenta SÍ existía: lo de antes fue una contraseña mal escrita.
+      setServerError(error === ERR_YA_REGISTRADO
+        ? 'Ya hay una cuenta con ese mail y esa contraseña no es la suya. Probá de nuevo, recuperá tu contraseña o, si la creaste con Google o Apple, entrá con ese botón.'
+        : error);
       return;
     }
     // No se navega desde acá (17/09/2026). Con la cuenta creada, `AuthRedirect`
@@ -170,17 +272,17 @@ export default function RegisterScreen() {
     }
   }
 
-  // Las dos declaraciones habilitan los tres métodos por igual.
+  // Las dos declaraciones habilitan el alta por mail.
   const canSubmit = acceptedTerms && ageConfirmed;
-  const GATE_ERROR = !acceptedTerms
-    ? 'Para continuar, aceptá los Términos y la Política de privacidad'
-    : 'Para continuar, confirmá que tenés 18 años o más';
 
-  // Google y Apple exigen los mismos checkboxes que el alta por email — antes estaban
-  // habilitados desde el arranque y se podía crear cuenta sin aceptar nada ni
-  // dejar constancia. El `true` que se les pasa persiste `profiles.accepted_terms`.
+  // 🔴 Google y Apple ya no esperan los tildes (07/10/2026): con ellos entrar y
+  // crear son el mismo botón, y pedirle dos tildes a quien solo vuelve a entrar
+  // es fricción sin sentido. La constancia NO se pierde: va por el aviso legal
+  // pegado a los botones ("Al continuar con Google o Apple declarás…"), el
+  // mismo criterio que ya usan `LoginScreen` y `CoachLoginScreen`. El `true`
+  // que se les pasa persiste `profiles.accepted_terms` y `age_confirmed` (el
+  // servidor nunca pisa una aceptación anterior).
   async function handleGoogle() {
-    if (!canSubmit) { setServerError(GATE_ERROR); return; }
     setGoogleLoading(true);
     setServerError(null);
     const error = await signInWithGoogle(true, true);
@@ -189,7 +291,6 @@ export default function RegisterScreen() {
   }
 
   async function handleApple() {
-    if (!canSubmit) { setServerError(GATE_ERROR); return; }
     setAppleLoading(true);
     setServerError(null);
     const error = await signInWithApple(true, true);
@@ -199,6 +300,7 @@ export default function RegisterScreen() {
 
   return (
     <View style={[s.root, tonoOnboarding ? { backgroundColor: tonoOnboarding } : null]}>
+      <EntradaDesdeColor tono={tono} />
       <StatusBar barStyle="dark-content" />
       <LineasEsquina />
       <SafeAreaView style={s.safe}>
@@ -219,64 +321,21 @@ export default function RegisterScreen() {
 
           {/* ── Heading ──────────────────────────────────────────── */}
           <Animated.View style={[s.headingArea, fadeUp(headingAnim)]}>
-            <Text style={s.heading}>Creá tu cuenta</Text>
-            <Text style={s.subheading}>Es rápido y gratuito.</Text>
+            <Text style={s.heading}>{etapa === 'crear' ? 'Creá tu cuenta' : 'Entrá o creá tu cuenta'}</Text>
+            <Text style={s.subheading}>
+              {etapa === 'crear' ? 'Es rápido y gratuito.' : 'Si ya tenés cuenta, entrás. Si no, la creamos.'}
+            </Text>
           </Animated.View>
 
           {/* ── Botones ──────────────────────────────────────────── */}
           <Animated.View style={[s.btnsArea, fadeUp(btnsAnim)]}>
 
-            {/* Checkbox de términos — VA ARRIBA DE LOS TRES MÉTODOS, no adentro del
-                formulario de email. Antes vivía adentro, así que Google y Apple
-                creaban cuenta sin que el usuario tuviera siquiera dónde aceptar. */}
-            <TouchableOpacity
-              style={s.termsRow}
-              onPress={() => setAcceptedTerms(v => !v)}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons
-                name={acceptedTerms ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                size={22}
-                color={acceptedTerms ? ViveColors.primary : "rgba(135,131,92,0.55)"}
-              />
-              <Text style={s.termsText}>
-                {'Leí y acepto los '}
-                <Text style={s.termsLink} onPress={() => setShowTermsModal(true)}>
-                  Términos y condiciones
-                </Text>
-                {' y la '}
-                <Text style={s.termsLink} onPress={() => setShowPrivacyModal(true)}>
-                  Política de privacidad
-                </Text>
-                {' de Vita'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Mayoría de edad — tilde propio, no fundido con el de T&C.
-                §3.1 dice que el Usuario "declara" ser mayor de 18 y hasta ahora
-                no se le preguntaba nada: la cláusula afirmaba una declaración
-                que nunca existía. Queda como constancia en `age_confirmed`. */}
-            <TouchableOpacity
-              style={s.termsRow}
-              onPress={() => setAgeConfirmed(v => !v)}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons
-                name={ageConfirmed ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                size={22}
-                color={ageConfirmed ? ViveColors.primary : "rgba(135,131,92,0.55)"}
-              />
-              <Text style={s.termsText}>
-                Declaro que tengo 18 años o más
-              </Text>
-            </TouchableOpacity>
-
             {/* Google */}
             <TouchableOpacity
-              style={[s.googleBtn, (googleLoading || !canSubmit) && { opacity: 0.5 }]}
+              style={[s.googleBtn, googleLoading && { opacity: 0.5 }]}
               onPress={handleGoogle}
               activeOpacity={0.85}
-              disabled={googleLoading || loading || !canSubmit}
+              disabled={googleLoading || loading}
             >
               <View style={s.btnIcon}>
                 {googleLoading
@@ -290,10 +349,10 @@ export default function RegisterScreen() {
             {/* Apple — Sign in with Apple no existe en Android, ocultar */}
             {Platform.OS === 'ios' && (
               <TouchableOpacity
-                style={[s.appleBtn, (appleLoading || !canSubmit) && { opacity: 0.5 }]}
+                style={[s.appleBtn, appleLoading && { opacity: 0.5 }]}
                 onPress={handleApple}
                 activeOpacity={0.85}
-                disabled={appleLoading || loading || !canSubmit}
+                disabled={appleLoading || loading}
               >
                 <View style={s.btnIcon}>
                   {appleLoading
@@ -304,6 +363,21 @@ export default function RegisterScreen() {
                 <View style={s.btnIcon} />
               </TouchableOpacity>
             )}
+
+            {/* Aceptación implícita de los botones sociales, pegada a ellos para
+                que quede claro a qué se refiere "Al continuar". Mismo texto que
+                en `LoginScreen`. */}
+            <Text style={s.legalNote}>
+              {'Al continuar con Google o Apple declarás tener 18 años o más y aceptás los '}
+              <Text style={s.termsLink} onPress={() => setShowTermsModal(true)}>
+                Términos y condiciones
+              </Text>
+              {' y la '}
+              <Text style={s.termsLink} onPress={() => setShowPrivacyModal(true)}>
+                Política de privacidad
+              </Text>
+              {' de Vita.'}
+            </Text>
 
             {serverError && !showEmailForm && (
               <Text style={s.serverError}>{serverError}</Text>
@@ -324,8 +398,8 @@ export default function RegisterScreen() {
             {/* Email form expandible */}
             {showEmailForm && (
               <View style={s.emailForm}>
-                {/* Nombre */}
-                <TextInput
+                {/* Nombre — solo al crear */}
+                {etapa === 'crear' && <TextInput
                   style={[
                     s.input,
                     errors.name && s.inputError,
@@ -338,7 +412,7 @@ export default function RegisterScreen() {
                   autoCapitalize="words"
                   onFocus={() => setFocused('name')}
                   onBlur={() => setFocused(null)}
-                />
+                />}
 
                 {/* Email */}
                 <TextInput
@@ -367,7 +441,7 @@ export default function RegisterScreen() {
                     style={s.inputInner}
                     value={password}
                     onChangeText={v => { setPassword(v); clearError('password'); clearError('confirm'); }}
-                    placeholder={`Contraseña (mín. ${LARGO_MIN_CONTRASENA} caracteres)`}
+                    placeholder={etapa === 'crear' ? `Contraseña (mín. ${LARGO_MIN_CONTRASENA} caracteres)` : 'Contraseña'}
                     placeholderTextColor="rgba(135,131,92,0.45)"
                     secureTextEntry={!showPassword}
                     onFocus={() => setFocused('pass')}
@@ -386,6 +460,8 @@ export default function RegisterScreen() {
                   </TouchableOpacity>
                 </View>
 
+                {etapa === 'crear' ? (
+                  <>
                 {/* Confirmar contraseña */}
                 <View style={[
                   s.inputRow,
@@ -454,6 +530,51 @@ export default function RegisterScreen() {
                   </View>
                 )}
 
+            {/* Los dos tildes del alta por mail. Hasta el 07/10/2026 iban
+                arriba de los tres métodos; Google y Apple ahora dejan constancia
+                por el aviso legal de sus botones (ver `handleGoogle`). */}
+            <TouchableOpacity
+              style={s.termsRow}
+              onPress={() => setAcceptedTerms(v => !v)}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name={acceptedTerms ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                size={22}
+                color={acceptedTerms ? ViveColors.primary : "rgba(135,131,92,0.55)"}
+              />
+              <Text style={s.termsText}>
+                {'Leí y acepto los '}
+                <Text style={s.termsLink} onPress={() => setShowTermsModal(true)}>
+                  Términos y condiciones
+                </Text>
+                {' y la '}
+                <Text style={s.termsLink} onPress={() => setShowPrivacyModal(true)}>
+                  Política de privacidad
+                </Text>
+                {' de Vita'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Mayoría de edad — tilde propio, no fundido con el de T&C.
+                §3.1 dice que el Usuario "declara" ser mayor de 18 y hasta ahora
+                no se le preguntaba nada: la cláusula afirmaba una declaración
+                que nunca existía. Queda como constancia en `age_confirmed`. */}
+            <TouchableOpacity
+              style={s.termsRow}
+              onPress={() => setAgeConfirmed(v => !v)}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name={ageConfirmed ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                size={22}
+                color={ageConfirmed ? ViveColors.primary : "rgba(135,131,92,0.55)"}
+              />
+              <Text style={s.termsText}>
+                Declaro que tengo 18 años o más
+              </Text>
+            </TouchableOpacity>
+
                 {serverError && (
                   <Text style={s.serverError}>{serverError}</Text>
                 )}
@@ -469,18 +590,70 @@ export default function RegisterScreen() {
                     : <Text style={s.enterBtnText}>Crear cuenta</Text>
                   }
                 </ScaleCard>
+
+                    <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7} onPress={() => irA('entrar')}>
+                      <Text style={s.forgotText}>Ya tengo cuenta: volver</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    {serverError && (
+                      <Text style={s.serverError}>{serverError}</Text>
+                    )}
+
+                    {/* No se crea nada en silencio: puede ser alguien nuevo o
+                        una contraseña mal escrita, y la respuesta es la misma. */}
+                    {etapa === 'no-encontrada' && (
+                      <Text style={s.aviso}>
+                        No encontramos una cuenta con ese mail y esa contraseña. Podés probar de nuevo o crear una cuenta nueva.
+                      </Text>
+                    )}
+
+                    <ScaleCard
+                      style={[s.enterBtn, loading && s.enterBtnLoading]}
+                      onPress={handleContinuar}
+                      activeOpacity={0.85}
+                      disabled={loading}
+                    >
+                      {loading
+                        ? <ActivityIndicator size="small" color="#565E32" />
+                        : <Text style={s.enterBtnText}>{etapa === 'no-encontrada' ? 'Probar de nuevo' : 'Continuar'}</Text>
+                      }
+                    </ScaleCard>
+
+                    {etapa === 'no-encontrada' && (
+                      <TouchableOpacity
+                        style={s.emailBtn}
+                        activeOpacity={0.85}
+                        accessibilityRole="button"
+                        onPress={() => irA('crear')}>
+                        <Text style={s.btnText}>Crear una cuenta nueva</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      style={s.forgotWrap}
+                      activeOpacity={0.7}
+                      onPress={handleForgot}
+                      disabled={resetLoading}>
+                      {resetLoading
+                        ? <ActivityIndicator size="small" color="#87835C" />
+                        : <Text style={s.forgotText}>¿Olvidaste tu contraseña?</Text>}
+                    </TouchableOpacity>
+
+                    {resetMsg && <Text style={s.resetMsg}>{resetMsg}</Text>}
+
+                    <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7} onPress={entrarConCodigo}>
+                      <Text style={s.forgotText}>¿No tenés contraseña? Entrá con un código</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             )}
           </Animated.View>
 
           {/* ── Footer ───────────────────────────────────────────── */}
           <Animated.View style={[s.footerArea, fadeUp(footerAnim)]}>
-            <View style={s.footer}>
-              <Text style={s.footerText}>¿Ya tenés cuenta? </Text>
-              <TouchableOpacity onPress={() => router.replace('/login')} activeOpacity={0.7}>
-                <Text style={s.footerLink}>Iniciá sesión</Text>
-              </TouchableOpacity>
-            </View>
             {/* Las líneas de crisis, antes de tener cuenta. Ver `AyudaAhoraLink`. */}
             <AyudaAhoraLink />
           </Animated.View>
@@ -512,6 +685,30 @@ export default function RegisterScreen() {
 }
 
 const s = StyleSheet.create({
+  legalNote: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11.5,
+    color: 'rgba(135,131,92,0.62)',
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  aviso: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: TEXTO,
+    textAlign: 'center',
+  },
+  forgotWrap: { alignSelf: 'center', minHeight: 20, justifyContent: 'center' },
+  forgotText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#87835C' },
+  resetMsg: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#87835C',
+    textAlign: 'center',
+  },
   // M7. Un link discreto: la gran mayoría no tiene código, y un campo siempre
   // visible le agrega un renglón al formulario a todo el mundo para servirle a
   // pocos.

@@ -1,3 +1,25 @@
+## 2026-10-07 — Andre (Claude · bienvenida en tres versiones, bifurcación y "entrá o creá tu cuenta")
+
+**Tocado:** `app/index.tsx`, `app/_layout.tsx`, `screens/OnboardingLlega.tsx` (nuevo), `screens/OnboardingTresEnUno.tsx` (nuevo), `screens/OnboardingScreen1.tsx`, `screens/OnboardingBifurcacion.tsx`, `screens/RegisterScreen.tsx`, `screens/LoginScreen.tsx`, `constants/onboardingTonos.ts`. **Sin migraciones ni cambios en la base.**
+
+**Resumen:**
+- **Bienvenida: tres versiones que salen al azar** cada vez que se abre la app sin sesión (idea de Andre y Joaquín), nunca la misma dos veces seguidas. Cuál salió queda anotado en `onboarding_variante`. En desarrollo hay un selector "1 · 2 · 3" arriba a la derecha para forzar una.
+  - **1 · "alguien llega"** (`OnboardingLlega`): un círculo solo, el toque hace nacer otro bajo el dedo, llega un tercero y se dibuja el isotipo; "vita / te acompaña". Alcanza con un toque y, si nadie toca, pasa sola.
+  - **2 · "tres en uno"** (`OnboardingTresEnUno`): la idea de Joaquín rediseñada. Los tres círculos forman el isotipo en tres tintas de la paleta y, al mantener apretado, se vuelven un disco terracota con "vita" al medio.
+  - **3 ·** la de Joaquín (`OnboardingScreen1`), con ajustes: sin la trama de líneas, barra de estado en oscuro, se puede apretar desde el primer instante, más corta, el final ya no se desarma al soltar ni pasa por el violeta.
+  - Criterios acordados ese día y que valen para las tres: se puede tocar desde el primer instante, la intro dura 4 segundos como mucho (Joaquín), colores solo de la paleta, y el lema pasa de "convive con vos" a **"te acompaña"**.
+- **Bifurcación:** barra de estado en oscuro, descripción más grande y con más contraste, vibración al elegir, y el salvia del lado "Quiero crecer" un poco más verde (`TONOS.crecer` `#E8E7DB` → `#E2E6D3`, viaja a las pantallas siguientes de ese camino).
+- **Bug viejo arreglado:** desde el 17/09 "Quiero crecer" va a `/register`, pero esa ruta no tenía la entrada "desde el color" que sí tenían `coach-login` y `onboarding2`: la pantalla entraba deslizándose desde la derecha encima del color ya expandido. Ahora entra sin transición y con `EntradaDesdeColor`, solo cuando llega con `tono`.
+- **`/register` es ahora "entrá o creá tu cuenta"** (decisión de Andre: que los dos lados de la bifurcación funcionen igual). Con mail y contraseña primero se intenta entrar; si no coinciden con ninguna cuenta se avisa y se ofrece reintentar o crear (nunca se crea en silencio: Supabase contesta igual si la cuenta no existe y si la contraseña está mal). El alta por mail conserva nombre, repetir contraseña, código de invitación y los dos tildes. **Google y Apple ya no piden los tildes en esta pantalla:** dejan constancia por el aviso legal pegado a los botones, igual que `LoginScreen` y `CoachLoginScreen`. Probado por Andre en el iPhone (entrar con Google, contraseña mal, crear cuenta) y contra `vita-pruebas` las respuestas del servidor.
+
+**Pendiente para la próxima sesión:**
+- 🟡 **Abogado:** confirmar que el aviso legal de Google/Apple alcanza como constancia de edad (T&C §3.1) también en `/register`, que antes pedía los tildes.
+- **Joaquín:** mirar las tres bienvenidas y decidir si quedan las tres en el sorteo. Probar en Android (grano con filtros SVG y `mixBlendMode: 'multiply'` de las versiones 1 y 2).
+- Emparejar `CoachLoginScreen` con el aviso de "no encontramos una cuenta" (hoy pasa directo a pedir el nombre).
+- Bifurcación: definir los dos títulos ("Quiero crecer" / "Quiero acompañar" chocan con "te acompaña") y si los íconos pasan a ser los círculos de la bienvenida.
+- El ícono de la app (`assets/images/icon.png`) sigue siendo el genérico de Expo.
+- La frase de la versión 1 ("a veces hace falta alguien") es propuesta de Claude: falta el visto bueno de Andre.
+
 ## 2026-10-07 — Andre (Claude · la web pide el mail a las personas y queda lista para que Google la encuentre)
 
 **Tocado:** `web/tiendas.js`, `web/index.html`, `web/profesionales.html`, `web/robots.txt` (nuevo), `web/sitemap.xml` (nuevo). **Sin migraciones.**

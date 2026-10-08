@@ -351,7 +351,7 @@ export default function LoginScreen() {
             {/* Footer */}
             <Animated.View style={[s.footer, fadeUp(footerAnim)]}>
               <Text style={s.footerText}>¿No tenés cuenta? </Text>
-              <TouchableOpacity onPress={() => router.replace('/register')} activeOpacity={0.7}>
+              <TouchableOpacity onPress={() => router.replace({ pathname: '/register', params: { modo: 'crear' } } as any)} activeOpacity={0.7}>
                 <Text style={s.footerLink}>Creamos una</Text>
               </TouchableOpacity>
             </Animated.View>

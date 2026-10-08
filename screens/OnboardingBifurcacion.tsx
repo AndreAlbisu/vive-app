@@ -1,8 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Animated, useWindowDimensions,
-  AccessibilityInfo, Easing,
+  AccessibilityInfo, Easing, Platform, StatusBar,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -48,7 +49,7 @@ const DURAZNO      = TONOS.acompanar;
 const DURAZNO_LINE = 'rgba(200,120,58,0.40)';
 const DURAZNO_RULE = 'rgba(200,120,58,0.45)';
 const TEXTO        = '#26402F';
-const TEXTO_SUAVE  = '#5C6B58';
+const TEXTO_SUAVE  = '#48574A';  // 07/10: era #5C6B58, la descripción se perdía
 const VERDE_ICON   = '#3F512F';
 const NARANJA      = '#C4743A';
 
@@ -162,6 +163,9 @@ const CAMINOS: Camino[] = [
     desc: 'Quiero explorar herramientas para mi crecimiento.',
     rule: SALVIA_RULE,
     accent: VERDE_ICON,
+    // 📌 `/register` es desde el 07/10/2026 "entrá o creá tu cuenta": sirve
+    // igual a quien ya tiene cuenta, así que esta pantalla no necesita un link
+    // aparte de "iniciar sesión" (se probó ese día y se sacó).
     // 🔴 Al registro, no a `/onboarding2` (17/09/2026): la cuenta se pide al
     // entrar. "¿Cómo te gustaría empezar?" viene después de crearla — lo decide
     // `lib/entrada.ts` con la marca que se pone en `elegir`.
@@ -246,6 +250,8 @@ export default function OnboardingBifurcacion() {
     // "quiero acompañar" —y cuánto tarda en decidirlo— es de lo más importante
     // que hay para saber acá.
     anotar('onboarding_respuesta', { pantalla: 'bifurcacion', respuesta: c.id, segundos: medir() });
+    // La reacción va en el instante del toque, no cuando termina la salida.
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
     // Se guarda además de viajar por parámetro: el tono tiene que sobrevivir
     // cinco pantallas, y reenviarlo en cada navegación significa que la primera
@@ -290,10 +296,12 @@ export default function OnboardingBifurcacion() {
         paso.setValue(0);
         Animated.timing(paso, {
           toValue: 1,
-          duration: 700,
-          // Arranca despacio y termina rápido: el comienzo es lo que se lee
+          // Arranca suave y termina rápido: el comienzo es lo que se lee
           // como "el área que toqué se está abriendo"; el final ya es color.
-          easing: Easing.bezier(0.34, 0, 0.2, 1),
+          // 07/10: se probó 450 ms arrancando de golpe y quedó tosca (Andre);
+          // esto es casi el original (700 ms), apenas más corto.
+          duration: 620,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
           useNativeDriver: true,
         }).start(ir);
       });
@@ -317,6 +325,8 @@ export default function OnboardingBifurcacion() {
 
   return (
     <View style={s.root}>
+      {/* Fondo claro: hora, señal y batería en oscuro. */}
+      <StatusBar barStyle="dark-content" />
       {/* El cuello: los dos paneles de color y el campo de líneas */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: splitAnim }, desvanece]} pointerEvents="none">
         <Svg width={width} height={height}>
@@ -459,8 +469,8 @@ const s = StyleSheet.create({
   rule: { width: 64, height: 1, marginTop: -3 },
   colDesc: {
     fontFamily: ViveFonts.regular,
-    fontSize: 13.5,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     color: TEXTO_SUAVE,
     textAlign: 'center',
   },

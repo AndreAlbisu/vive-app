@@ -289,7 +289,19 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding4" options={{ headerShown: false }} />
           <Stack.Screen name="sala" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="register" options={{ headerShown: false }} />
+          {/* 🔴 Igual que `coach-login` y `onboarding2`, pero SOLO cuando se llega
+              desde la bifurcación (viene con `tono`): ahí la pantalla ya está
+              tapada por el color y un slide se ve como la pantalla entera
+              entrando desde la derecha. Desde cualquier otro lado (login →
+              "crear cuenta") conserva la transición normal. Faltaba desde el
+              17/09, cuando "Quiero crecer" pasó a ir al registro. */}
+          <Stack.Screen
+            name="register"
+            options={({ route }) => ({
+              headerShown: false,
+              animation: (route.params as { tono?: string } | undefined)?.tono ? 'none' : 'default',
+            })}
+          />
           <Stack.Screen name="nueva-contrasena" options={{ headerShown: false }} />
           {/* 🔴 `none`, ni slide ni fade. Se llega desde la bifurcación con la
               pantalla ENTERA tapada por el color del ala (ver

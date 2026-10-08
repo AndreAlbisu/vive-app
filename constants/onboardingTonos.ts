@@ -10,7 +10,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // expande al elegir es el área de color de fondo —la forma curva— así que la
 // pantalla que recibe tiene que llegar en ese mismo tono y no en el saturado.
 export const TONOS = {
-  crecer:    '#E8E7DB',  // SALVIA  — el ala izquierda
+  // 07/10: era #E8E7DB, que en el teléfono se leía beige grisáceo y dejaba
+  // el lado del cliente más frío que el del profesional. Se probó el salvia
+  // pastel de la app (#DCE5CB) y quedó demasiado verde: este es el punto medio.
+  crecer:    '#E2E6D3',  // SALVIA  — el ala izquierda
   acompanar: '#F8E7DA',  // DURAZNO — el ala derecha
 } as const;
 
