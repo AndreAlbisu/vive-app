@@ -594,6 +594,12 @@
        la barra de abajo tapaba "Tus recursos a mano". Se achica entero. */
     .hero .phone { width: 300px; transform: scale(.84) rotate(2deg); margin: -50px auto; }
   }
+  /* Pantallas muy angostas (Android con la letra agrandada): los tres botones
+     del selector no entraban y el último se cortaba. */
+  @media (max-width: 350px) {
+    .peek-switch:not([hidden]) { gap: 4px; }
+    .peek-switch button { min-width: 0; font-size: .72rem; padding: 8px 4px; white-space: normal; line-height: 1.15; }
+  }
   /* Movimiento reducido: se apaga lo que se mueve (la aurora, los anillos, los
      puntitos, los desplazamientos y escalas), pero quedan los fundidos de
      color y opacidad, que son los que avisan que algo cambió. Antes se

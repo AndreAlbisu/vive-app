@@ -1,3 +1,16 @@
+## 2026-10-08 — Andre (Claude · repaso de toda la web en celulares angostos)
+
+**Tocado:** `web/index.html`. **Sin migraciones.**
+
+**Resumen:**
+- Andre preguntó si la web se ve bien en todos los celulares. Medido en Chrome sin ventana: portada, profesionales, reserva, sala y perfil público, de 260 a 412 px de ancho, buscando cualquier elemento que se pase del borde.
+- Un solo hallazgo: en la portada, a 320 px o menos, el tercer botón del selector de "un vistazo adentro" ("Una pausa") se cortaba 15 px. Por debajo de 350 px el selector ahora usa letra y márgenes más chicos.
+- De 320 para arriba no queda nada cortado. Por debajo de 300 px la maqueta del teléfono se recorta un poco a la derecha: no se tocó, casi ningún celular llega a ese ancho.
+
+**Pendiente para la próxima sesión:**
+- No se probó en Safari de iPhone ni en un Android real: lo medido es Chrome de escritorio simulando el ancho.
+- La web no nombra el bienestar físico, mental y espiritual: Andre decide si lo suma.
+
 ## 2026-10-08 — Andre (Claude · la portada se cortaba a la derecha en celulares con la letra agrandada)
 
 **Tocado:** `web/tiendas.js`, `web/index.html`. **Sin migraciones.**
