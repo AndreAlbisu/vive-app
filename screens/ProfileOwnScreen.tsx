@@ -20,12 +20,11 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { supabase, registrarEvento } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { FRASE_BORRAR, coincideBorrado } from '@/lib/confirmarBorrado';
 import { AppBg } from '@/components/ui/AppBg';
 import { deleteMyAccount } from '@/lib/accountDeletion';
 import { DESCUENTO_REFERIDO_PCT } from '@/lib/referidos';
-import { getMomentPref, setMomentPref } from '@/lib/sobreVosMomentoStorage';
 import { useConsent } from '@/hooks/useConsent';
 type Profesional = {
   id: string;
@@ -54,26 +53,15 @@ export default function ProfileOwnScreen() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmTexto, setConfirmTexto] = useState('');
   const [deleting, setDeleting] = useState(false);
-  // Parte E de "Sobre vos" — auto-disparo del momento completo. Vive en
-  // AsyncStorage, no en `profiles` (ver lib/sobreVosMomentoStorage.ts).
-  const [momentoEnabled, setMomentoEnabled] = useState(true);
   // El consentimiento de datos sensibles se revoca desde acá. No es un extra:
   // la Ley 25.326 y el Decreto 1558/2001 lo hacen REVOCABLE en cualquier
   // momento, y el sheet que lo pide promete que se puede hacer desde el perfil.
   const consent = useConsent(user?.id);
 
-  useEffect(() => { getMomentPref().then(setMomentoEnabled); }, []);
-
   async function pedirMiCodigo() {
     const { data, error } = await supabase.rpc('mi_codigo_referido');
     if (error || !data) { Alert.alert('No se pudo', 'Probá de nuevo en un rato.'); return; }
     setMiCodigo(data as string);
-  }
-
-  async function toggleMomento(value: boolean) {
-    setMomentoEnabled(value);
-    await setMomentPref(value);
-    if (!value) registrarEvento('reflexion_momento_desactivado');
   }
 
   // `profiles.name` primero, igual que en el home: es lo que ve el resto de la
@@ -426,26 +414,12 @@ export default function ProfileOwnScreen() {
           {/* Preferencias */}
           <Animated.View style={fadeUp(configAnim)}>
             <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Preferencias</Text>
-            <View style={styles.preferenceCard}>
-              <View style={styles.preferenceInfo}>
-                <Text style={styles.preferenceTitle}>Mostrar la reflexión completa al registrar tu ánimo</Text>
-                <Text style={styles.preferenceDesc}>Si lo apagás, vas directo al resumen sin el paso completo</Text>
-              </View>
-              <Switch
-                value={momentoEnabled}
-                onValueChange={toggleMomento}
-                trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
-                thumbColor="#FFFFFF"
-                ios_backgroundColor={`${ViveColors.text}25`}
-              />
-            </View>
-
             {/* 🔴 Revocación del consentimiento de datos sensibles. Va junto a
                 las preferencias y no escondido en Configuración: la revocación
                 tiene que ser tan fácil como el otorgamiento, o el consentimiento
                 deja de ser libre. Apagarlo no borra lo ya guardado — eso se pide
                 aparte, y el texto lo dice. */}
-            <View style={[styles.preferenceCard, { marginTop: 10 }]}>
+            <View style={styles.preferenceCard}>
               <View style={styles.preferenceInfo}>
                 <Text style={styles.preferenceTitle}>Guardar cómo venís</Text>
                 <Text style={styles.preferenceDesc}>

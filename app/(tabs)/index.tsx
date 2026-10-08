@@ -19,7 +19,6 @@ import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
-import { useSobreVosMomento } from '@/context/SobreVosMomentoContext';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { VitaMark } from '@/components/VitaMark';
 import { useAuth } from '@/context/AuthContext';
@@ -36,8 +35,7 @@ import { useDailyReflection } from '@/hooks/useDailyReflection';
 import { localDayKey, localDayKeyMinus, diasEntreDias } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
 import { sessionHasEnded } from '@/lib/time';
-import { shouldShowMoment } from '@/lib/sobreVosMomento';
-import { getMomentPref, getLastShown, markMomentShown, getLastSpoken, markSpoken } from '@/lib/sobreVosMomentoStorage';
+import { getLastSpoken, markSpoken } from '@/lib/sobreVosSilencioStorage';
 import { shouldStaySilent } from '@/lib/sobreVosSilencio';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useConsentGate } from '@/hooks/useConsentGate';
@@ -191,7 +189,7 @@ export default function InicioScreen() {
 
   // ── "Sobre vos" — Parte A/B/C ────────────────────────────────────────────
   // `useMoodHistory` no se refresca solo tras guardar un check-in nuevo (fetch
-  // único al montar), así que sin esto la card y el momento seguirían mirando
+  // único al montar), así que sin esto la card seguiría mirando
   // datos de ANTES del check-in que la persona recién hizo. `freshCheckIn`
   // guarda el resultado recalculado a mano con el pick ya adentro; una vez que
   // existe, manda sobre `reflection`/`todayMoodEntry` para el resto de la
@@ -219,9 +217,6 @@ export default function InicioScreen() {
   // tarjeta "tu coach te dejó algo" seguía apareciendo con la sesión ya abierta.
   const refetchWeekly = weekly.refetch;
   useFocusEffect(useCallback(() => { refetchWeekly(); }, [refetchWeekly]));
-  // El momento vive fuera de Inicio (app/(tabs)/_layout.tsx, sibling de
-  // <Tabs>) para poder sacarle el <Modal> propio — ver SobreVosMomentoContext.
-  const { open: openMomento } = useSobreVosMomento();
 
   const cardMoodColor = freshCheckIn?.color ?? (todayMoodEntry ? ViveMoodColors[todayMoodEntry.mood_id] : null);
   const cardReflection = freshCheckIn?.reflection ?? reflection;
@@ -233,7 +228,7 @@ export default function InicioScreen() {
   //
   // `markSpoken` corre SOLO cuando la tarjeta efectivamente va a hablar. De eso
   // depende que la regla alterne en vez de callarse para siempre: ver la nota en
-  // `lib/sobreVosMomentoStorage.ts`.
+  // `lib/sobreVosSilencioStorage.ts`.
   const [silent, setSilent] = useState(false);
   const cardSignal = cardReflection.signal;
 
@@ -281,7 +276,6 @@ export default function InicioScreen() {
 
   const handleMoodPicked = useCallback((
     mood: { id: number; label: string; color: string },
-    opts: { firstToday: boolean },
   ) => {
     const optimisticToday: MoodEntry = {
       id: 'optimistic', mood_id: mood.id, mood_label: mood.label, entry_date: today,
@@ -305,21 +299,12 @@ export default function InicioScreen() {
       dayKey: today,
     });
 
+    // Hasta el 08/10/2026 acá se abría además un cartel desde abajo ("el
+    // momento") con la misma frase que la card acaba de mostrar. Se sacó:
+    // repetía lo que ya se leía arriba y ofrecía "Ver mi progreso" incluso
+    // cuando la card mandaba al Diario.
     setFreshCheckIn({ color: mood.color, reflection: freshReflection });
-
-    // Cambiaste el mood habiendo ya hecho el check-in hoy: la card se
-    // actualiza (arriba), pero el momento es una sola vez por día — no
-    // relanza.
-    if (!opts.firstToday) return;
-
-    setTimeout(async () => {
-      const [prefEnabled, lastShown] = await Promise.all([getMomentPref(), getLastShown()]);
-      if (!shouldShowMoment({ signal: freshReflection.signal, prefEnabled, lastShown })) return;
-      openMomento(freshReflection, mood.color);
-      markMomentShown(today, freshReflection.signal);
-      registrarEvento('reflexion_vista', { origen: 'checkin' });
-    }, 350);
-  }, [moodEntries, today, recentCutoff, weekly.resourcesThisWeek, weekly.sessionsThisWeek, weekly.writingThisWeek, openMomento]);
+  }, [moodEntries, today, recentCutoff, weekly.resourcesThisWeek, weekly.sessionsThisWeek, weekly.writingThisWeek]);
 
   /** La oración que pregunta, sin el hecho que la precede.
    *
@@ -332,7 +317,7 @@ export default function InicioScreen() {
     return desde >= 0 ? texto.slice(desde).trim() : texto.trim();
   }
 
-  function handleReopenMomento() {
+  function handleCardPress() {
     // 🔴 EL PISO DE SEGURIDAD NO ABRE EL MOMENTO: abre `/ayuda`.
     //
     // Hasta el 07/09/2026 caía en el camino de abajo como cualquier otra señal,
@@ -676,7 +661,7 @@ export default function InicioScreen() {
 
           {/* ── 4. SOBRE VOS ── */}
           <Animated.View style={fadeUp(a2)}>
-            <SobreVosCard reflection={cardReflection} moodColor={cardMoodColor} silent={silent} onPress={handleReopenMomento} />
+            <SobreVosCard reflection={cardReflection} moodColor={cardMoodColor} silent={silent} onPress={handleCardPress} />
           </Animated.View>
 
           {/* ── 5. TU PRÓXIMA SESIÓN ── */}

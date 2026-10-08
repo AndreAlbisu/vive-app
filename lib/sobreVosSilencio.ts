@@ -1,7 +1,7 @@
 // El silencio de la tarjeta "Sobre vos" — cuándo NO decir nada.
 //
 // Puro: sin red, sin AsyncStorage, sin `Date.now()` adentro. La lectura y la
-// escritura de qué se dijo la última vez viven en `lib/sobreVosMomentoStorage.ts`
+// escritura de qué se dijo la última vez viven en `lib/sobreVosSilencioStorage.ts`
 // (mismo criterio que ya separa `sobreVosMomento.ts` de su storage, y
 // `weeklyReflection.ts` de `useDailyReflection.ts`: lo puro se testea, el I/O no).
 //

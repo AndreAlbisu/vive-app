@@ -58,11 +58,8 @@ interface Props {
   todayEntry:    MoodEntry | undefined;
   onRequestAuth: () => void;
   /** Se dispara al elegir un mood, ANTES del upsert (no depende de la red).
-   *  `firstToday` = todavía no había check-in hoy cuando se tocó — Inicio lo
-   *  usa para decidir si corresponde el momento de pantalla completa. Elegir
-   *  un mood distinto habiendo ya hecho el check-in hoy también dispara esto,
-   *  pero con `firstToday: false`. */
-  onPicked?: (mood: { id: MoodId; label: string; color: string }, opts: { firstToday: boolean }) => void;
+   *  También al elegir uno distinto habiendo ya hecho el check-in hoy. */
+  onPicked?: (mood: { id: MoodId; label: string; color: string }) => void;
   /** Se consulta ANTES de tocar nada. Si devuelve `false`, el check-in no ocurre
    *  — ni animación, ni callback, ni upsert.
    *
@@ -167,12 +164,7 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked, requi
 
     // ANTES del upsert y sin esperar la red — Inicio necesita reaccionar en
     // el acto (Parte A: "actualizá inmediatamente la card persistente").
-    // `todayEntry` es el prop de ANTES de este toque, así que "no había nada
-    // todavía" es exactamente `!todayEntry`, sin necesitar otro estado.
-    onPicked?.(
-      { id, label: mood.label, color: ViveMoodColors[id] },
-      { firstToday: !todayEntry },
-    );
+    onPicked?.({ id, label: mood.label, color: ViveMoodColors[id] });
 
     await supabase.from('mood_entries').upsert(
       { user_id: userId, mood_id: id, mood_label: mood.label, entry_date: today },

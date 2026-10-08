@@ -1,7 +1,7 @@
 // Las reglas del consentimiento de datos sensibles: qué cubre, y cuándo hay que
 // pedirlo. Puro — sin imports, sin red, sin estado. Las consultas viven en
 // `lib/consent.ts`; mismo criterio que separa `credentialRules` de
-// `coachCredentials`, y `sobreVosMomento` de su storage.
+// `coachCredentials`, y `sobreVosSilencio` de su storage.
 //
 // El porqué de todo esto está en `docs/consentimiento-datos-sensibles.md`.
 // Resumen: el checkbox de los T&C no alcanza para dato sensible —es genérico y

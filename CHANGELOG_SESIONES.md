@@ -1,3 +1,16 @@
+## 2026-10-08 — Andre (Claude · se va el cartel de Sofía que saltaba después del check-in)
+
+**Tocado:** `app/(tabs)/index.tsx`, `app/(tabs)/_layout.tsx`, `screens/ProfileOwnScreen.tsx`, `components/MoodCheckIn.tsx`, `lib/sobreVosSilencioStorage.ts` (antes `sobreVosMomentoStorage.ts`), `docs/la-voz-de-sofia.md`. Borrados: `components/SobreVosMomento.tsx`, `context/SobreVosMomentoContext.tsx`, `lib/sobreVosMomento.ts` y su test. **Sin migraciones.**
+
+**Resumen:**
+- **Se sacó "el momento"**: el cartel que subía desde abajo al registrar el ánimo. Andre lo vio en el teléfono y no le encontró sentido: repetía palabra por palabra la frase de la tarjeta de Sofía, y ofrecía "Ver mi progreso" aunque la tarjeta dijera "Contestalo en tu Diario". El 17/09 ya se había sacado por el mismo motivo al tocar la tarjeta; esto era lo que quedaba.
+- **Se fue también el interruptor del Perfil** "Mostrar la reflexión completa al registrar tu ánimo", que solo servía para apagar ese cartel. En Preferencias queda "Guardar cómo venís".
+- La tarjeta de Sofía y a dónde lleva al tocarla no cambiaron.
+
+**Pendiente para la próxima sesión:**
+- Avisarle a Joaquín (el cartel era de la feature "Sobre vos" y él le había trabajado el rendimiento).
+- Ya no se registra el evento `reflexion_vista` con origen `checkin` ni `reflexion_momento_desactivado`: si algún tablero los miraba, van a quedar en cero.
+
 ## 2026-10-08 — Andre (Claude · cuarta bienvenida: "el puente")
 
 **Tocado:** `screens/OnboardingPuente.tsx` (nuevo), `app/index.tsx`, `screens/OnboardingBifurcacion.tsx`. **Sin migraciones.**

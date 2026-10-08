@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // menor, y hoy reaparecer es descartable, no roto.
 //
 // Va en AsyncStorage y no en la base: preferencia de UI de un dispositivo, no un
-// dato a sincronizar. Mismo criterio que `sobreVosMomentoStorage`.
+// dato a sincronizar. Mismo criterio que `sobreVosSilencioStorage`.
 
 const KEY = (bookingId: string) => `paquete_descartado:${bookingId}`;
 

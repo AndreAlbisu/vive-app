@@ -163,13 +163,13 @@ describe('buildReflection — el piso de seguridad gana sobre todo', () => {
   // 🔴 El nombre de la señal es una INTERFAZ, no un detalle interno. Desde el
   // 07/09/2026 dos lugares de la UI lo matchean como string literal:
   //
-  //  · `app/(tabs)/index.tsx` → `handleReopenMomento`, para mandar a `/ayuda`
-  //    en vez de abrir el momento a pantalla completa.
+  //  · `app/(tabs)/index.tsx` → `handleCardPress`, para mandar a `/ayuda`
+  //    en vez de a Progreso.
   //  · `SobreVosCard` → el CTA, que dice "Ver líneas de ayuda" y no "Ver más".
   //
   // Si alguien renombra la señal, los dos `if` dejan de matchear **en silencio**:
-  // no falla nada, no hay error de tipos, y la tarjeta vuelve a ofrecerle
-  // "Ver mi progreso completo" a alguien que lleva dos semanas en el fondo. Este
+  // no falla nada, no hay error de tipos, y la tarjeta vuelve a mandar a
+  // Progreso a alguien que lleva dos semanas en el fondo. Este
   // test es lo único que se interpone.
   it('🔴 la señal se llama exactamente "piso-seguridad" — hay UI que la matchea', () => {
     const r = buildReflection(on({ pisoSeguridad: true }));

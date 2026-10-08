@@ -809,6 +809,10 @@ y que no la persiga afuera. Al menos hasta que la voz tenga crédito ganado.
   seguía nombrándola como una devolución. 📌 El símbolo no cambió: el orbe de
   Sofía **es el isotipo de Vita invertido**, así que la marca que ya estaba al
   lado del texto se lee como su firma sin agregar nada.
+- 📌 **08/10/2026: el momento ya no existe.** Andre lo vio en el teléfono y lo
+  sacó: repetía la frase de la tarjeta y ofrecía "Ver mi progreso" aunque la
+  tarjeta mandara al Diario. Lo que sigue queda como historia; hoy la tarjeta es
+  el único lugar donde Sofía devuelve algo en Inicio.
 - ~~**Qué pasa al tocarla.**~~ ✅ **DECIDIDO el 07/09: sigue abriendo el momento,
   y el momento pasa a ser de Sofía** (firma "Sofía" en vez de "vita"). **NO se
   unificó con el panel del orbe**, y el motivo es la consecuencia incómoda de
