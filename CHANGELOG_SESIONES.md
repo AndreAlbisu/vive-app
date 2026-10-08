@@ -1,3 +1,18 @@
+## 2026-10-07 — Andre (Claude · la web pide el mail a las personas y queda lista para que Google la encuentre)
+
+**Tocado:** `web/tiendas.js`, `web/index.html`, `web/profesionales.html`, `web/robots.txt` (nuevo), `web/sitemap.xml` (nuevo). **Sin migraciones.**
+
+**Resumen:**
+- **Formulario "Avisame" para personas.** Mientras no haya links de tiendas, la portada y el cierre muestran el campo para dejar el mail en lugar de los botones "Muy pronto", que no llevaban a ningún lado. Revierte la decisión del 25/09 (las tiendas salían "en días"; ahora se abre a usuarios en noviembre). Usa la misma función `anotarse_lista_espera` con tipo `persona`, que ya existía y ya está declarada en la Política §2.5. Cuando se carguen los links en `TIENDAS`, vuelven los botones solos.
+- **Medir la feria.** El formulario ya guardaba el `?ref=` del link. Los QR del stand de Feria 21 tienen que llevar a `https://www.vitaapp.com.ar/?ref=feria21` para poder contar cuántos mails vinieron de ahí.
+- **Buscadores.** Título y descripción de la portada con lo que alguien busca ("Psicólogos, coaches y nutricionistas online para argentinos"), `canonical` en las dos páginas, datos estructurados de la organización, `robots.txt` y `sitemap.xml`. `/sala` y `/reserva` siguen fuera por su `noindex`.
+
+**Pendiente para la próxima sesión:**
+- No se probó el envío del formulario de personas (habría escrito en la lista de espera real). Probarlo una vez con un mail propio después de publicar.
+- El botón "Descargar" de la barra lleva al cierre, donde ahora está el formulario: evaluar cambiarle el texto hasta que haya tiendas.
+- Sigue en la web "crypto (USDT)" en tres lugares con ese cobro apagado, y no dice que se abre en noviembre.
+- Pie de página: nombre, CUIT y domicilio de Andre se dejan (los exige la normativa de comercio electrónico y los repiten los legales). Si no quiere su domicilio particular a la vista, consultarle al abogado por un domicilio comercial.
+
 ## 2026-10-07 — Andre (Claude · la web suma los datos del problema, el puente y el mapa de argentinos afuera)
 
 **Tocado:** `web/index.html`. **Sin migraciones.**

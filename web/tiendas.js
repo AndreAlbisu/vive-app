@@ -3,8 +3,8 @@
 // data-tipo="persona" o "profesional". Un elemento con id `pros-cta` cambia
 // de texto cuando haya links de tiendas.
 (function () {
-  // Links de descarga. Mientras estén vacíos, los botones dicen "Muy pronto"
-  // y no llevan a ningún lado. Cuando la app salga, pegar acá las URLs de las
+  // Links de descarga. Mientras estén vacíos, en lugar de los botones va el
+  // formulario para dejar el mail. Cuando la app salga, pegar acá las URLs de las
   // tiendas y listo: se actualizan todos los botones de las dos páginas.
   var TIENDAS = {
     ios: '',      // https://apps.apple.com/ar/app/vita/id<número que da App Store Connect>
@@ -19,7 +19,7 @@
   var HAY_TIENDAS = !!(TIENDAS.ios || TIENDAS.android);
 
   // Lista de espera (25/09/2026). Mientras no haya links de tiendas, el
-  // recuadro de profesionales muestra un formulario para dejar el mail. Escribe por la
+  // recuadro muestra un formulario para dejar el mail. Escribe por la
   // función `anotarse_lista_espera` (scripts/add-lista-de-espera.sql): la tabla
   // no se puede leer ni escribir con la anon key, y la función tiene tope por IP.
   // El `?ref=` de un link de invitación se guarda con el mail.
@@ -92,12 +92,12 @@
   }
 
   document.querySelectorAll('[data-stores]').forEach(function (box) {
-    // 25/09/2026, Andre: las tiendas salen en días, así que para quien busca
-    // acompañamiento van los botones ("Muy pronto" hasta que haya links). El
-    // formulario queda solo para profesionales, mientras no se pueda postular
-    // desde la app publicada.
+    // 07/10/2026, Andre: Vita abre a los usuarios en noviembre, así que
+    // mientras no haya links de tiendas las dos páginas piden el mail (antes
+    // la portada mostraba botones "Muy pronto" que no llevaban a ningún lado).
+    // Los QR de Feria 21 llevan `?ref=feria21`, que se guarda con el mail.
+    if (!HAY_TIENDAS) { formularioAviso(box, box.dataset.tipo === 'profesional' ? 'profesional' : 'persona'); return; }
     if (box.dataset.tipo === 'profesional') {
-      if (!HAY_TIENDAS) { formularioAviso(box, 'profesional'); return; }
       var cta = document.getElementById('pros-cta');
       if (cta) cta.textContent = 'Bajate la app y postulate desde ahí.';
     }

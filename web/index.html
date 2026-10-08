@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Vita · Bienestar acompañado</title>
-<meta name="description" content="Vita es un espacio para estar mejor a tu ritmo: profesionales del bienestar para sesiones online, herramientas para el día a día y un lugar que no te apura.">
+<title>Vita · Psicólogos, coaches y nutricionistas online para argentinos</title>
+<meta name="description" content="Encontrá con quién hablar: psicólogos, coaches y nutricionistas para sesiones por videollamada, en Argentina o donde vivas. Cada profesional pone su precio y, si la primera sesión no te convence, te devolvemos lo que pagaste.">
+<link rel="canonical" href="https://www.vitaapp.com.ar/">
 <!-- Vista previa al compartir (WhatsApp, redes): misma frase que la portada. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Vita">
@@ -17,6 +18,12 @@
 <meta property="og:image:alt" content="Vita. Conectados todo el día. Acompañados, casi nunca.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F7EFE4">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","@id":"https://www.vitaapp.com.ar/#org","name":"Vita","url":"https://www.vitaapp.com.ar/","logo":"https://www.vitaapp.com.ar/favicon.svg","email":"vitaappar@gmail.com","areaServed":"AR","description":"Psicólogos, coaches y nutricionistas para sesiones por videollamada."},
+{"@type":"WebSite","@id":"https://www.vitaapp.com.ar/#web","url":"https://www.vitaapp.com.ar/","name":"Vita","inLanguage":"es-AR","publisher":{"@id":"https://www.vitaapp.com.ar/#org"}}
+]}
+</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -168,6 +175,21 @@
   @media (hover: hover) and (pointer: fine) { .store[aria-disabled="true"]:hover { background: var(--olive); } }
   .store[aria-disabled="true"]:active { transform: none; }
   @keyframes dot { 0% { transform: scale(.7); } 40% { transform: scale(1.5); } 100% { transform: scale(.7); } }
+
+  /* Formulario "Avisame" (tiendas.js lo arma mientras no haya links de tiendas). */
+  .aviso { margin-top: 28px; max-width: 460px; }
+  .aviso-fila { display: flex; gap: 8px; padding: 6px; border-radius: 999px; background: rgba(251, 246, 238, .85); box-shadow: inset 0 0 0 1px rgba(86, 94, 50, .38); }
+  .aviso-fila:focus-within { box-shadow: inset 0 0 0 2px var(--olive); }
+  .aviso input { flex: 1; min-width: 0; min-height: 48px; padding: 0 16px; border: 0; background: transparent; font: inherit; font-size: 16px; color: var(--olive); }
+  .aviso input::placeholder { color: var(--soft); }
+  .aviso input:focus { outline: none; }
+  .aviso button { flex: none; border: 0; cursor: pointer; font: inherit; font-weight: 700; }
+  .aviso button[disabled] { opacity: .6; cursor: default; }
+  .aviso-nota { margin-top: 10px; font-size: .875rem; color: var(--soft); }
+  .aviso-nota.error { font-weight: 600; color: var(--terra-ink); }
+  .aviso-nota a { color: inherit; font-weight: 700; }
+  .aviso-listo { margin-top: 28px; max-width: 460px; font-weight: 600; font-size: 1.05rem; color: var(--olive); }
+  .closing .aviso, .closing .aviso-listo { margin-left: auto; margin-right: auto; }
 
   .garantia { margin-top: 18px; font-size: .95rem; color: var(--soft); font-weight: 500; }
   .garantia a { color: var(--olive); font-weight: 700; text-decoration-color: var(--terra); text-underline-offset: 4px; }
