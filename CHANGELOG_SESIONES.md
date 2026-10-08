@@ -1,3 +1,16 @@
+## 2026-10-08 — Andre (Claude · el logo de la web con las tres uniones iguales)
+
+**Tocado:** `web/favicon.svg` y las 10 páginas de `web/` que dibujan el isotipo (`index`, `profesionales`, `reserva`, `sala`, `c` y las cinco de `legal/`). **Sin migraciones.**
+
+**Resumen:**
+- Andre notó que la unión de abajo del isotipo era más angosta que las otras dos. Era cierto: los dos círculos de abajo estaban a 41 de distancia y cada uno a 38 del de arriba (7,9% más separados). Se acercaron los de abajo (`cx` 29.5 → 31.52 y 70.5 → 68.48) hasta que los tres pares quedan a 36,96. El de arriba, el radio y el trazo no cambian. 14 copias en la web.
+- Fuera del repo: mismo arreglo en el artifact del pitch (portada, puente animado y cierre; versión 116).
+
+**Pendiente para la próxima sesión:**
+- 🟡 **La app sigue con la geometría vieja:** `components/VitaMark.tsx` y las constantes `MARK_*` / `CENTROS` de las bienvenidas (`OnboardingLlega`, `OnboardingTresEnUno`, `OnboardingPuente`). Andre está evaluando además un isotipo nuevo (tres aros abiertos, cada uno apuntando al siguiente): definir eso antes de tocar la app.
+- El PowerPoint del pitch y las imágenes ya exportadas (vista previa al compartir, video de la solución) no se regeneraron.
+- Publicar la web.
+
 ## 2026-10-08 — Andre (Claude · el ícono de la app pasa a ser el logo de Vita)
 
 **Tocado:** `assets/images/icon.png`, `android-icon-foreground.png`, `android-icon-monochrome.png`, `android-icon-background.png`, `splash-icon.png`, `favicon.png`, `app.json`. **Sin migraciones.**
