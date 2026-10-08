@@ -436,6 +436,7 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 9,
     paddingVertical: 14,
+    paddingLeft: 6,   // corre los números un poco a la derecha (Joaquín, 08/10)
   },
   fieldRowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
