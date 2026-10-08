@@ -347,7 +347,7 @@ export default function VerificarMailScreen() {
     <View style={[s.root, tonoOnboarding ? { backgroundColor: tonoOnboarding } : null]}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe}>
-        <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={s.flex} behavior="padding">
           <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
 
             <Animated.View style={[s.logoWrap, fadeUp(anim)]}>

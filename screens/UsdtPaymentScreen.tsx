@@ -220,7 +220,7 @@ export default function UsdtPaymentScreen() {
           <View style={s.headerSpacer} />
         </View>
 
-        <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={s.flex} behavior="padding">
         {loading ? (
           <View style={s.centro}><ActivityIndicator size="large" color={ViveColors.primary} /></View>
         ) : vencida ? (

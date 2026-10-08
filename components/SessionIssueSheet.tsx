@@ -92,7 +92,7 @@ export default function SessionIssueSheet({ visible, onClose, bookingId, rol, es
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={sheetStyles.flex}>
         <TouchableOpacity style={sheetStyles.overlay} activeOpacity={1} onPress={onClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView behavior="padding">
           <View style={sheetStyles.sheet}>
             <View style={sheetStyles.handle} />
 

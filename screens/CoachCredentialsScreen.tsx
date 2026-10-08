@@ -166,7 +166,7 @@ export default function CoachCredentialsScreen() {
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          behavior="padding">
           <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
 
             {/* 🔴 Esto no es relleno: el coach está por subir un documento de

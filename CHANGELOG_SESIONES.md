@@ -1,3 +1,16 @@
+## 2026-10-08 — Andre (Claude · primera prueba en Android: teclado y botón de la próxima sesión)
+
+**Tocado:** `screens/CoachHomeScreen.tsx` y los 18 archivos que usan `KeyboardAvoidingView` (login, registro, chat, diario, gratitud, hojas de notas y reportes, entre otros). **Sin migraciones.**
+
+**Resumen:**
+- Primera vez que la app corre en un Android real (Samsung S20 FE, compilación de demostración contra la base de prueba). La app abre, entra y carga datos.
+- 🔴 **El teclado tapaba el campo al escribir** (lo vio Andre en el login). En Android la app se dibuja de borde a borde y el sistema ya no achica la pantalla solo, así que `behavior={undefined}` no hacía nada. Ahora es `"padding"` también en Android. iOS queda igual que antes. **No está verificado en el teléfono todavía**: se prueba con la compilación siguiente.
+- Inicio del profesional: el botón "Se habilita 10 min antes" partía el texto en dos renglones pegado al borde izquierdo. Ahora tiene margen a los costados y el texto va centrado.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el Samsung que el teclado ya no tapa el campo en el login y en el chat, y que no queda un hueco de más arriba del teclado. Si queda, hay que revisar pantalla por pantalla.
+- El resto de la app en Android sigue sin recorrer.
+
 ## 2026-10-08 — Andre (Claude · la bolita de Sofía se puede esconder en una compilación)
 
 **Tocado:** `app/(tabs)/_layout.tsx`. **Sin migraciones.**

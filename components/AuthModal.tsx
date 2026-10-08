@@ -150,7 +150,7 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
       <Pressable style={s.backdrop} onPress={handleDismiss}>
         <KeyboardAvoidingView
           style={s.center}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           pointerEvents="box-none"
         >
           <Pressable style={s.card} onPress={() => {}}>

@@ -232,7 +232,7 @@ export default function ReviewScreen() {
         </View>
         <View style={s.divider} />
 
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
             <View style={s.coachCard}>

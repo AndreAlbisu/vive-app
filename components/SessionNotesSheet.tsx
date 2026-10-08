@@ -172,7 +172,7 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={sheetStyles.flex}>
         <TouchableOpacity style={sheetStyles.overlay} activeOpacity={1} onPress={onClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView behavior="padding">
           <View style={sheetStyles.sheet}>
             <View style={sheetStyles.handle} />
             <Text style={s.title}>Notas de la sesión</Text>

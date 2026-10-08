@@ -501,7 +501,7 @@ export default function DiarioScreen() {
 
         <KeyboardAvoidingView
           style={s.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
         >
           <ScrollView
             style={s.scroll}

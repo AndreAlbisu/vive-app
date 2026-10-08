@@ -1642,13 +1642,13 @@ const s = StyleSheet.create({
   // Cuándo es la sesión: 13 (era 11). Es el dato que se viene a mirar.
   whoSub: { fontSize: 13, lineHeight: 18, color: GREEN_EYEBROW, fontFamily: ViveFonts.regular, marginTop: 2 },
   acts: { flexDirection: 'row', gap: 8, marginTop: 13 },
-  actBtn: { flex: 1, borderRadius: 15, paddingVertical: 11, minHeight: 46, alignItems: 'center', justifyContent: 'center' },
+  actBtn: { flex: 1, borderRadius: 15, paddingVertical: 11, paddingHorizontal: 10, minHeight: 46, alignItems: 'center', justifyContent: 'center' },
   actJoin: { backgroundColor: TERRA_INK },
   // Letra de 14 (era 12): es el botón que se toca con la persona esperando.
-  actJoinTxt: { fontSize: 14, fontFamily: ViveFonts.semibold, color: ViveColors.onPrimaryInk },
+  actJoinTxt: { fontSize: 14, lineHeight: 18, textAlign: 'center', fontFamily: ViveFonts.semibold, color: ViveColors.onPrimaryInk },
   actDisabled: { backgroundColor: 'rgba(162,88,66,0.45)' },
   actPrep: { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
-  actPrepTxt: { fontSize: 14, fontFamily: ViveFonts.semibold, color: GREEN_TXT },
+  actPrepTxt: { fontSize: 14, lineHeight: 18, textAlign: 'center', fontFamily: ViveFonts.semibold, color: GREEN_TXT },
   prep: { marginTop: 11, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 13 },
   prepLine: { fontSize: 13, color: '#E9E4D2', lineHeight: 19, fontFamily: ViveFonts.regular },
   prepB: { color: GREEN_TXT, fontFamily: ViveFonts.semibold, fontSize: 13 },

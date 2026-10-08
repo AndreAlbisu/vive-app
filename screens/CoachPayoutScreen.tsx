@@ -212,7 +212,7 @@ export default function CoachPayoutScreen() {
             <Text style={s.emptyText}>Todavía no completaste tu perfil de profesional</Text>
           </View>
         ) : (
-          <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView style={s.flex} behavior="padding">
             <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
               {/* ── Hipertransparencia con el coach ──────────────────────────
                   🔴 Decisión de Andre, 08/09/2026: el coach tiene que poder ver
