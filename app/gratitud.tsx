@@ -434,7 +434,7 @@ const s = StyleSheet.create({
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 14,
+    gap: 9,
     paddingVertical: 14,
   },
   fieldRowDivider: {

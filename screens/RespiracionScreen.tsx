@@ -377,7 +377,9 @@ const s = StyleSheet.create({
   content:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 16 },
   // El setup (idle) sube y se ordena; running/done siguen centrados en `content`.
   idleScroll:  { flex: 1, alignSelf: 'stretch' },
-  idleContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start', gap: 16, paddingTop: 4, paddingBottom: 24 },
+  // paddingTop 24 = misma altura del cartel que Gratitud/Diario (su container
+  // arranca a 24 del divider). Antes 4 → el "para qué sirve" quedaba más arriba.
+  idleContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start', gap: 16, paddingTop: 24, paddingBottom: 24 },
   subtitle:    { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 
