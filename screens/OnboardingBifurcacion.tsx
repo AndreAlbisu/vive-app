@@ -450,11 +450,36 @@ export default function OnboardingBifurcacion() {
         ))}
       </View>
 
+      {/* 🧪 TEMPORAL (08/10/2026): vuelve a la bienvenida para repetir las
+          animaciones. Solo en desarrollo; borrarlo junto con el selector de
+          `app/index.tsx` cuando se elija la bienvenida definitiva. */}
+      {__DEV__ && (
+        <SafeAreaView edges={['top']} style={s.devVolver} pointerEvents="box-none">
+          <TouchableOpacity
+            style={s.devVolverBoton}
+            hitSlop={10}
+            activeOpacity={0.7}
+            onPress={() => router.replace('/')}>
+            <MaterialCommunityIcons name="replay" size={18} color={TEXTO} />
+          </TouchableOpacity>
+        </SafeAreaView>
+      )}
+
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  devVolver: { position: 'absolute', top: 0, left: 14 },
+  devVolverBoton: {
+    marginTop: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(86,94,50,0.10)',
+  },
   root: { flex: 1, backgroundColor: CREMA },
 
   top: { paddingHorizontal: 24 },

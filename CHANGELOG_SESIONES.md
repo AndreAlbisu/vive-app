@@ -1,3 +1,18 @@
+## 2026-10-08 — Andre (Claude · cuarta bienvenida: "el puente")
+
+**Tocado:** `screens/OnboardingPuente.tsx` (nuevo), `app/index.tsx`, `screens/OnboardingBifurcacion.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- **Bienvenida 4, "el puente"** (idea de Andre): la imagen del pitch de Feria 21 y de la web. Fondo verde bosque, "La ayuda existe. / Falta el puente." (dos pesos y un arco terracota que subraya), dos orillas "Vos" y "La ayuda" con un hueco punteado. Al tocar se tiende el puente en lima, un punto cruza y, apenas llega, **todo se transforma en el isotipo**: las orillas se juntan y pasan a ser los dos círculos de abajo, y donde estaba la cima del arco se dibuja el de arriba. Debajo, "vita / te acompaña". Entra en el sorteo con las otras tres.
+- Decisiones de Andre al verla: arranca directo en verde (la diapositiva empieza en lima; eran tres fondos en cuatro segundos y el lima no es de la paleta de la app), el puente un 20% más rápido y la formación del logo un 20% más lenta.
+- **Botón temporal** (solo en desarrollo) arriba a la izquierda de la bifurcación para volver a la bienvenida y repetir las animaciones. Se borra junto con el selector "1 · 2 · 3 · 4" de `app/index.tsx`.
+- Fuera del repo: el título de la diapositiva "Falta el puente" del artifact del pitch quedó con el mismo tratamiento (versión 115).
+
+**Pendiente para la próxima sesión:**
+- ⚠️ El PowerPoint del pitch (`~/Desktop`) es del 06/10 y no tiene el título nuevo: regenerarlo o entregar el anterior.
+- Decidir con Joaquín cuáles de las cuatro bienvenidas quedan; lo que sobreviva comparte piezas copiadas (`Trazo`, `Aro`) que hay que unificar. Borrar el selector y el botón temporal.
+- Probar las cuatro en Android.
+
 ## 2026-10-07 — Andre (Claude · bifurcación: textos, círculos y barra de estado)
 
 **Tocado:** `screens/OnboardingBifurcacion.tsx`, `app/_layout.tsx`, `screens/RegisterScreen.tsx`, `screens/CoachLoginScreen.tsx`. **Sin migraciones.**
