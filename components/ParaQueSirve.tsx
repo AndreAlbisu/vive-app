@@ -88,7 +88,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  enlace: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 5, opacity: 0.75 },
+  // Plegado: arriba a la IZQUIERDA (antes flex-end, flotaba a la derecha y se
+  // veía descolgado en todos los recursos — Joaquín, 08/10).
+  enlace: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 5, opacity: 0.75 },
   enlaceTexto: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: FOREST_SOFT },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   titulo: { flex: 1, fontFamily: ViveFonts.semibold, fontSize: 13.5, color: FOREST },

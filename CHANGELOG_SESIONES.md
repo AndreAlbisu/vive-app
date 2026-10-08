@@ -1,3 +1,14 @@
+## 2026-10-08 — Joaquín (Claude · recursos: carteles a la izquierda + orden de Respiración y Sonidos)
+
+**Tocado:** `components/ParaQueSirve.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`. Directo en `main`.
+
+**Resumen:** Arreglos de layout que marcó Joaquín en device (4 capturas).
+- **"Para qué sirve" plegado → arriba a la IZQUIERDA** (antes `alignSelf: flex-end`, flotaba a la derecha y se veía descolgado). Global en el componente → afecta Gratitud, Diario, Respiración y Sonidos.
+- **Sonidos (`RuidoScreen`):** el contenido sube — `scrollContent` pasa de `justifyContent: center` a `flex-start` (había un vacío enorme arriba).
+- **Respiración (`RespiracionScreen`):** el setup (`idle`) estaba centrado vertical → vacío arriba, y al expandir el "para qué sirve" cramaba todo. Ahora el idle va en un `ScrollView` top-aligned (ordenado + el expand scrollea sin clipear Iniciar). Los estados `running`/`done` siguen centrados.
+
+**Pendiente:** confirmar en device (Joaquín estaba probando). Sin migraciones.
+
 ## 2026-10-08 — Andre (Claude · se va el cartel de Sofía que saltaba después del check-in)
 
 **Tocado:** `app/(tabs)/index.tsx`, `app/(tabs)/_layout.tsx`, `screens/ProfileOwnScreen.tsx`, `components/MoodCheckIn.tsx`, `lib/sobreVosSilencioStorage.ts` (antes `sobreVosMomentoStorage.ts`), `docs/la-voz-de-sofia.md`. Borrados: `components/SobreVosMomento.tsx`, `context/SobreVosMomentoContext.tsx`, `lib/sobreVosMomento.ts` y su test. **Sin migraciones.**

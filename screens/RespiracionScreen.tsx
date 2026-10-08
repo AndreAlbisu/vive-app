@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, StatusBar, ScrollView } from 'react-native';
 import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -255,8 +255,15 @@ export default function RespiracionScreen() {
         <View style={s.headerDivider} />
 
         <View style={s.content}>
+          {/* setup arriba y ordenado (antes el content centrado dejaba un vacío
+              enorme arriba y el "para qué sirve" al expandir cramaba todo). El
+              scroll deja respirar al expandir sin clipear Iniciar. */}
           {phase === 'idle' && (
-            <>
+            <ScrollView
+              style={s.idleScroll}
+              contentContainerStyle={s.idleContent}
+              showsVerticalScrollIndicator={false}
+            >
               <ParaQueSirve toolId="respiracion" style={{ alignSelf: 'stretch', marginBottom: 14 }} />
               <View style={s.patronRow}>
                 {PATRONES.map(p => (
@@ -296,7 +303,7 @@ export default function RespiracionScreen() {
               <Text style={s.footerHint}>
                 La pantalla no se apaga mientras dura, y se detiene sola al terminar.
               </Text>
-            </>
+            </ScrollView>
           )}
 
           {phase === 'running' && (
@@ -368,6 +375,9 @@ const s = StyleSheet.create({
   },
 
   content:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 16 },
+  // El setup (idle) sube y se ordena; running/done siguen centrados en `content`.
+  idleScroll:  { flex: 1, alignSelf: 'stretch' },
+  idleContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start', gap: 16, paddingTop: 4, paddingBottom: 24 },
   subtitle:    { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 
