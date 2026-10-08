@@ -6,7 +6,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ViveFonts } from '@/constants/theme';
@@ -52,6 +52,12 @@ const TEXTO        = '#26402F';
 const TEXTO_SUAVE  = '#48574A';  // 07/10: era #5C6B58, la descripción se perdía
 const VERDE_ICON   = '#3F512F';
 const NARANJA      = '#C4743A';
+// 07/10/2026: los íconos (una persona y un maletín) se cambiaron por los
+// círculos de la bienvenida, con sus mismas tintas: salvia es quien busca,
+// durazno quien acompaña. Si cambian allá (`OnboardingLlega`,
+// `OnboardingTresEnUno`), cambian acá.
+const CIRCULO_SALVIA  = '#BFCBA6';
+const CIRCULO_DURAZNO = '#DDAE93';
 
 // ── Geometría ────────────────────────────────────────────────────────────────
 // Coordenadas normalizadas (x en fracción del ancho, y en fracción del alto).
@@ -81,7 +87,12 @@ const BASE_CUELLO = 0.560;
 // Cuánto sube el título respecto del centro del bloque de arriba. Sale del alto
 // de pantalla y no de un número clavado, igual que el resto de las medidas de
 // esta pantalla: 22pt son un gesto distinto en un SE que en un 15 Pro Max.
-const TITULO_SUBE = 0.05;
+// 07/10: de 0,05 a 0,08, junto con bajar el wordmark (`VITA_BAJA`): el título
+// queda donde estaba y "vita" se le acerca.
+const TITULO_SUBE = 0.08;
+// Cuánto baja "vita" desde arriba. Quedaba pegada al borde, con casi un tercio
+// de pantalla vacío hasta el título.
+const VITA_BAJA = 0.03;
 
 const BASE_PUNTA  = 0.235;
 const BASE = {
@@ -145,7 +156,8 @@ const fadeUp = (anim: Animated.Value) => ({
 
 type Camino = {
   id: 'crecer' | 'acompañar';
-  icon: keyof typeof Ionicons.glyphMap;
+  /** El círculo de arriba de la columna: la misma tinta que en la bienvenida. */
+  circulo: string;
   title: string;
   desc: string;
   rule: string;
@@ -158,9 +170,15 @@ type Camino = {
 const CAMINOS: Camino[] = [
   {
     id: 'crecer',
-    icon: 'person-outline',
-    title: 'Quiero\ncrecer',
-    desc: 'Quiero explorar herramientas para mi crecimiento.',
+    circulo: CIRCULO_SALVIA,
+    // 07/10/2026 (Andre): era "Quiero crecer", que suena a superación personal
+    // y no le habla a quien llega en un mal momento. "Busco acompañamiento" no
+    // tiene género y es activo. El `id` y el tono siguen siendo `crecer`:
+    // viajan en la analítica y en las pantallas siguientes.
+    title: 'Busco\nacompañamiento',
+    // 07/10/2026 (Andre): nombra las dos cosas que hay en Vita, profesionales
+    // primero. Antes hablaba solo de "herramientas para mi crecimiento".
+    desc: 'Quiero encontrar un profesional y tener herramientas para el día a día.',
     rule: SALVIA_RULE,
     accent: VERDE_ICON,
     // 📌 `/register` es desde el 07/10/2026 "entrá o creá tu cuenta": sirve
@@ -175,7 +193,7 @@ const CAMINOS: Camino[] = [
   },
   {
     id: 'acompañar',
-    icon: 'briefcase-outline',
+    circulo: CIRCULO_DURAZNO,
     title: 'Quiero\nacompañar',
     desc: 'Soy profesional y quiero ofrecer mi acompañamiento.',
     rule: DURAZNO_RULE,
@@ -386,7 +404,7 @@ export default function OnboardingBifurcacion() {
       <Animated.View style={[s.top, { height: yCierre - height * 0.018 }, desvanece]} pointerEvents="none">
         <SafeAreaView edges={['top']} />
         <View style={s.topInner}>
-          <Animated.View style={fadeUp(brandAnim)}>
+          <Animated.View style={[{ marginTop: height * VITA_BAJA }, fadeUp(brandAnim)]}>
             <VitaWordmark />
           </Animated.View>
           {/* El paddingBottom es lo que lo sube: `titleArea` centra en el
@@ -403,14 +421,18 @@ export default function OnboardingBifurcacion() {
         {CAMINOS.map(c => (
           <TouchableOpacity
             key={c.id}
-            style={[s.col, { paddingTop: height * 0.006, paddingBottom: height * 0.115 }]}
+            // 07/10: el pie bajó de 0,115 a 0,06. Con la descripción nueva (un
+            // renglón más) el texto tocaba la flecha, y abajo sobraba una franja.
+            style={[s.col, { paddingTop: height * 0.006, paddingBottom: height * 0.06 }]}
             activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={`${c.title.replace('\n', ' ')}. ${c.desc}`}
             onPress={() => elegir(c)}>
             <Animated.View style={[s.colTop, desvanece]}>
-              <Ionicons name={c.icon} size={38} color={c.accent} />
-              <Text style={s.colTitle}>{c.title}</Text>
+              <View style={[s.circulo, { backgroundColor: c.circulo }]} />
+              {/* "acompañamiento" es una palabra larga para media pantalla: si
+                  no entra en un renglón se achica, en vez de partirse. */}
+              <Text style={s.colTitle} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>{c.title}</Text>
               <View style={[s.rule, { backgroundColor: c.rule }]} />
               <Text style={s.colDesc}>{c.desc}</Text>
             </Animated.View>
@@ -458,10 +480,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
   },
   colTop: { alignItems: 'center', gap: 17 },
+  circulo: { width: 40, height: 40, borderRadius: 20 },
   colTitle: {
     fontFamily: ViveFonts.titleSemiBold,
-    fontSize: 25,
-    lineHeight: 31,
+    // 07/10: de 25 a 21 en los DOS títulos, para que "acompañamiento" entre
+    // entero en la columna y los dos lados sigan del mismo tamaño.
+    fontSize: 21,
+    lineHeight: 27,
     letterSpacing: -0.4,
     color: TEXTO,
     textAlign: 'center',

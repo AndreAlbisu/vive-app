@@ -1,3 +1,17 @@
+## 2026-10-07 — Andre (Claude · bifurcación: textos, círculos y barra de estado)
+
+**Tocado:** `screens/OnboardingBifurcacion.tsx`, `app/_layout.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- **Textos (decisión de Andre):** el lado izquierdo pasa de "Quiero crecer" a **"Busco acompañamiento"** (crecer sonaba a superación personal y no le hablaba a quien llega mal), y su descripción a "Quiero encontrar un profesional y tener herramientas para el día a día." (antes solo nombraba herramientas). El `id` y el tono siguen siendo `crecer`. Los dos títulos bajan de 25 a 21 para que "acompañamiento" entre en la columna.
+- **Íconos → círculos:** la persona y el maletín se reemplazan por los círculos de la bienvenida (salvia quien busca, durazno quien acompaña).
+- **Aire:** "vita" más cerca del título y las flechas más abajo (la descripción nueva tocaba la flecha y sobraba una franja al pie).
+- 🔴 **Barra de estado en toda la app:** el `<StatusBar style="auto" />` de la raíz seguía el modo del teléfono, así que con el iPhone en modo oscuro la hora y la batería salían en blanco sobre el crema; además montaba después de la primera pantalla y le ganaba a su `dark-content`. Ahora es `dark`. Las pantallas oscuras (Sueño, Meditación, foto ampliada) siguen pidiendo `light-content` por su cuenta.
+
+**Pendiente para la próxima sesión:**
+- Mirar en Android la barra de estado y los títulos a 21.
+- Siguen en pie los pendientes de la entrada de abajo (abogado, Joaquín con las tres bienvenidas, `CoachLoginScreen`, ícono de la app).
+
 ## 2026-10-07 — Andre (Claude · bienvenida en tres versiones, bifurcación y "entrá o creá tu cuenta")
 
 **Tocado:** `app/index.tsx`, `app/_layout.tsx`, `screens/OnboardingLlega.tsx` (nuevo), `screens/OnboardingTresEnUno.tsx` (nuevo), `screens/OnboardingScreen1.tsx`, `screens/OnboardingBifurcacion.tsx`, `screens/RegisterScreen.tsx`, `screens/LoginScreen.tsx`, `constants/onboardingTonos.ts`. **Sin migraciones ni cambios en la base.**
@@ -16,7 +30,6 @@
 - 🟡 **Abogado:** confirmar que el aviso legal de Google/Apple alcanza como constancia de edad (T&C §3.1) también en `/register`, que antes pedía los tildes.
 - **Joaquín:** mirar las tres bienvenidas y decidir si quedan las tres en el sorteo. Probar en Android (grano con filtros SVG y `mixBlendMode: 'multiply'` de las versiones 1 y 2).
 - Emparejar `CoachLoginScreen` con el aviso de "no encontramos una cuenta" (hoy pasa directo a pedir el nombre).
-- Bifurcación: definir los dos títulos ("Quiero crecer" / "Quiero acompañar" chocan con "te acompaña") y si los íconos pasan a ser los círculos de la bienvenida.
 - El ícono de la app (`assets/images/icon.png`) sigue siendo el genérico de Expo.
 - La frase de la versión 1 ("a veces hace falta alguien") es propuesta de Claude: falta el visto bueno de Andre.
 

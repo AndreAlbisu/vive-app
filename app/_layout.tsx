@@ -406,7 +406,14 @@ export default function RootLayout() {
             pedido llegaría a un widget desmontado. No dibuja nada salvo que
             Turnstile decida desafiar. */}
         <CaptchaHost />
-        <StatusBar style="auto" />
+        {/* 🔴 "dark" y no "auto" (07/10/2026). La app es clara en todas sus
+            pantallas (fondo crema), pero "auto" sigue el modo del TELÉFONO: con
+            el iPhone en modo oscuro ponía la hora, la señal y la batería en
+            blanco sobre el crema. Además este componente monta DESPUÉS de la
+            primera pantalla, así que le ganaba al `dark-content` que ella
+            pedía. Una pantalla oscura (la sala) puede pedir lo contrario: monta
+            más tarde y manda. */}
+        <StatusBar style="dark" />
         {/* Último, para quedar por encima de todo el Stack. Afuera de nada que
             dependa de la sesión: tiene que poder tapar también el login. */}
         <VersionGate />
