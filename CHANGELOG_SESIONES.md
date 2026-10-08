@@ -1,13 +1,15 @@
 ## 2026-10-08 — Joaquín (Claude · recursos: carteles a la izquierda + orden de Respiración y Sonidos)
 
-**Tocado:** `components/ParaQueSirve.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`. Directo en `main`.
+**Tocado:** `components/ParaQueSirve.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`, `screens/MeditacionScreen.tsx`, `screens/SuenoScreen.tsx`, `app/gratitud.tsx`, `components/ui/Grain.tsx`, `lib/admin.ts` + migración (en rama aparte). Directo en `main` salvo la privacidad.
 
-**Resumen:** Arreglos de layout que marcó Joaquín en device (4 capturas).
-- **"Para qué sirve" plegado → arriba a la IZQUIERDA** (antes `alignSelf: flex-end`, flotaba a la derecha y se veía descolgado). Global en el componente → afecta Gratitud, Diario, Respiración y Sonidos.
-- **Sonidos (`RuidoScreen`):** el contenido sube — `scrollContent` pasa de `justifyContent: center` a `flex-start` (había un vacío enorme arriba).
-- **Respiración (`RespiracionScreen`):** el setup (`idle`) estaba centrado vertical → vacío arriba, y al expandir el "para qué sirve" cramaba todo. Ahora el idle va en un `ScrollView` top-aligned (ordenado + el expand scrollea sin clipear Iniciar). Los estados `running`/`done` siguen centrados.
+**Resumen:** Varios arreglos de layout/UX que marcó Joaquín en device, y dos cierres.
+- **"Para qué sirve" plegado → arriba a la IZQUIERDA** (antes `alignSelf: flex-end`). Global → Gratitud, Diario, Respiración, Sonidos.
+- **Setup de recursos arriba (no centrado):** Sonidos (`scrollContent` flex-start), Respiración (idle en `ScrollView` top-aligned; running/done siguen centrados), y **Meditación + Sueño** (nuevo `setupContent` top-aligned; el `done` sigue centrado). Los 5 recursos quedaron consistentes.
+- **Gratitud, alineación número↔texto:** la línea de pelo pasó a elemento aparte (como borde de fila, 2 y 3 quedaban a otra altura que la 1); badge `marginTop 3` + input `paddingTop 2` + números un toque a la derecha (`paddingLeft 6`). Receta guardada en memoria.
+- **Splash, grano a prueba de Android:** `Grain` pasó de feTurbulence a patrón de puntitos (mismo que las cards, iOS+Android OK). Joaquín no tiene Android para probar feTurbulence. API igual.
+- 🔒 **Privacidad (fase 5 #1), PR #11 (rama `fix-privacidad-garantia-notes`):** `guarantee_claims.notes` (motivo de rechazo del admin, incluido abuso §9.3) lo leía el reclamante por API. Migración `20261008010000` (revoca la columna de `authenticated` + `notas_garantia_admin()` definer) + `lib/admin.ts` por RPC. Cero impacto de UX. **NO aplicada — la corre Andre.**
 
-**Pendiente:** confirmar en device (Joaquín estaba probando). Sin migraciones.
+**Pendiente:** confirmar en device lo visual. PR #11 y PR #9 esperan a Andre. Observación de privacidad #2 (`bookings.user_message` visible a la admin) sin tocar.
 
 ## 2026-10-08 — Andre (Claude · se va el cartel de Sofía que saltaba después del check-in)
 
