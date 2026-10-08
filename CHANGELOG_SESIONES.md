@@ -1,3 +1,17 @@
+## 2026-10-08 — Andre (Claude · la portada se cortaba a la derecha en celulares con la letra agrandada)
+
+**Tocado:** `web/tiendas.js`, `web/index.html`. **Sin migraciones.**
+
+**Resumen:**
+- Un amigo de Andre abrió la web en un Samsung S20 FE y el texto, los botones de las tiendas y el campo del mail se salían por la derecha. Reproducido: pasa cuando la pantalla mide menos de unos 340 px de ancho útil, que es lo que queda en un Android con la letra o el zoom de pantalla agrandados. A 360 y 412 no se veía.
+- Causa: el commit anterior metió la fila de botones y el formulario adentro de una caja que seguía siendo "fila que no corta". Su ancho mínimo ensanchaba toda la columna de la portada. Ahora esa caja deja de ser fila y la columna no puede crecer más que la pantalla.
+- De paso, el título de la portada se achica por debajo de 320 px (antes "Acompañados," tocaba el borde a 280).
+- Visto en Chrome sin ventana a 280, 320, 360, 412 y 1280 de ancho, antes y después.
+
+**Pendiente para la próxima sesión:**
+- Que el amigo vuelva a entrar después de publicar (puede necesitar recargar: el navegador guarda la versión vieja).
+- Siguen abiertos los pendientes del cifrado del diario.
+
 ## 2026-10-08 — Andre (Claude · la portada de la web vuelve a mostrar los botones de las tiendas, con el aviso por mail debajo)
 
 **Tocado:** `web/tiendas.js`, `web/index.html`. **Sin migraciones.**

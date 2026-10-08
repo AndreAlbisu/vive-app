@@ -537,7 +537,7 @@
 
   /* ── Responsive ──────────────────────────────────────────────────────── */
   @media (max-width: 960px) {
-    .hero-inner { grid-template-columns: 1fr; padding-top: 112px; gap: 40px; }
+    .hero-inner { grid-template-columns: minmax(0, 1fr); padding-top: 112px; gap: 40px; }
     .hero .phone { transform: rotate(2deg); }
     .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 32px; }
     .pros-box { grid-template-columns: 1fr; }
@@ -573,7 +573,7 @@
     /* En el celular el mapa se acerca al Atlántico: entero quedaba ilegible. */
     .mapa { overflow: hidden; }
     .mapa svg { width: 212.5%; max-width: none; margin-left: -27.5%; }
-    .hero h1 { font-size: clamp(2.4rem, 9.6vw, 3.4rem); }
+    .hero h1 { font-size: clamp(min(2.4rem, 12vw), 9.6vw, 3.4rem); }
     .hero-inner { padding-top: 88px; padding-bottom: 48px; gap: 32px; }
     .hero .lead { margin-top: 20px; }
     .hero .stores { flex-wrap: nowrap; }

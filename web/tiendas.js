@@ -116,6 +116,10 @@
     // mail. La página de profesionales sigue solo con el formulario.
     if (!HAY_TIENDAS) {
       if (!profesional) {
+        // La caja deja de ser la fila de botones: adentro van la fila y el
+        // formulario, uno debajo del otro. Si queda como fila, en el celular
+        // los dos se ponen lado a lado y la página se ensancha.
+        box.classList.remove('stores');
         var fila = document.createElement('div');
         botonesDeTiendas(fila);
         box.appendChild(fila);
