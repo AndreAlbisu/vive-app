@@ -461,7 +461,10 @@ const s = StyleSheet.create({
     lineHeight: 23,
     minHeight: 24,
     padding: 0,
-    paddingTop: 4,   // baja el texto un toque para alinearlo con el número (Joaquín, 08/10)
+    // Alineación número↔texto en iOS: badge con marginTop 3 + input paddingTop 2
+    // deja el número y la primera línea a la misma altura. pt 1 queda alto, pt 4
+    // queda muy bajo — el punto justo es 2 (Joaquín, 08/10, medido en captura).
+    paddingTop: 2,
     textAlignVertical: 'top',
   },
   counter: {
