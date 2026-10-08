@@ -1055,7 +1055,7 @@ export default function CoachHomeScreen() {
                   onPress={() => next.salaId
                     ? router.push({ pathname: '/sala', params: { sala_id: next.salaId } })
                     : router.push('/sala')}>
-                  <Text style={s.actJoinTxt}>{canJoin ? 'Unirse' : 'Se habilita 10 min antes'}</Text>
+                  <Text style={s.actJoinTxt}>{canJoin ? 'Unirse' : 'Abre 10 min antes'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.actBtn, s.actPrep]} activeOpacity={0.85} onPress={() => setPrepOpen(o => !o)}>
                   <Text style={s.actPrepTxt}>Preparar sesión</Text>
