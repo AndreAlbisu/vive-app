@@ -1,3 +1,16 @@
+## 2026-10-08 — Andre (Claude · pendientes del cifrado del diario, subidos acá para que no se pierdan)
+
+**Tocado:** `CHANGELOG_SESIONES.md`
+
+**Resumen:**
+- Sin cambios de código. La entrada del cifrado es la del 05/10 y quedó tapada por las de estos días; sus pendientes siguen abiertos y se repiten acá.
+- Comprobado hoy que el cifrado sigue puesto en `app/diario.tsx` y `app/gratitud.tsx` después del rediseño del 07/10, y que el secreto maestro figura cargado en Supabase.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Probar el cifrado en el iPhone** (nunca se probó de punta a punta): guardar una entrada de diario y una de gratitud, cerrar, reabrir y ver que se leen. Después mirar en la base que el texto empiece con `vd1.`.
+- Recién con eso verificado, cambiar la Política §8.2 (hoy dice que diario y gratitud no están cifrados) y correr `npm run sync:legal`.
+- **Inventario de secretos** (pedido de Andre): tabla en el repo solo con NOMBRES, nunca valores, de los secretos de Supabase y del `.env`: dónde está cada uno, para qué sirve, quién lo regenera y qué se rompe si se pierde. Marcar los irrecuperables (hoy uno: `WELLBEING_MASTER_KEY`). Va junto con pasar todo a un gestor de contraseñas compartido con Joaquín y una copia fuera de línea del irrecuperable.
+
 ## 2026-10-08 — Andre (Claude · el logo de la web con las tres uniones iguales)
 
 **Tocado:** `web/favicon.svg` y las 10 páginas de `web/` que dibujan el isotipo (`index`, `profesionales`, `reserva`, `sala`, `c` y las cinco de `legal/`). **Sin migraciones.**
