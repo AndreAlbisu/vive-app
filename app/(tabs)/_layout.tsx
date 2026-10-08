@@ -108,8 +108,10 @@ export default function TabLayout() {
 
       {/* Global a las 4 tabs principales, montado acá (no por pantalla) para
           que sea un solo elemento — no aparece en coach/admin/onboarding/auth,
-          que viven en otros grupos de rutas. */}
-      <SofiaAssistant />
+          que viven en otros grupos de rutas.
+          Se puede esconder en una compilación puntual (la de demostración de
+          Feria 21): su campo de escribir todavía dice "Muy pronto". */}
+      {process.env.EXPO_PUBLIC_OCULTAR_SOFIA !== '1' && <SofiaAssistant />}
     </>
   );
 }

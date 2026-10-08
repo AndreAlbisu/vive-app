@@ -1,3 +1,14 @@
+## 2026-10-08 — Andre (Claude · la bolita de Sofía se puede esconder en una compilación)
+
+**Tocado:** `app/(tabs)/_layout.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Con `EXPO_PUBLIC_OCULTAR_SOFIA=1` la bolita flotante de Sofía no se monta. Sin esa variable (o sea, en todas las compilaciones normales) la app queda igual que antes.
+- Es para la versión de demostración del stand de Feria 21: el panel de Sofía tiene el campo de escribir apagado con "Muy pronto vas a poder escribirme", y la demo quiere mostrar la app como si ya funcionara entera. La variable solo está en el perfil `demo` de `eas.json`, que es local y no se commitea (apunta a la base de prueba).
+
+**Pendiente para la próxima sesión:**
+- Después de la feria se puede sacar el interruptor, o dejarlo si sirve para otras demostraciones.
+
 ## 2026-10-08 — Andre (Claude · la portada nombra el bienestar físico, mental y espiritual)
 
 **Tocado:** `web/index.html`. **Sin migraciones.**
