@@ -460,8 +460,8 @@ const s = StyleSheet.create({
     color: ViveColors.text,
     lineHeight: 23,
     minHeight: 24,
-    paddingTop: 1,
     padding: 0,
+    paddingTop: 4,   // baja el texto un toque para alinearlo con el número (Joaquín, 08/10)
     textAlignVertical: 'top',
   },
   counter: {
