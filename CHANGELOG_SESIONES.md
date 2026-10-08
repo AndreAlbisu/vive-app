@@ -1,3 +1,17 @@
+## 2026-10-08 — Andre (Claude · el ícono de la app pasa a ser el logo de Vita)
+
+**Tocado:** `assets/images/icon.png`, `android-icon-foreground.png`, `android-icon-monochrome.png`, `android-icon-background.png`, `splash-icon.png`, `favicon.png`, `app.json`. **Sin migraciones.**
+
+**Resumen:**
+- El ícono, el ícono adaptable de Android, la pantalla de carga y el favicon seguían siendo los de la plantilla de Expo (una "A" azul), sin cambios desde el primer commit. La compilación para la tienda del 25/09 salió con ese ícono.
+- Ahora son los tres círculos en oliva sobre crema, con las tres uniones iguales y el centro relleno: la misma versión que los stickers de Feria 21. La pantalla de carga pasa de fondo blanco (negro en modo oscuro) a crema en los dos, para que no haya salto al entrar.
+- No existe un archivo maestro del logo: la web (junto a "vita") y la presentación usan una versión con la unión de abajo más angosta; el favicon de la web ya tenía las uniones iguales.
+
+**Pendiente para la próxima sesión:**
+- El cambio recién se ve en una compilación nueva. Mirarlo en un iPhone y en un Android.
+- Decidir si esta versión es la oficial y unificarla en la web y la presentación, con un archivo maestro.
+- El ícono de las notificaciones en Android sigue apuntando a `icon.png`; Android espera una silueta blanca sobre transparente.
+
 ## 2026-10-08 — Andre (Claude · la web ya no muestra el domicilio en el pie)
 
 **Tocado:** `web/index.html`, `web/profesionales.html`, `docs/paquete-abogado.md`. **Sin migraciones.**
