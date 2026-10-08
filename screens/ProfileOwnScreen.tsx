@@ -848,6 +848,7 @@ const styles = StyleSheet.create({
     borderColor: GLASS_BORDER,
     padding: 16,
     marginHorizontal: 20,
+    marginBottom: 20,
     gap: 12,
   },
   preferenceInfo: { flex: 1 },
