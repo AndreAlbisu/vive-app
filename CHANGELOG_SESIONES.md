@@ -344,12 +344,13 @@
 - **Sin clave no se guarda** (la pantalla avisa), nunca se sube texto en claro.
 - **Legal:** investigado. La Ley 25.326 (art. 9) pide medidas "necesarias" sin nombrar el cifrado y la Res. AAIP 47/2018 lo deja como recomendación; no encontré norma vigente que lo obligue. Sumado al paquete del abogado como B.8.
 - 🗄️ **Base de datos: sin cambios de tablas ni policies.** Función nueva `wellbeing-key` desplegada en producción; SCHEMA.md actualizado.
-- ⚠️ **No verificado de punta a punta:** el entorno no me deja cargar secretos, así que la función está desplegada pero responde "configuración incompleta" hasta que Andre corra el script. Verificado: pruebas automáticas (cifrado, clave, formato contra el script del pedido de datos) y que la función rechaza a quien no tiene sesión.
+- 🔑 **Secreto maestro cargado en producción por Andre** (`WELLBEING_MASTER_KEY`, con `scripts/crear-secreto-bienestar.sh`; el primer intento falló del lado de Supabase y el segundo entró). Copia local en `~/.config/vita/` y segunda copia en su gestor de contraseñas.
+- ⚠️ **Todavía no probado de punta a punta:** verificado con pruebas automáticas (cifrado, clave, formato contra el script del pedido de datos), que la función rechaza a quien no tiene sesión y que el secreto figura en Supabase. Falta verla entregar una clave real y el cifrado corriendo en el teléfono.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Andre: correr `bash scripts/crear-secreto-bienestar.sh` antes de usar el Diario** (hasta entonces Diario y Gratitud no guardan) y pegar la copia del secreto en el gestor de contraseñas.
-- Después: probar en el teléfono guardar y releer una entrada, y mirar en la base que empiece con `vd1.`.
-- Recién con eso verificado, cambiar la Política §8.2 para que diga que diario y gratitud se almacenan cifrados (hoy dice que no, y es cierto hasta que el secreto esté cargado) y correr `npm run sync:legal`.
+- 🔴 **Probar en el iPhone:** recargar la app, guardar una entrada de diario y una de gratitud, cerrar, reabrir y ver que se leen. Después mirar en la base que el texto empiece con `vd1.`.
+- Recién con eso verificado, cambiar la Política §8.2 para que diga que diario y gratitud se almacenan cifrados (hoy dice que no) y correr `npm run sync:legal`.
+- **Inventario de secretos** (pedido de Andre): una tabla en el repo solo con NOMBRES, nunca valores, de los 30 secretos de Supabase y los del `.env`: dónde está cada uno, para qué sirve, quién lo regenera y qué se rompe si se pierde. Marcar los irrecuperables (hoy uno: `WELLBEING_MASTER_KEY`). Va junto con pasar todo a un gestor de contraseñas con bóveda compartida con Joaquín y una copia fuera de línea del irrecuperable.
 - Evaluar después: notas privadas del profesional con el mismo esquema, y Face ID para abrir el Diario.
 
 ## 2026-10-05 — Andre (Claude · "Para qué sirve" más discreto)
