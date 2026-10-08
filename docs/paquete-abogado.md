@@ -471,6 +471,21 @@ reemplazó las medidas obligatorias por recomendadas.
 - [ ] Si hubiera una filtración, ¿hay hoy obligación de avisarle a la AAIP o a
       las personas? ¿Conviene comprometer un plazo en la Política?
 
+**B.9 — Mis datos personales en la web.**
+Vita opera a mi nombre, así que para identificar al proveedor figuran mi nombre
+completo, mi CUIT y mi domicilio. El 08/10/2026 saqué el domicilio del pie de la
+portada y de la página de profesionales (quedó "Andre Albisu Lambertini. CUIT
+… Córdoba, Argentina."). El domicilio completo sigue en los Términos, la
+Política de Privacidad, el botón de arrepentimiento y la página de eliminar
+cuenta, todos enlazados desde ese mismo pie.
+- [ ] ¿Alcanza con que el domicilio esté en los documentos legales enlazados, o
+      la identificación del proveedor (Ley 24.240, Res. GMC 21/2004) exige que
+      esté a la vista en el pie?
+- [ ] ¿Puedo constituir un domicilio distinto del de mi casa (fiscal o legal)
+      para estos fines, sin formar una sociedad?
+- [ ] ¿Conviene pasar a una sociedad antes de lanzar, entre otras cosas para que
+      figuren sus datos y no los míos?
+
 ### C. Solo si decidimos que Sofía conversa — *decidir antes de enviar*
 
 > **Nota interna, borrar antes de mandar:** esta sección solo va si se decide

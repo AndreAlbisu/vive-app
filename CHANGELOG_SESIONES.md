@@ -1,3 +1,15 @@
+## 2026-10-08 — Andre (Claude · la web ya no muestra el domicilio en el pie)
+
+**Tocado:** `web/index.html`, `web/profesionales.html`, `docs/paquete-abogado.md`. **Sin migraciones.**
+
+**Resumen:**
+- El pie de la portada y de la página de profesionales mostraba nombre, CUIT y domicilio completo de Andre. Queda nombre, CUIT y "Córdoba, Argentina". El domicilio completo sigue en los documentos legales enlazados desde ese pie (Términos, Política, arrepentimiento, eliminar cuenta), que no se tocaron.
+- Pregunta nueva para el abogado (B.9): si alcanza con eso, si se puede constituir un domicilio distinto y si conviene una sociedad antes de lanzar.
+
+**Pendiente para la próxima sesión:**
+- Publicar la web para que el cambio se vea. El historial del repo (público) conserva el domicilio.
+- `eas.json` tiene un perfil `demo` sin commitear (de otra sesión, para la feria); no se incluyó acá.
+
 ## 2026-10-08 — Joaquín (Claude · recursos: carteles a la izquierda + orden de Respiración y Sonidos)
 
 **Tocado:** `components/ParaQueSirve.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`, `screens/MeditacionScreen.tsx`, `screens/SuenoScreen.tsx`, `app/gratitud.tsx`, `components/ui/Grain.tsx`, `lib/admin.ts` + migración (en rama aparte). Directo en `main` salvo la privacidad.
