@@ -374,7 +374,10 @@ export type AdminClaim = {
 export async function listClaims(): Promise<AdminClaim[]> {
   const { data, error } = await supabase
     .from('guarantee_claims')
-    .select('id, booking_id, status, requested_at, resolved_at, resolved_by, notes')
+    // `notes` ya NO se lee por la tabla: `authenticated` no tiene la columna
+    // (migración 20261008010000 — el reclamante leía el motivo de rechazo del
+    // admin por su propia fila). Las notas las trae la RPC de abajo.
+    .select('id, booking_id, status, requested_at, resolved_at, resolved_by')
     .order('requested_at', { ascending: false })
     .limit(50);
 
@@ -382,6 +385,13 @@ export async function listClaims(): Promise<AdminClaim[]> {
     console.warn('[admin] no se pudieron leer las garantías:', error.message);
     return [];
   }
+
+  // Notas (motivo de rechazo) por RPC security definer, gateada por is_admin.
+  const { data: notasData } = await supabase.rpc('notas_garantia_admin');
+  const notas = new Map<string, string>(
+    ((notasData ?? []) as { id: string; notes: string | null }[]).map(n => [n.id, n.notes ?? '']),
+  );
+
   return (data ?? []).map(c => ({
     id: c.id,
     bookingId: c.booking_id,
@@ -389,7 +399,7 @@ export async function listClaims(): Promise<AdminClaim[]> {
     requestedAt: c.requested_at,
     resolvedAt: c.resolved_at,
     resolvedBy: c.resolved_by ?? null,
-    notes: c.notes,
+    notes: notas.get(c.id) ?? null,
   }));
 }
 
