@@ -1,17 +1,19 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { PASTEL_DURAZNO } from '@/constants/tools';
 import { Grain } from '@/components/ui/Grain';
-import { PrintLines } from '@/components/ui/PrintLines';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedProps,
   withTiming,
+  withDelay,
   cancelAnimation,
   runOnJS,
   type SharedValue,
@@ -46,16 +48,22 @@ const REST_ANGLES  = [90, 330, 210] as const;
 // Start angles reflejados igual, para que cada círculo entre por su propio arco.
 const START_ANGLES = [160, 40, 280] as const;
 
-const ENTRY_MS      = 1900;
-const HOLD_MS       = 1500;
-const BRAND_GROW_MS = 1100;
+// 07/10: toda la intro en 4 segundos como mucho (Joaquín). Entrada más corta,
+// y desde que se apoya el dedo hasta la pantalla siguiente pasan unos 2,3 s.
+const ENTRY_MS      = 1200;
+const HOLD_MS       = 1100;
+// Cuánto queda quieto el final (disco + "vita" + "te acompaña") antes de
+// salir. Es el remate del gesto: sin esta pausa la frase no se llega a leer.
+const REVEAL_HOLD_MS = 700;
+const EXIT_MS        = 450;
+const BRAND_REST_Y   = CY - 90;
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 // El wordmark pasa a verde bosque sólido (ViveColors.accent) con un duplicado
 // terracota (ViveColors.primary) desplazado — "mala registración" de imprenta.
 // El fondo es crema plano del token (ViveColors.background), sin degradé.
 const PAL = {
-  subColor: '#9E5742',   // tagline "convive con vos"
+  subColor: '#9E5742',   // tagline "te acompaña"
 } as const;
 
 // Desfasaje de la mala registración, en unidades del viewBox (≈2px en pantalla).
@@ -64,7 +72,11 @@ const MISREG = 2;
 
 // Durazno calmo (Joaquín, 06/10, laboratorio) — antes naranja (#FF9A52…), se
 // sentía fuerte; este tono es más suave y menos "neón" al superponerse.
-const AURA_COLORS = ['#F39A7E', '#F7BBA6', '#FBD8CB'] as const;
+// Colores de la paleta de la app (07/10, Andre y Joaquín: el durazno #F39A7E
+// se veía muy salmón y no era de la paleta). Mismo escalonado de tres tonos,
+// ahora con la familia terracota: terracota de marca, su tono medio (el
+// "Cansado" de la escala de ánimo) y el durazno pastel de las herramientas.
+const AURA_COLORS = [ViveColors.primary, '#DDAE93', PASTEL_DURAZNO] as const;
 const GRAD_IDS    = ['vgA', 'vgB', 'vgC'] as const;
 const DEG         = Math.PI / 180;
 
@@ -142,6 +154,8 @@ export default function OnboardingScreen1() {
   const [hintText, setHintText] = useState('mantené presionado');
   const [entryDone, setEntryDone] = useState(false);
   const reduced = useReducedMotion();
+  // El gesto ya se completó: desde acá soltar el dedo no deshace nada.
+  const revealed = useRef(false);
 
   // ── Shared values ─────────────────────────────────────────────────────────
   const entryP = useSharedValue(0);
@@ -149,7 +163,6 @@ export default function OnboardingScreen1() {
   const hintOp = useSharedValue(0);
   const diagOp = useSharedValue(1);
   const diagSc = useSharedValue(1);
-  const rvlOp  = useSharedValue(0);
 
   // ── JS-thread callbacks ───────────────────────────────────────────────────
 
@@ -158,23 +171,36 @@ export default function OnboardingScreen1() {
   }, [router]);
 
   const triggerReveal = useCallback(() => {
+    if (revealed.current) return;
+    revealed.current = true;
     // `segundos` acá es cuánto tardó en descubrir el gesto, no en decidir nada.
     anotar('onboarding_respuesta', { pantalla: 'bienvenida', respuesta: 'mantuvo', segundos: abandono() });
 
-    diagOp.value = withTiming(0,   { duration: 750 });
-    diagSc.value = withTiming(1.4, { duration: 950 });
-    hintOp.value = withTiming(0,   { duration: 280 });
-    rvlOp.value  = withTiming(1,   { duration: BRAND_GROW_MS });
-    setTimeout(navigateNext, BRAND_GROW_MS + 250);
+    // Si soltó justo al completar, el pressOut pudo arrancar la vuelta antes de
+    // llegar acá: se fija el final.
+    cancelAnimation(mergeP);
+    mergeP.value = withTiming(1, { duration: 200 });
+    if (Platform.OS === 'ios') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+
+    // El final queda quieto REVEAL_HOLD_MS y recién después se va, hacia el
+    // mismo crema de la pantalla siguiente.
+    hintOp.value = withTiming(0, { duration: 280 });
+    diagOp.value = withDelay(REVEAL_HOLD_MS, withTiming(0,   { duration: EXIT_MS }));
+    diagSc.value = withDelay(REVEAL_HOLD_MS, withTiming(1.4, { duration: EXIT_MS + 200 }));
+    setTimeout(navigateNext, REVEAL_HOLD_MS + EXIT_MS + 50);
   }, [navigateNext]);
 
   // ── Entry animation on mount ──────────────────────────────────────────────
   useEffect(() => {
     anotar('onboarding_pantalla_vista', { pantalla: 'bienvenida' });
 
+    // 🔴 Se puede apoyar el dedo desde el primer instante (Andre, 07/10): la
+    // instrucción aparece enseguida y el gesto no espera a que termine la entrada.
+    hintOp.value = withDelay(300, withTiming(1, { duration: 350 }));
     entryP.value = withTiming(1, { duration: ENTRY_MS }, (finished) => {
       if (finished) {
-        hintOp.value = withTiming(1, { duration: 600 });
         runOnJS(setEntryDone)(true);
       }
     });
@@ -193,16 +219,20 @@ export default function OnboardingScreen1() {
 
   // ── Press handlers ────────────────────────────────────────────────────────
   const handlePressIn = useCallback(() => {
-    if (!entryDone) return;
+    if (revealed.current) return;
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
     setHintText('manteniendo…');
     mergeP.value = withTiming(1, { duration: HOLD_MS }, (finished) => {
       if (finished) {
         runOnJS(triggerReveal)();
       }
     });
-  }, [entryDone, triggerReveal]);
+  }, [triggerReveal]);
 
   const handlePressOut = useCallback(() => {
+    if (revealed.current) return;
     cancelAnimation(mergeP);
     mergeP.value = withTiming(0, { duration: 600 }, (finished) => {
       if (finished) {
@@ -210,6 +240,16 @@ export default function OnboardingScreen1() {
       }
     });
   }, []);
+
+  // VoiceOver / TalkBack no pueden "mantener": el doble toque completa el gesto.
+  const handleActivate = useCallback(() => {
+    if (revealed.current) return;
+    mergeP.value = withTiming(1, { duration: 600 }, (finished) => {
+      if (finished) {
+        runOnJS(triggerReveal)();
+      }
+    });
+  }, [triggerReveal]);
 
   // ── Animated props (9 circle hooks — fixed call order) ───────────────────
 
@@ -223,7 +263,7 @@ export default function OnboardingScreen1() {
   const ig1 = useCircleAnimProps(1, 0.88, 1.0, entryP, mergeP);
   const ig2 = useCircleAnimProps(2, 0.88, 1.0, entryP, mergeP);
 
-  // Brand name: y slides from CY-90 down to CY; fontSize grows 52→62.
+  // Brand name: y slides from BRAND_REST_Y down to CY; fontSize grows 52→62.
   // "Letras que se juntan" (tracking-in, elegido por Joaquín 06/10 en el
   // laboratorio): en la segunda mitad de la entrada el wordmark aparece con las
   // letras separadas y se juntan a su lugar (letterSpacing 30→0 + fade). Se mide
@@ -232,7 +272,7 @@ export default function OnboardingScreen1() {
     const me = eioq(mergeP.value);
     const wp = eioq(Math.min(1, Math.max(0, (entryP.value - 0.45) / 0.5)));
     return {
-      y:             lerp(CY - 90, CY, me),
+      y:             lerp(BRAND_REST_Y, CY, me),
       fontSize:      lerp(52, 62, me),
       letterSpacing: lerp(30, 0, wp),
       opacity:       wp,
@@ -246,7 +286,7 @@ export default function OnboardingScreen1() {
     const me = eioq(mergeP.value);
     const wp = eioq(Math.min(1, Math.max(0, (entryP.value - 0.45) / 0.5)));
     return {
-      y:             lerp(CY - 90, CY, me) + MISREG,
+      y:             lerp(BRAND_REST_Y, CY, me) + MISREG,
       fontSize:      lerp(52, 62, me),
       letterSpacing: lerp(30, 0, wp),
       opacity:       wp * 0.55,
@@ -266,10 +306,6 @@ export default function OnboardingScreen1() {
     transform: [{ scale: diagSc.value }],
   }));
 
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: rvlOp.value,
-  }));
-
   const hintStyle = useAnimatedStyle(() => ({
     opacity: hintOp.value,
   }));
@@ -278,17 +314,19 @@ export default function OnboardingScreen1() {
 
   return (
     <View style={styles.cream}>
-      {/* Dark overlay fades in during reveal before navigating */}
-      <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,8,38,0.88)' }, overlayStyle]}
-        pointerEvents="none"
-      />
+      {/* Fondo claro: hora, señal y batería en oscuro. */}
+      <StatusBar barStyle="dark-content" />
 
       {/* Full-screen hold target */}
       <Pressable
         style={styles.pressable}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel="Vita te acompaña. Empezar"
+        accessibilityActions={[{ name: 'activate' }]}
+        onAccessibilityAction={handleActivate}
       >
         {/* Diagram group — scales out + fades on reveal */}
         <Animated.View style={[StyleSheet.absoluteFill, diagramStyle]}>
@@ -330,17 +368,20 @@ export default function OnboardingScreen1() {
             <AnimatedCircle animatedProps={ig1} fill={`url(#${GRAD_IDS[1]})`} />
             <AnimatedCircle animatedProps={ig2} fill={`url(#${GRAD_IDS[2]})`} />
           </Svg>
+        </Animated.View>
 
-          {/* ── Trama + grano: ENCIMA de los círculos, DEBAJO del wordmark, para
-              que todo se vea impreso sobre el mismo papel. Full-screen (cubren el
-              papel entero, no el SVG letterboxed). Muy tenues: no ensucian los
-              círculos. ── */}
-          <PrintLines color={ViveColors.accent} opacity={0.06} />
-          <Grain opacity={0.16} />
+        {/* ── Grano: ENCIMA de los círculos, DEBAJO del wordmark. Va FUERA del
+            grupo animado: es el papel, y el papel no se agranda ni se desvanece
+            cuando los círculos salen. Muy leve (07/10, visto en el iPhone): a
+            16% no se leía como grano, solo agrisaba el crema; y la trama de
+            líneas se veía como una persiana encima de los círculos, se sacó. ── */}
+        <Grain opacity={0.05} />
 
-          {/* ── Wordmark: su propio SVG, encima de las texturas. Dos capas con
-              "mala registración" de imprenta: atrás terracota corrida +MISREG a
-              55%, adelante verde bosque sólido (sin contorno). ── */}
+        {/* Wordmark group — sale igual que los círculos */}
+        <Animated.View style={[StyleSheet.absoluteFill, diagramStyle]} pointerEvents="none">
+          {/* ── Wordmark: su propio SVG, encima del grano. Dos capas con "mala
+              registración" de imprenta: atrás terracota corrida +MISREG a 55%,
+              adelante verde bosque sólido (sin contorno). ── */}
           <Svg
             style={StyleSheet.absoluteFill}
             viewBox={`0 0 ${VB_W} ${VB_H}`}
@@ -381,7 +422,7 @@ export default function OnboardingScreen1() {
               letterSpacing={0.8}
               fill={PAL.subColor}
             >
-              {'convive con vos'}
+              {'te acompaña'}
             </AnimatedSvgText>
           </Svg>
         </Animated.View>
@@ -416,12 +457,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingBottom: 28,
   },
   hint: {
     fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: '#87835C',
+    fontSize: 14,
+    letterSpacing: 0.6,
+    color: ViveColors.text,
   },
 });
