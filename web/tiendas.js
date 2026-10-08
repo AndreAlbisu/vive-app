@@ -3,8 +3,8 @@
 // data-tipo="persona" o "profesional". Un elemento con id `pros-cta` cambia
 // de texto cuando haya links de tiendas.
 (function () {
-  // Links de descarga. Mientras estén vacíos, en lugar de los botones va el
-  // formulario para dejar el mail. Cuando la app salga, pegar acá las URLs de las
+  // Links de descarga. Mientras estén vacíos, los botones dicen "Muy pronto" y
+  // debajo va el formulario para dejar el mail. Cuando la app salga, pegar acá las URLs de las
   // tiendas y listo: se actualizan todos los botones de las dos páginas.
   var TIENDAS = {
     ios: '',      // https://apps.apple.com/ar/app/vita/id<número que da App Store Connect>
@@ -91,17 +91,10 @@
     box.appendChild(form);
   }
 
-  document.querySelectorAll('[data-stores]').forEach(function (box) {
-    // 07/10/2026, Andre: Vita abre a los usuarios en noviembre, así que
-    // mientras no haya links de tiendas las dos páginas piden el mail (antes
-    // la portada mostraba botones "Muy pronto" que no llevaban a ningún lado).
-    // Los QR de Feria 21 llevan `?ref=feria21`, que se guarda con el mail.
-    if (!HAY_TIENDAS) { formularioAviso(box, box.dataset.tipo === 'profesional' ? 'profesional' : 'persona'); return; }
-    if (box.dataset.tipo === 'profesional') {
-      var cta = document.getElementById('pros-cta');
-      if (cta) cta.textContent = 'Bajate la app y postulate desde ahí.';
-    }
-    box.classList.add('stores');
+  // Los dos botones de tiendas. Sin link todavía, dicen "Muy pronto en" y no
+  // llevan a ningún lado.
+  function botonesDeTiendas(donde) {
+    donde.classList.add('stores');
     ['ios', 'android'].forEach(function (k) {
       var url = TIENDAS[k];
       var el = document.createElement(url ? 'a' : 'span');
@@ -109,7 +102,31 @@
       if (url) { el.href = url; el.rel = 'noopener'; }
       else { el.setAttribute('aria-disabled', 'true'); }
       el.innerHTML = ICONOS[k] + '<span><small>' + (url ? 'Descargala en' : 'Muy pronto en') + '</small><b>' + NOMBRES[k] + '</b></span>';
-      box.appendChild(el);
+      donde.appendChild(el);
     });
+  }
+
+  document.querySelectorAll('[data-stores]').forEach(function (box) {
+    var profesional = box.dataset.tipo === 'profesional';
+    // 08/10/2026, Andre: mientras no haya links de tiendas, la portada muestra
+    // las DOS cosas: los botones de App Store y Google Play ("Muy pronto en",
+    // como estaban hasta el 07/10) y, debajo, el mail para avisar. Los botones
+    // dicen que va a ser una app y dónde; el mail es lo único que se puede
+    // hacer hoy. Los QR de Feria 21 llevan `?ref=feria21`, que se guarda con el
+    // mail. La página de profesionales sigue solo con el formulario.
+    if (!HAY_TIENDAS) {
+      if (!profesional) {
+        var fila = document.createElement('div');
+        botonesDeTiendas(fila);
+        box.appendChild(fila);
+      }
+      formularioAviso(box, profesional ? 'profesional' : 'persona');
+      return;
+    }
+    if (profesional) {
+      var cta = document.getElementById('pros-cta');
+      if (cta) cta.textContent = 'Bajate la app y postulate desde ahí.';
+    }
+    botonesDeTiendas(box);
   });
 })();

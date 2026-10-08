@@ -1,3 +1,16 @@
+## 2026-10-08 — Andre (Claude · la portada de la web vuelve a mostrar los botones de las tiendas, con el aviso por mail debajo)
+
+**Tocado:** `web/tiendas.js`, `web/index.html`. **Sin migraciones.**
+
+**Resumen:**
+- Pedido de Andre: en la portada vuelven los dos botones "Muy pronto en App Store" y "Muy pronto en Google Play" (se habían reemplazado el 07/10 por el formulario) y debajo queda el campo del mail con "Avisame". En las dos ubicaciones: arriba y en el cierre.
+- `/profesionales` no cambia: sigue solo con el formulario.
+- Cuando se carguen los links de las tiendas en `tiendas.js`, los botones se activan y el formulario desaparece, igual que antes.
+
+**Pendiente para la próxima sesión:**
+- No se vio en un navegador antes de commitear: Andre lo revisa publicado, sobre todo en el celular.
+- Siguen abiertos los pendientes del cifrado del diario (entrada de abajo).
+
 ## 2026-10-08 — Andre (Claude · pendientes del cifrado del diario, subidos acá para que no se pierdan)
 
 **Tocado:** `CHANGELOG_SESIONES.md`
