@@ -301,7 +301,9 @@ export default function GratitudScreen() {
               const tiene = items[i].trim().length > 0;
               return (
                 <View key={i} style={[s.fieldRow, i > 0 && s.fieldRowDivider]}>
-                  <NumberBadge n={i + 1} filled={tiene} reduced={reduced} />
+                  <View style={s.badgeWrap}>
+                    <NumberBadge n={i + 1} filled={tiene} reduced={reduced} />
+                  </View>
                   <TextInput
                     style={s.fieldInput}
                     value={items[i]}
@@ -438,6 +440,9 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     paddingLeft: 6,   // corre los números un poco a la derecha (Joaquín, 08/10)
   },
+  // El TextInput multilínea (iOS) baja el texto un toque respecto al borde;
+  // este marginTop centra el número con la primera línea (Joaquín, 08/10).
+  badgeWrap: { marginTop: 3 },
   fieldRowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(86,94,50,0.16)',
