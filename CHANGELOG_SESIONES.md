@@ -1,3 +1,18 @@
+## 2026-10-07 — Andre (Claude · la web suma los datos del problema, el puente y el mapa de argentinos afuera)
+
+**Tocado:** `web/index.html`. **Sin migraciones.**
+
+**Resumen:**
+- Salen del pitch de Feria 21 cuatro cosas que la página principal no tenía. Entre la portada y "Vita existe para que..." hay una sección nueva con dos datos ("1 de cada 6" y "1 de cada 2", con fuentes) y la frase "La ayuda existe. Falta el puente.", con un puente que se dibuja al entrar en pantalla.
+- Antes de las preguntas frecuentes hay otra sección nueva, "para argentinos, estén donde estén.": un mapa de puntos con líneas que salen de Córdoba y las cifras de España, Estados Unidos e Italia. **No lleva los nombres de los hermanos** (en el pitch sí): es una página pública. En el celular el mapa se acerca al Atlántico porque entero no se leía.
+- "A cada profesional lo entrevistamos y lo revisamos a mano" quedó en el paso 2 de "cómo funciona" y en la pregunta "¿Quiénes son los profesionales?". Coincide con el panel de administración, que no deja aprobar sin registrar la entrevista.
+- Las dos animaciones corren una sola vez y respetan movimiento reducido. Sin librerías ni archivos nuevos: todo va dentro de `index.html`, así que no cambia la política de seguridad de contenido.
+
+**Pendiente para la próxima sesión:**
+- Mirar las dos secciones en un teléfono real antes o apenas se publique: acá solo se probaron en Chrome sin pantalla, a 1440 y 500 px de ancho.
+- "Alrededor de dos millones" es una estimación consular, no un censo; las fuentes se leyeron en notas periodísticas, no en los informes originales. Conviene abrir la fuente primaria.
+- Joaquín: confirmar que le cierra el tono de la sección de datos.
+
 ## 2026-10-07 — Andre (Claude · texto de privacidad de Gratitud + revisión de la rama de limpieza de cobros)
 
 **Tocado:** `constants/herramientasParaQue.ts`. **Sin migraciones.**
