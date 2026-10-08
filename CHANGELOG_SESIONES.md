@@ -1,3 +1,15 @@
+## 2026-10-08 — Andre (Claude · la portada nombra el bienestar físico, mental y espiritual)
+
+**Tocado:** `web/index.html`. **Sin migraciones.**
+
+**Resumen:**
+- La web no usaba esas tres palabras en ningún lado. Andre pidió sumarlas, las tres. Van en la sección "Vita existe para que, en un momento difícil, sepas a quién acudir", como primera oración del texto de abajo: "Acompañamos tu bienestar físico, mental y espiritual."
+- El titular, la descripción para buscadores y la página de profesionales no cambian.
+
+**Pendiente para la próxima sesión:**
+- "Espiritual" no tiene hoy un tipo de profesional propio en Vita (hay psicólogos, coaches y nutricionistas). Si alguien pregunta en el stand, tener pensada la respuesta.
+- Publicar la web.
+
 ## 2026-10-08 — Andre (Claude · repaso de toda la web en celulares angostos)
 
 **Tocado:** `web/index.html`. **Sin migraciones.**
