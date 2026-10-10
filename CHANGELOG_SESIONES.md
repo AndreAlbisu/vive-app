@@ -1,3 +1,18 @@
+## 2026-10-09 — Andre (Claude · cierre de Feria 21)
+
+**Tocado:** `screens/CoachHomeScreen.tsx` (commit `7d25f760`, del 08/10, que había quedado sin anotar). **Sin migraciones.**
+
+**Resumen:**
+- Inicio del profesional: el botón de la próxima sesión pasó de "Se habilita 10 min antes" a "Abre 10 min antes", para que entre en un renglón en pantallas angostas.
+- La app de demostración de la feria se instaló en un iPhone 12 (vista de persona) y un Samsung S20 FE (vista de profesional), contra la base de prueba con datos inventados. La base real no se tocó. El perfil `demo` de `eas.json` nunca se commiteó y ya se sacó de la copia local.
+- Resultado de la feria: el stand funcionó, pero Vita no quedó seleccionada para dar el pitch. La lista de espera de la web recibió un solo registro en el día.
+
+**Pendiente para la próxima sesión:**
+- Los arreglos de Android (teclado, menú "+" con las notas) se usaron en el stand pero no se recorrieron pantalla por pantalla: confirmar con Andre si vio algo raro.
+- El ícono de las notificaciones en Android sigue siendo el genérico.
+- El QR de la web lleva a la portada, donde el formulario de mail solo aparece para profesionales. Evaluar una página de una sola pantalla para anotarse.
+- `docs/pitch-feria-21.md` sigue sin commitear: Andre decide si va al repo o a Notion.
+
 ## 2026-10-08 — Andre (Claude · las notas de la sesión pasan al "+" del chat)
 
 **Tocado:** `screens/SalaScreen.tsx`. **Sin migraciones.**
