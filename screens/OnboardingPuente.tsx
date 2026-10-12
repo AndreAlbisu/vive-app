@@ -9,10 +9,12 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import Animated, {
   Easing,
+  cancelAnimation,
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withRepeat,
   withSequence,
   withTiming,
   type SharedValue,
@@ -27,7 +29,11 @@ import { anotar, cronometro } from '@/lib/analytics';
 // Vita"), en una sola pantalla y con el toque como bisagra:
 //
 //   1. Fondo verde bosque. "La ayuda existe. Falta el puente." Dos orillas,
-//      "Vos" (terracota) y "La ayuda" (durazno), con un hueco punteado.
+//      "Vos" (terracota) y "La ayuda" (durazno). Entre las dos, una soga floja
+//      de puntos que se hamaca. Cada tanto "Vos" late y una luz sale caminando
+//      por los puntos hacia la otra orilla, pero se apaga antes de llegar.
+//      📌 12/10 (Andre: "el comienzo no me cierra"). Antes el hueco era una
+//      línea punteada quieta; ahora cuenta que se intenta y no se llega.
 //   2. Tocás: el puente se tiende en lima (tablero, arco y columnas), un punto
 //      crema cruza y la otra orilla late al recibirlo.
 //      📌 Arranca en oscuro (Andre, 08/10). La diapositiva empieza en lima y
@@ -35,10 +41,15 @@ import { anotar, cronometro } from '@/lib/analytics';
 //      crema de la pantalla siguiente) y el lima no es de la paleta de la app.
 //      `oscuro` quedó como "ya arrancó": apaga el título y el hueco.
 //   3. Apenas el punto llega, TODO se transforma en el isotipo (pedido de
-//      Andre, 08/10): las dos orillas se acercan por el tablero, crecen y pasan
-//      de círculos llenos a trazo (son los dos círculos de abajo del logo); el
-//      puente se cierra hacia el medio y donde estaba la cima del arco se
-//      dibuja el círculo de arriba. Debajo, "vita / te acompaña".
+//      Andre, 08/10): las dos orillas se acercan por el tablero, que se acorta
+//      con ellas, crecen y pasan de círculos llenos a trazo (son los dos
+//      círculos de abajo del logo). Y el ARCO se enrosca: sus dos pies se
+//      juntan por debajo y queda cerrado en el círculo de arriba. Debajo,
+//      "vita / te acompaña".
+//      📌 12/10 (Andre: "el paso al logo no me cierra"). Antes el puente se
+//      aplastaba hacia el medio y se apagaba, y el círculo de arriba se
+//      dibujaba aparte. Ahora el arco ES el círculo: es una sola línea que
+//      cambia de forma. También es más lento y sin rebote.
 //
 // 📌 Colores, geometría y tiempos salen del artifact "Pitch Vita · Feria 21"
 // (diapositivas `puente` y `puentevita`). Si cambian allá, cambian acá. Lo que
@@ -86,6 +97,48 @@ const COLUMNAS = [1, 2, 3, 4, 5, 6, 7].map(k => {
   return { x, y: yDelArco(x) };
 });
 
+// ── El arco que se enrosca ───────────────────────────────────────────────────
+// Para que una sola línea pase de arco a círculo, las dos formas tienen que
+// estar escritas igual: un punto de salida y cuatro tramos curvos, 13 puntos
+// en total. El arco se parte en cuatro (pie, cuarto, cima, cuarto, pie) y el
+// círculo también (abajo, izquierda, arriba, derecha, abajo): así los pies
+// del arco terminan juntos en el punto de abajo del círculo.
+type Punto = [number, number];
+function mezcla(a: Punto, b: Punto, t: number): Punto {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+}
+/** El arco (una curva de un solo punto de control) en cuatro tramos de dos. */
+const ARCO_PUNTOS: Punto[] = (() => {
+  const p0: Punto = [X0, PISO], p1: Punto = [VB_W / 2, CIMA], p2: Punto = [X1, PISO];
+  // Un pedazo de la curva, entre `a` y `b` (de 0 a 1), como tramo de dos controles.
+  const pedazo = (a: number, b: number): Punto[] => {
+    const en = (t: number) => mezcla(mezcla(p0, p1, t), mezcla(p1, p2, t), t);
+    const ini = en(a), fin = en(b);
+    const control = mezcla(mezcla(p0, p1, a), mezcla(p1, p2, a), b);
+    return [mezcla(ini, control, 2 / 3), mezcla(fin, control, 2 / 3), fin];
+  };
+  return [p0, ...pedazo(0, 0.25), ...pedazo(0.25, 0.5), ...pedazo(0.5, 0.75), ...pedazo(0.75, 1)];
+})();
+/** Un círculo de centro (`cx`, `cy`) y radio `r`, con los mismos 13 puntos. */
+function circuloPuntos(cx: number, cy: number, r: number): Punto[] {
+  const k = 0.5523 * r;   // lo que hay que alejar los controles para que salga redondo
+  return [
+    [cx, cy + r],
+    [cx - k, cy + r], [cx - r, cy + k], [cx - r, cy],
+    [cx - r, cy - k], [cx - k, cy - r], [cx, cy - r],
+    [cx + k, cy - r], [cx + r, cy - k], [cx + r, cy],
+    [cx + r, cy + k], [cx + k, cy + r], [cx, cy + r],
+  ];
+}
+
+// ── La soga floja de puntos, antes del toque ─────────────────────────────────
+const SOGA_N      = 13;
+const SOGA_CAIDA  = 13;    // cuánto cuelga en el medio, en unidades del viewBox
+const SOGA_BASE   = 0.3;   // cuánto se ve un punto apagado
+const LUZ_ANCHO   = 0.1;   // el tamaño de la luz que camina (la soga entera es 1)
+const LUZ_LLEGA   = 0.72;  // hasta dónde llega antes de apagarse del todo
+const SOGA_MS     = 3400;  // una pasada de la luz
+
 const FRASE_1 = 'La ayuda existe.';
 const FRASE_2 = 'Falta el puente.';
 
@@ -94,7 +147,6 @@ const MARK_R = 26;
 const MARK_LADO_X = 20.5;
 const MARK_Y = 16;                 // los de abajo, +16; el de arriba, -16
 const MARK_TRAZO = 7;
-const MARK_C = 2 * Math.PI * MARK_R;
 
 // Más rápida que la diapositiva: el puente se tiende, el punto cruza y, apenas
 // llega, todo se vuelve el logo.
@@ -108,9 +160,10 @@ const CRUZA_EN  = 416;
 const CRUZA_MS  = 520;
 const LLEGA_EN  = 936;    // la otra orilla late
 const MORF_EN   = 1040;   // todo se transforma en el isotipo
-const MORF_MS   = 625;
-const MARCA_EN  = 1425;
-const FIN_EN    = 1950;   // todo quieto
+// 12/10 (Andre): más lenta otra vez (era 625), para que se vea el arco enroscarse.
+const MORF_MS   = 1000;
+const MARCA_EN  = 1750;
+const FIN_EN    = 2350;   // todo quieto
 const HOLD_MS   = 700;
 const EXIT_MS   = 450;
 const AUTO_MS   = 4000;
@@ -118,7 +171,8 @@ const SALTEAR_MS = 600;
 
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
 const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
-const EASE_REBOTE = Easing.bezier(0.34, 1.56, 0.64, 1);
+// Arranca despacio y frena largo: para transformarse sin tirones.
+const EASE_SUAVE  = Easing.bezier(0.45, 0, 0.15, 1);
 
 const AnimatedPath   = Animated.createAnimatedComponent(Path);
 const AnimatedLine   = Animated.createAnimatedComponent(Line);
@@ -140,6 +194,45 @@ function Columna({ x, y, cae }: { x: number; y: number; cae: SharedValue<number>
       animatedProps={props}
       x1={x} y1={y} x2={x}
       stroke={LIMA} strokeWidth={2} strokeLinecap="round"
+    />
+  );
+}
+
+/** La luz que sale de "Vos": qué tan prendido está el lugar `t` de la soga (0 a 1). */
+function luzEn(t: number, reloj: number): number {
+  'worklet';
+  // Arranca un poco antes de la orilla y sigue de largo, para que la vuelta
+  // del reloj caiga cuando no hay nada prendido.
+  const donde = -0.25 + 1.6 * reloj;
+  const d = (t - donde) / LUZ_ANCHO;
+  return Math.exp(-d * d) * clamp01(1 - t / LUZ_LLEGA);
+}
+
+/** Un punto de la soga. `x` e `y0` en px; cuelga, se hamaca y se prende con la luz. */
+function PuntoSoga({ t, x, lado, caida, reloj, oscuro, aparece }: {
+  t: number; x: number; lado: number; caida: number;
+  reloj: SharedValue<number>; oscuro: SharedValue<number>; aparece: SharedValue<number>;
+}) {
+  const style = useAnimatedStyle(() => {
+    const luz = luzEn(t, reloj.value);
+    const hamaca = 0.82 + 0.18 * Math.sin(reloj.value * 2 * Math.PI);
+    const queda = 1 - clamp01(oscuro.value * 2);
+    return {
+      opacity: aparece.value * queda * (SOGA_BASE + (1 - SOGA_BASE) * luz),
+      transform: [
+        // Al tocar se tensa: sube a la línea del tablero mientras se apaga.
+        { translateY: caida * 4 * t * (1 - t) * hamaca * (1 - oscuro.value) },
+        { scale: 1 + 0.7 * luz },
+      ],
+    };
+  });
+  return (
+    <Animated.View
+      style={[
+        { position: 'absolute', left: x - lado / 2, top: -lado / 2, width: lado, height: lado, borderRadius: lado / 2 },
+        { backgroundColor: LIMA },
+        style,
+      ]}
     />
   );
 }
@@ -182,6 +275,15 @@ export default function OnboardingPuente() {
   const ORILLA_X = W / 2 - ORILLA_IZQ * K; // distancia de cada orilla al centro
   const ESCALA_0 = (2 * ORILLA_R * K) / D; // tamaño de la orilla respecto del final
   const textoY = pisoY + (MARK_R + MARK_TRAZO) * KL + 18;
+  // El lienzo donde el arco se enrosca: tiene que entrar el arco entero y
+  // también el círculo de arriba, que puede quedar más alto.
+  const arribaCY = logoCY - MARK_Y * KL;
+  const morfTop = Math.min(puenteTop, arribaCY - (MARK_R + MARK_TRAZO) * KL) - 6;
+  const morfAlto = pisoY - morfTop + 8;
+  // Las dos formas, en px de ese lienzo y en fila (x, y, x, y…).
+  const arcoPx = ARCO_PUNTOS.flatMap(([x, y]) => [x * K, (y - PISO) * K + pisoY - morfTop]);
+  const circuloPx = circuloPuntos(W / 2, arribaCY - morfTop, MARK_R * KL).flat();
+  const TABLERO_MEDIO = (TABLERO_LARGO / 2) * K;
 
   // ── Valores compartidos ────────────────────────────────────────────────────
   const aparece = useSharedValue(0);
@@ -195,6 +297,7 @@ export default function OnboardingPuente() {
   const frase2  = useSharedValue(0);  // la segunda línea del título
   const subraya = useSharedValue(0);  // el arco que la subraya
   const morf    = useSharedValue(0);  // orillas y puente → isotipo
+  const reloj   = useSharedValue(0);  // 0→1 en loop: la luz que camina por la soga
   const marca   = useSharedValue(0);
   const sale    = useSharedValue(0);
   const hintOp  = useSharedValue(0);
@@ -247,8 +350,7 @@ export default function OnboardingPuente() {
         withTiming(1, { duration: 130, easing: EASE_OUT }),
         withTiming(0, { duration: 200, easing: EASE_OUT }),
       ));
-      // Con un rebote chico al final: el logo "cae" en su lugar.
-      morf.value = withDelay(MORF_EN, withTiming(1, { duration: MORF_MS, easing: EASE_REBOTE }));
+      morf.value = withDelay(MORF_EN, withTiming(1, { duration: MORF_MS, easing: EASE_SUAVE }));
       luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), LLEGA_EN);
       luego(() => vibrar(Haptics.ImpactFeedbackStyle.Light), MORF_EN + MORF_MS - 120);
     }
@@ -286,6 +388,17 @@ export default function OnboardingPuente() {
     return () => { clearTimeout(t); lista.forEach(clearTimeout); };
   }, []);
 
+  // La soga: mientras nadie toca, se hamaca y la luz sale una y otra vez.
+  useEffect(() => {
+    if (reduced) {
+      cancelAnimation(reloj);
+      return;
+    }
+    reloj.value = 0;
+    reloj.value = withRepeat(withTiming(1, { duration: SOGA_MS, easing: Easing.linear }), -1, false);
+    return () => cancelAnimation(reloj);
+  }, [reduced]);
+
   // ── Dedo ───────────────────────────────────────────────────────────────────
   const alApoyar = useCallback((ev: GestureResponderEvent) => {
     if (saliendo.current) return;
@@ -318,25 +431,46 @@ export default function OnboardingPuente() {
   // La salida: un velo del crema de la pantalla siguiente.
   const veloStyle = useAnimatedStyle(() => ({ opacity: sale.value }));
 
-  // El puente (tablero, arco, columnas) se cierra hacia el medio y se apaga
-  // mientras las orillas se juntan.
-  const puenteStyle = useAnimatedStyle(() => {
-    const t = clamp01(morf.value);
+  // Columnas y punto: se apagan enseguida, apenas empieza la transformación.
+  const puenteStyle = useAnimatedStyle(() => ({
+    opacity: aparece.value * (1 - clamp01(morf.value * 4)),
+    transform: [{ scale: 0.97 + 0.03 * aparece.value }],
+  }));
+
+  // El tablero es una vista: se tiende desde "Vos" y después se acorta junto
+  // con las orillas, que se le vienen encima.
+  const tableroStyle = useAnimatedStyle(() => {
+    const u = tiende.value;
+    const m = clamp01(morf.value);
+    const entreOrillas = (ORILLA_X - (ORILLA_X - MARK_LADO_X * KL) * m) / ORILLA_X;
     return {
-      opacity: aparece.value * (1 - clamp01(t * 1.6)),
-      transform: [{ scale: 0.97 + 0.03 * aparece.value }, { scaleX: 1 - 0.72 * t }],
+      opacity: (u > 0 ? 1 : 0) * (1 - clamp01(m * 1.8)),
+      transform: [
+        { translateX: -TABLERO_MEDIO * (1 - u) },
+        { scaleX: Math.max(0.001, u * entreOrillas) },
+      ],
     };
   });
-
-  const huecoProps = useAnimatedProps(() => ({ opacity: 0.4 * (1 - clamp01(oscuro.value * 2)) }));
-  const tableroProps = useAnimatedProps(() => ({
-    strokeDashoffset: TABLERO_LARGO * (1 - tiende.value),
-    opacity: tiende.value > 0 ? 1 : 0,
-  }));
+  // El arco se dibuja con este trazo; cuando empieza a enroscarse lo releva
+  // el de abajo, que arranca exactamente encima.
   const arcoProps = useAnimatedProps(() => ({
     strokeDashoffset: ARCO_LARGO * (1 - tiende.value),
-    opacity: tiende.value > 0 ? 1 : 0,
+    opacity: tiende.value > 0 && morf.value <= 0 ? 1 : 0,
   }));
+  // El arco que se enrosca: cada punto va del arco al círculo.
+  const enroscaProps = useAnimatedProps(() => {
+    const m = clamp01(morf.value);
+    const en = (i: number) => (arcoPx[i] + (circuloPx[i] - arcoPx[i]) * m).toFixed(1);
+    let d = `M${en(0)} ${en(1)}`;
+    for (let i = 2; i < 26; i += 6) {
+      d += `C${en(i)} ${en(i + 1)} ${en(i + 2)} ${en(i + 3)} ${en(i + 4)} ${en(i + 5)}`;
+    }
+    return {
+      d,
+      strokeWidth: 4 * K + (MARK_TRAZO * KL - 4 * K) * m,
+      opacity: morf.value > 0 ? 1 : 0,
+    };
+  });
   const pasoProps = useAnimatedProps(() => ({
     cx: ORILLA_IZQ + (ORILLA_DER - ORILLA_IZQ) * cruza.value,
     // Aparece al salir y se funde al llegar (12% y 88%, como en la diapositiva).
@@ -348,7 +482,8 @@ export default function OnboardingPuente() {
     opacity: aparece.value,
     transform: [
       { translateX: -ORILLA_X + (ORILLA_X - MARK_LADO_X * KL) * morf.value },
-      { scale: ESCALA_0 + (1 - ESCALA_0) * morf.value },
+      // "Vos" late cada vez que sale la luz, hasta que arranca.
+      { scale: (ESCALA_0 + (1 - ESCALA_0) * morf.value) * (1 + 0.09 * luzEn(0, reloj.value) * (1 - oscuro.value)) },
     ],
   }));
   const orillaDerStyle = useAnimatedStyle(() => ({
@@ -361,12 +496,6 @@ export default function OnboardingPuente() {
   // De círculo lleno a trazo.
   const rellenoStyle = useAnimatedStyle(() => ({ opacity: 1 - clamp01(morf.value * 1.5) }));
   const trazoStyle = useAnimatedStyle(() => ({ opacity: clamp01((morf.value - 0.25) / 0.5) }));
-
-  // El círculo de arriba se dibuja donde estaba la cima del arco.
-  const arribaProps = useAnimatedProps(() => {
-    const t = clamp01((morf.value - 0.15) / 0.75);
-    return { strokeDashoffset: MARK_C * (1 - t), opacity: t > 0 ? 1 : 0 };
-  });
 
   const etiquetaStyle = useAnimatedStyle(() => ({
     opacity: aparece.value * (1 - clamp01(morf.value * 3)),
@@ -450,17 +579,6 @@ export default function OnboardingPuente() {
           style={[styles.centrado, { top: puenteTop, marginLeft: -W / 2 }, puenteStyle]}
         >
           <Svg width={W} height={H} viewBox={`0 0 ${VB_W} ${VB_H}`}>
-            <AnimatedLine
-              animatedProps={huecoProps}
-              x1={X0 + 8} y1={PISO} x2={X1 - 8} y2={PISO}
-              stroke={LIMA} strokeWidth={4} strokeLinecap="round" strokeDasharray={[0.01, 12]}
-            />
-            <AnimatedPath
-              animatedProps={tableroProps}
-              d={`M${X0} ${PISO}H${X1}`}
-              stroke={LIMA} strokeWidth={4} strokeLinecap="round" fill="none"
-              strokeDasharray={[TABLERO_LARGO]}
-            />
             <AnimatedPath
               animatedProps={arcoProps}
               d={ARCO}
@@ -472,17 +590,42 @@ export default function OnboardingPuente() {
           </Svg>
         </Animated.View>
 
-        {/* El círculo de arriba del isotipo, que se dibuja sobre la cima del arco. */}
-        <View pointerEvents="none" style={[styles.centrado, { top: logoCY - S / 2, marginLeft: -S / 2 }]}>
-          <Svg width={S} height={S} viewBox="0 0 100 100">
-            <AnimatedCircle
-              animatedProps={arribaProps}
-              cx={50} cy={50 - MARK_Y} r={MARK_R}
-              stroke={LIMA} strokeWidth={MARK_TRAZO} fill="none"
-              strokeDasharray={[MARK_C]}
-              rotation={-90} origin={`50, ${50 - MARK_Y}`}
+        {/* El arco que se enrosca hasta ser el círculo de arriba del isotipo. */}
+        <View pointerEvents="none" style={[styles.centrado, { top: morfTop, marginLeft: -W / 2 }]}>
+          <Svg width={W} height={morfAlto}>
+            <AnimatedPath
+              animatedProps={enroscaProps}
+              stroke={LIMA} strokeLinecap="round" strokeLinejoin="round" fill="none"
             />
           </Svg>
+        </View>
+
+        {/* El tablero. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.centrado,
+            {
+              top: pisoY - 2 * K, marginLeft: -TABLERO_MEDIO,
+              width: 2 * TABLERO_MEDIO, height: 4 * K, borderRadius: 2 * K, backgroundColor: LIMA,
+            },
+            tableroStyle,
+          ]}
+        />
+
+        {/* La soga floja de puntos: lo que hay antes de que exista el puente. */}
+        <View pointerEvents="none" style={[styles.centrado, { top: pisoY, marginLeft: -W / 2, width: W, height: 1 }]}>
+          {Array.from({ length: SOGA_N }, (_, i) => {
+            const t = i / (SOGA_N - 1);
+            return (
+              <PuntoSoga
+                key={i} t={t}
+                x={(X0 + 8 + (TABLERO_LARGO - 16) * t) * K}
+                lado={4 * K} caida={SOGA_CAIDA * K}
+                reloj={reloj} oscuro={oscuro} aparece={aparece}
+              />
+            );
+          })}
         </View>
 
         {/* Las dos orillas. Son vistas y no parte del SVG para poder moverlas y

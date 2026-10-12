@@ -1,3 +1,18 @@
+## 2026-10-12 — Andre (Claude · bienvenidas: 5 y 8 con idea nueva, 4 con otro comienzo y otro paso al logo)
+
+**Tocado:** `screens/OnboardingCerca.tsx`, `screens/OnboardingOndas.tsx`, `screens/OnboardingPuente.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Andre probó la ronda anterior: la 8 (muaré) "marea" y la 5 (aros orbitando el círculo) "la idea no va". De la 4, que es de antes, no le cierran el comienzo ni el paso al logo. Se le preguntó antes de tocar, porque el comentario era ambiguo.
+- 5, tercera idea: una flor de seis círculos terracota transparentes que gira y respira; al tocar se juntan en uno solo y de atrás de ese círculo salen los aros, crema mientras lo pisan y oliva al asomar.
+- 8, tercera idea: los tres juegos de aros un poco separados, con cada aro inclinándose en perspectiva un instante después que el de adentro (una ola lenta). Al tocar quedan de frente y se enganchan.
+- 4, comienzo: el hueco punteado quieto pasó a ser una soga floja de puntos que se hamaca; "Vos" late y una luz camina hacia la otra orilla pero se apaga antes de llegar.
+- 4, paso al logo: el arco ya no se aplasta y se apaga. Es una sola línea que cambia de forma: los pies se juntan por debajo y queda cerrada en el círculo de arriba. El tablero se acorta con las orillas. Más lento (1000 ms, eran 625) y sin rebote.
+
+**Pendiente para la próxima sesión:**
+- Nada de esto se probó en un teléfono. Mirar en la 8 que la inclinación en perspectiva se vea bien (en Android es lo más dudoso) y en la 4 que el arco no pegue un salto cuando empieza a enroscarse.
+- La 5 ya lleva tres ideas rechazadas. Si esta tampoco va, conviene preguntarle a Andre si el problema es el isotipo B.
+
 ## 2026-10-12 — Andre (Claude · bienvenidas 5 a 8: se arregla el lag y se rehacen la 5 y la 8)
 
 **Tocado:** `components/ui/Anillo.tsx`, `screens/OnboardingCerca.tsx`, `screens/OnboardingAbrirse.tsx`, `screens/OnboardingEncuentro.tsx`, `screens/OnboardingOndas.tsx`. **Sin migraciones.**

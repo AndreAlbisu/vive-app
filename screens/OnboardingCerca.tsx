@@ -27,26 +27,26 @@ import { anotar, cronometro } from '@/lib/analytics';
 // primera que termina en el isotipo B (`vita-isotipo-B.svg`) en vez de los tres
 // aros de `VitaMark`. Qué cuenta, en tres tiempos:
 //
-//   1. Un círculo terracota, lleno, quieto en el medio del crema. A su
-//      alrededor dan vueltas dos aros oliva (uno de ellos doble), cada uno a
-//      su ritmo y para su lado, acercándose y alejándose. Cada vez que un aro
-//      pasa por encima del círculo, ese tramo se vuelve crema.
-//      "hay alguien cerca"
-//   2. Tocás: el círculo se corre despacio a su lugar y los dos aros terminan
-//      la vuelta y se quedan donde van.
-//   3. Queda el isotipo B, con "vita / te acompaña" debajo.
+//   1. Una flor: seis círculos terracota, transparentes, girando despacio
+//      alrededor de un punto. Donde se pisan el color se hace más hondo. La
+//      flor se abre y se cierra, como si respirara. "hay alguien cerca"
+//   2. Tocás: los seis se juntan en uno solo, lleno, que se corre a su lugar.
+//   3. De ATRÁS de ese círculo salen los aros, uno y después el otro (que es
+//      doble). Mientras están encima del círculo son crema; a medida que
+//      asoman, la parte que queda afuera es oliva. Así queda el isotipo B,
+//      con "vita / te acompaña" debajo.
 //
-// 📌 En el isotipo los dos aros están a la misma distancia del círculo lleno,
-// separados 60°. Por eso la espera es una órbita: el isotipo es un momento de
-// esa ronda, y al tocar la ronda se frena justo ahí.
+// 📌 En el isotipo los dos aros están a la misma distancia del círculo lleno.
+// Por eso pueden salir los dos del mismo punto, cada uno para su lado.
 //
-// 🔴 Todo son VISTAS con borde, no SVG: los aros se mueven en cada cuadro y en
-// SVG eso se traba. El cambio a crema sale de tener los aros dos veces: en
-// oliva debajo del círculo, y en crema ADENTRO del círculo, que es una vista
-// redonda que recorta lo que se le sale.
+// 🔴 Todo son VISTAS, no SVG: se mueven en cada cuadro y en SVG eso se traba.
+// El cambio a crema sale de tener los aros dos veces: en oliva debajo del
+// círculo, y en crema ADENTRO del círculo, que es una vista redonda que
+// recorta lo que se le sale.
 //
 // 📌 Andre las pidió "artísticas y modernas, bellas, hasta hipnóticas", sin
-// confeti ni circo. Por eso acá no hay rebotes ni golpes: todo es continuo.
+// confeti ni circo. Ya probó y descartó para este isotipo: las ondas tipo gota
+// (aburridas) y los aros dando vueltas alrededor del círculo (no lo convenció).
 //
 // 📌 El círculo lleno NUNCA cambia: no se vacía ni pierde el color. Es la
 // diferencia con "alguien llega", donde las tintas se van y queda solo el trazo.
@@ -69,31 +69,41 @@ const DISCO = { cx: 68.48, cy: 66, r: 27.6 };   // el círculo lleno
 const TRAZO = 3.2;
 const VUELTA = 2 * Math.PI;
 // Los dos aros, vistos desde el círculo lleno: a qué distancia y en qué ángulo
-// quedan en el isotipo, qué radios tienen, y cómo dan vueltas mientras esperan.
+// quedan en el isotipo, qué radios tienen y cuánto esperan para salir.
 function desdeElDisco(cx: number, cy: number) {
   return { dist: Math.hypot(cx - DISCO.cx, cy - DISCO.cy), angulo: Math.atan2(cy - DISCO.cy, cx - DISCO.cx) };
 }
-const ORBITAS = [
-  { ...desdeElDisco(50, 34),    radios: [26],       sentido: 1,  vuelta: 9000,  fase: 0 },
-  { ...desdeElDisco(31.52, 66), radios: [26, 19.6], sentido: -1, vuelta: 14000, fase: 0.5 },
+const AROS = [
+  { ...desdeElDisco(50, 34),    radios: [26],       espera: 0 },
+  { ...desdeElDisco(31.52, 66), radios: [26, 19.6], espera: 220 },
 ];
-type Orbita = (typeof ORBITAS)[number];
+type Aro = (typeof AROS)[number];
 const RADIO_MAX = 26;
+// La flor: cuántos círculos, cuánto se ve cada uno y qué tan lejos del medio
+// van (en radios del círculo) cuando la flor está cerrada y cuando está abierta.
+const PETALOS     = 6;
+const PETALO_OP   = 0.24;
+const PETALO_MIN  = 0.28;
+const PETALO_MAX  = 0.92;
 // Cuánto se aparta el círculo lleno del centro del isotipo.
 const DISCO_DX = DISCO.cx - 50;
 const DISCO_DY = DISCO.cy - 50;
 
 const FRASE_1 = 'hay alguien cerca';
 
-const VAIVEN      = 0.3;   // cuánto se acercan al círculo mientras dan vueltas
-const ACOMODA_MS  = 1500;  // el círculo va a su lugar y los aros frenan
-const MARCA_EN    = 1350;
-const FIN_EN      = 2100;  // todo quieto
+const JUNTA_MS    = 950;   // los seis se hacen uno
+const ACOMODA_EN  = 250;
+const ACOMODA_MS  = 1250;  // el círculo va a su lugar
+const SALE_EN     = 850;   // empiezan a asomar los aros
+const SALE_MS     = 1000;
+const MARCA_EN    = 1550;
+const FIN_EN      = 2300;  // todo quieto
 const HOLD_MS     = 700;
 const EXIT_MS     = 450;
 const AUTO_MS     = 4000;
 const SALTEAR_MS  = 600;
-const BREATH_MS   = 6400;
+const BREATH_MS   = 6400;  // la flor se abre y se cierra
+const VUELTA_MS   = 18000; // una vuelta entera de la flor
 
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
 // Arranca despacio y frena largo: para llegar al isotipo sin tirones.
@@ -104,26 +114,50 @@ function clamp01(x: number): number {
   return Math.min(1, Math.max(0, x));
 }
 
+/** Uno de los círculos transparentes de la flor. (`x`, `y`) es el medio. */
+function Petalo({ i, k, x, y, giro, reloj, junta }: {
+  i: number; k: number; x: number; y: number;
+  giro: SharedValue<number>; reloj: SharedValue<number>; junta: SharedValue<number>;
+}) {
+  const r = DISCO.r * k;
+  const style = useAnimatedStyle(() => {
+    const abre = 0.5 - 0.5 * Math.cos(reloj.value * VUELTA);
+    const d = r * (PETALO_MIN + (PETALO_MAX - PETALO_MIN) * abre) * (1 - junta.value);
+    const angulo = giro.value + (i * VUELTA) / PETALOS;
+    return {
+      transform: [{ translateX: d * Math.cos(angulo) }, { translateY: d * Math.sin(angulo) }],
+    };
+  });
+  return (
+    <Animated.View
+      style={[
+        { position: 'absolute', left: x - r, top: y - r, width: 2 * r, height: 2 * r, borderRadius: r },
+        { backgroundColor: TERRACOTA, opacity: PETALO_OP },
+        style,
+      ]}
+    />
+  );
+}
+
 /**
- * Un aro (o dos, uno adentro del otro) dando vueltas alrededor del punto
- * (`x`, `y`), que es el centro del círculo lleno. Se usa dos veces por aro:
- * en oliva debajo del círculo y en crema adentro.
+ * Un aro (o dos, uno adentro del otro) que sale del punto (`x`, `y`), el
+ * centro del círculo lleno, hasta su lugar. Se usa dos veces por aro: en oliva
+ * debajo del círculo y en crema adentro.
  */
-function Ronda({ o, k, x, y, color, angulo, acomoda, reloj }: {
-  o: Orbita; k: number; x: number; y: number; color: string;
-  angulo: SharedValue<number>; acomoda: SharedValue<number>; reloj: SharedValue<number>;
+function Asoma({ aro, k, x, y, color, sale }: {
+  aro: Aro; k: number; x: number; y: number; color: string; sale: SharedValue<number>;
 }) {
   const style = useAnimatedStyle(() => {
-    const cerca = 0.5 - 0.5 * Math.cos((reloj.value + o.fase) * VUELTA);
-    const d = o.dist * k * (1 - VAIVEN * (1 - acomoda.value) * cerca);
+    const d = aro.dist * k * sale.value;
     return {
-      transform: [{ translateX: d * Math.cos(angulo.value) }, { translateY: d * Math.sin(angulo.value) }],
+      opacity: clamp01(sale.value * 6),
+      transform: [{ translateX: d * Math.cos(aro.angulo) }, { translateY: d * Math.sin(aro.angulo) }],
     };
   });
   const lado = 2 * (RADIO_MAX + TRAZO) * k;
   return (
     <Animated.View style={[{ position: 'absolute', left: x - lado / 2, top: y - lado / 2, width: lado, height: lado }, style]}>
-      {o.radios.map(r => (
+      {aro.radios.map(r => (
         <View key={r} style={[aroCaja(lado / 2, lado / 2, r * k, TRAZO * k), { borderColor: color }]} />
       ))}
     </Animated.View>
@@ -152,17 +186,18 @@ export default function OnboardingCerca() {
   const S = Math.min(width * 0.58, 250);   // lado del isotipo
   const K = S / 100;                       // px por unidad del viewBox
   const centroY = height * 0.46;
-  // El texto va debajo de hasta donde llegan los aros cuando dan vueltas.
-  const textoY = centroY + (ORBITAS[0].dist + RADIO_MAX + TRAZO) * K + 6;
+  // El texto va debajo de hasta donde llega la flor abierta.
+  const textoY = centroY + DISCO.r * (1 + PETALO_MAX) * K + 14;
   const discoPx = 2 * DISCO.r * K;
 
   // ── Valores compartidos ────────────────────────────────────────────────────
   const aparece = useSharedValue(0);
+  const junta   = useSharedValue(0);  // los seis círculos se hacen uno
   const acomoda = useSharedValue(0);  // el círculo va del medio a su lugar
-  // El ángulo de cada aro alrededor del círculo, en radianes. Arrancan donde
-  // van en el isotipo.
-  const ang0 = useSharedValue(ORBITAS[0].angulo), ang1 = useSharedValue(ORBITAS[1].angulo);
-  const angulos = [ang0, ang1];
+  const giro    = useSharedValue(0);  // en radianes: la flor da vueltas
+  // Cuánto asomó cada aro de atrás del círculo.
+  const sale0 = useSharedValue(0), sale1 = useSharedValue(0);
+  const salen = [sale0, sale1];
   const marca   = useSharedValue(0);
   const sale    = useSharedValue(0);
   const reloj   = useSharedValue(0);  // 0→1 en loop: la respiración
@@ -201,20 +236,19 @@ export default function OnboardingCerca() {
     frase1.value = withTiming(0, { duration: 280 });
 
     const f = rapido ? 0 : 1;   // con reduced motion todo cae en el mismo instante
-    angulos.forEach((a, i) => {
-      cancelAnimation(a);
-      // Sigue para el mismo lado hasta completar la vuelta: ahí está su lugar.
-      const o = ORBITAS[i];
-      const dadas = Math.abs(a.value - o.angulo) / VUELTA;
-      const destino = o.angulo + o.sentido * VUELTA * (rapido ? Math.round(dadas) : 1);
-      a.value = withTiming(destino, { duration: rapido ? 300 : ACOMODA_MS, easing: Easing.out(Easing.quad) });
-    });
     if (rapido) {
+      junta.value = withTiming(1, { duration: 300 });
       acomoda.value = withTiming(1, { duration: 300 });
+      salen.forEach(v => { v.value = withTiming(1, { duration: 300 }); });
     } else {
-      acomoda.value = withTiming(1, { duration: ACOMODA_MS, easing: EASE_SUAVE });
+      // La flor no hace falta frenarla: al juntarse, el giro deja de verse.
+      junta.value = withTiming(1, { duration: JUNTA_MS, easing: EASE_SUAVE });
+      acomoda.value = withDelay(ACOMODA_EN, withTiming(1, { duration: ACOMODA_MS, easing: EASE_SUAVE }));
+      salen.forEach((v, i) => {
+        v.value = withDelay(SALE_EN + AROS[i].espera, withTiming(1, { duration: SALE_MS, easing: EASE_SUAVE }));
+      });
       luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), 0);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ACOMODA_MS - 200);
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), SALE_EN);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -249,28 +283,18 @@ export default function OnboardingCerca() {
     return () => { clearTimeout(t); lista.forEach(clearTimeout); };
   }, []);
 
-  // Mientras nadie toca: los dos aros dan vueltas alrededor del círculo.
+  // Mientras nadie toca: la flor gira, y se abre y se cierra.
   useEffect(() => {
     if (reduced) {
       cancelAnimation(reloj);
+      cancelAnimation(giro);
       return;
     }
     reloj.value = 0;
     reloj.value = withRepeat(withTiming(1, { duration: BREATH_MS, easing: Easing.linear }), -1, false);
-    // 🔴 Si ya arrancó, el giro es de la secuencia: no se pisa.
-    if (!armado.current) {
-      angulos.forEach((a, i) => {
-        const o = ORBITAS[i];
-        a.value = o.angulo;
-        a.value = withRepeat(
-          withTiming(o.angulo + o.sentido * VUELTA, { duration: o.vuelta, easing: Easing.linear }), -1, false,
-        );
-      });
-    }
-    return () => {
-      cancelAnimation(reloj);
-      if (!armado.current) angulos.forEach(a => cancelAnimation(a));
-    };
+    giro.value = 0;
+    giro.value = withRepeat(withTiming(VUELTA, { duration: VUELTA_MS, easing: Easing.linear }), -1, false);
+    return () => { cancelAnimation(reloj); cancelAnimation(giro); };
   }, [reduced]);
 
   // ── Dedo ───────────────────────────────────────────────────────────────────
@@ -303,7 +327,7 @@ export default function OnboardingCerca() {
 
   // ── Animados ───────────────────────────────────────────────────────────────
   // Todo el isotipo es una sola vista. Antes del toque está corrida para que
-  // el círculo lleno quede justo en el medio; con `acomoda` vuelve a su lugar.
+  // la flor quede justo en el medio; con `acomoda` vuelve a su lugar.
   const isotipoStyle = useAnimatedStyle(() => {
     const g = acomoda.value;
     return {
@@ -314,6 +338,9 @@ export default function OnboardingCerca() {
       ],
     };
   });
+
+  // El círculo lleno aparece a medida que los seis se juntan.
+  const discoStyle = useAnimatedStyle(() => ({ opacity: junta.value }));
 
   const frase1Style = useAnimatedStyle(() => ({
     opacity: frase1.value,
@@ -358,29 +385,30 @@ export default function OnboardingCerca() {
           pointerEvents="none"
           style={[styles.centrado, { top: centroY - S / 2, marginLeft: -S / 2, width: S, height: S }, isotipoStyle]}
         >
+          {/* La flor. Cuando se juntan quedan los seis debajo del círculo lleno. */}
+          {Array.from({ length: PETALOS }, (_, i) => (
+            <Petalo key={i} i={i} k={K} x={DISCO.cx * K} y={DISCO.cy * K} giro={giro} reloj={reloj} junta={junta} />
+          ))}
           {/* Los aros en oliva, debajo del círculo. */}
-          {ORBITAS.map((o, i) => (
-            <Ronda
-              key={i} o={o} k={K} x={DISCO.cx * K} y={DISCO.cy * K} color={OLIVA}
-              angulo={angulos[i]} acomoda={acomoda} reloj={reloj}
-            />
+          {AROS.map((aro, i) => (
+            <Asoma key={i} aro={aro} k={K} x={DISCO.cx * K} y={DISCO.cy * K} color={OLIVA} sale={salen[i]} />
           ))}
           {/* El círculo lleno. Adentro, los mismos aros en crema: como recorta
               lo que se le sale, solo se ven donde lo pisan. */}
-          <View
-            style={{
-              position: 'absolute', overflow: 'hidden', backgroundColor: TERRACOTA,
-              left: (DISCO.cx - DISCO.r) * K, top: (DISCO.cy - DISCO.r) * K,
-              width: discoPx, height: discoPx, borderRadius: discoPx / 2,
-            }}
+          <Animated.View
+            style={[
+              {
+                position: 'absolute', overflow: 'hidden', backgroundColor: TERRACOTA,
+                left: (DISCO.cx - DISCO.r) * K, top: (DISCO.cy - DISCO.r) * K,
+                width: discoPx, height: discoPx, borderRadius: discoPx / 2,
+              },
+              discoStyle,
+            ]}
           >
-            {ORBITAS.map((o, i) => (
-              <Ronda
-                key={i} o={o} k={K} x={discoPx / 2} y={discoPx / 2} color={CREMA}
-                angulo={angulos[i]} acomoda={acomoda} reloj={reloj}
-              />
+            {AROS.map((aro, i) => (
+              <Asoma key={i} aro={aro} k={K} x={discoPx / 2} y={discoPx / 2} color={CREMA} sale={salen[i]} />
             ))}
-          </View>
+          </Animated.View>
         </Animated.View>
 
         {/* El papel: quieto, encima del isotipo y debajo del texto. */}
