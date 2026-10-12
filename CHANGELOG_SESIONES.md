@@ -1,3 +1,17 @@
+## 2026-10-12 — Andre (Claude · quinta bienvenida, "alguien cerca", con el isotipo B)
+
+**Tocado:** `screens/OnboardingCerca.tsx` (nueva), `app/index.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Andre pidió una bienvenida como las cuatro que ya había, pero que termine en el isotipo B (`vita-isotipo-B.svg`: un círculo terracota lleno, un aro arriba y dos aros con el mismo centro al lado). Es la primera que no termina en los tres aros de `VitaMark`.
+- Qué se ve: un círculo terracota solo en el medio, con la frase "hay alguien cerca". Al tocar, el círculo se corre y hace lugar, a su lado nace una onda de dos aros y arriba se dibuja el tercero. Donde los aros pisan el círculo lleno pasan a crema, igual que en el archivo. Debajo, "vita / te acompaña".
+- Entra en el sorteo con las otras cuatro (sale una al azar por apertura) y queda anotada como variante 5. El selector de desarrollo ahora dice "1 · 2 · 3 · 4 · 5".
+- La frase "hay alguien cerca" la propuso Claude: Andre todavía no la vio. Se eligió sin género a propósito.
+
+**Pendiente para la próxima sesión:**
+- No se probó en un teléfono: solo pasó el chequeo de tipos y el lint. Mirar en el iPhone que los aros se vean crema sobre el círculo lleno (usa un recorte de `react-native-svg` que las otras bienvenidas no usan) y después en Android.
+- El ícono de la app, la pantalla de carga y `VitaMark` siguen con los tres aros. Si el isotipo B pasa a ser el logo, hay que cambiarlos y decidir qué hacer con las otras cuatro bienvenidas.
+
 ## 2026-10-09 — Andre (Claude · cierre de Feria 21)
 
 **Tocado:** `screens/CoachHomeScreen.tsx` (commit `7d25f760`, del 08/10, que había quedado sin anotar). **Sin migraciones.**

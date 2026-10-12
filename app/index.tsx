@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { ViveColors } from '@/constants/theme';
-// Las tres bienvenidas conviven y sale una AL AZAR cada vez que se abre la app
+// Las bienvenidas conviven y sale una AL AZAR cada vez que se abre la app
 // sin sesión (idea de Andre y Joaquín, 07/10):
 //   1 = "alguien llega": un círculo solo, el toque trae a otro y se arma el logo.
 //   2 = "tres en uno": la idea de Joaquín (tres círculos que se hacen uno con
@@ -12,20 +12,23 @@ import { ViveColors } from '@/constants/theme';
 //   3 = esa misma idea como estaba antes del rediseño (`OnboardingScreen1`).
 //   4 = "el puente": la imagen del pitch y de la web. Se tiende un puente
 //       entre "vos" y "la ayuda", un punto cruza y aparece el isotipo.
-// El selector "1 · 2 · 3 · 4" de arriba sale SOLO en desarrollo, para forzar una.
+//   5 = "alguien cerca": un círculo lleno, solo; el toque le trae compañía y
+//       queda el isotipo B (el del círculo terracota), no el de los tres aros.
+// El selector "1 · 2 · 3 · 4 · 5" de arriba sale SOLO en desarrollo, para forzar una.
 // Cuál salió queda anotado (`onboarding_variante`), así se puede ver después
 // cuál lleva más gente a la pantalla siguiente.
 import OnboardingLlega from '@/screens/OnboardingLlega';
 import OnboardingScreen1 from '@/screens/OnboardingScreen1';
 import OnboardingTresEnUno from '@/screens/OnboardingTresEnUno';
 import OnboardingPuente from '@/screens/OnboardingPuente';
+import OnboardingCerca from '@/screens/OnboardingCerca';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { limpiarTono } from '@/constants/onboardingTonos';
 import { destinoTrasEntrar } from '@/lib/entrada';
 import { anotar } from '@/lib/analytics';
 
-type Opcion = 1 | 2 | 3 | 4;
-const OPCIONES: Opcion[] = [1, 2, 3, 4];
+type Opcion = 1 | 2 | 3 | 4 | 5;
+const OPCIONES: Opcion[] = [1, 2, 3, 4, 5];
 
 // La última que salió en esta apertura de la app, para no repetirla seguida
 // (por ejemplo al cerrar sesión y volver a la bienvenida).
@@ -80,10 +83,11 @@ export default function Index() {
       {opcion === 1 ? <OnboardingLlega key={vuelta} />
         : opcion === 2 ? <OnboardingTresEnUno key={vuelta} />
         : opcion === 3 ? <OnboardingScreen1 key={vuelta} />
-        : <OnboardingPuente key={vuelta} />}
+        : opcion === 4 ? <OnboardingPuente key={vuelta} />
+        : <OnboardingCerca key={vuelta} />}
       {__DEV__ && (
         <View style={[styles.selector, { top: insets.top + 6 }]}>
-          {([1, 2, 3, 4] as const).map(n => (
+          {OPCIONES.map(n => (
             <Pressable
               key={n}
               hitSlop={8}
