@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { AppBg } from '@/components/ui/AppBg';
+import { Cierre } from '@/components/ui/Cierre';
 import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
@@ -159,7 +160,7 @@ export default function AnclajeScreen() {
           )}
 
           {phase === 'done' && (
-            <>
+            <Cierre style={s.cierre}>
               <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} />
               <Text style={s.subtitle}>Volviste al presente</Text>
               <Text style={s.description}>
@@ -169,7 +170,7 @@ export default function AnclajeScreen() {
               <ScaleCard style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Volver</Text>
               </ScaleCard>
-            </>
+            </Cierre>
           )}
         </View>
       </SafeAreaView>
@@ -185,6 +186,7 @@ const s = StyleSheet.create({
   title:   { fontFamily: ViveFonts.bold, fontSize: 20, color: FOREST, letterSpacing: -0.3 },
 
   content:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 20 },
+  cierre:      { alignSelf: 'stretch', alignItems: 'center', gap: 20 },
   subtitle:    { fontFamily: ViveFonts.title, fontSize: 24, color: FOREST, textAlign: 'center' },
   description: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 

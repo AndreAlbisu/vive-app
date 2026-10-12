@@ -20,7 +20,11 @@ import { supabase } from '@/lib/supabase';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 import SessionIssueSheet from '@/components/SessionIssueSheet';
+import { SaveScreen } from '@/components/ui/SaveScreen';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
+// Gradiente salvia del cierre, el mismo que usa el Diario al guardar.
+const CIERRE_GRADIENT: [string, string] = ['#D8E3C6', '#EEF1E6'];
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
@@ -52,6 +56,9 @@ export default function ReviewScreen() {
 
   const [pageLoading, setPageLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // Reseña ya guardada: muestra el cierre (la misma pantalla que Diario y Gratitud).
+  const [enviada, setEnviada] = useState(false);
+  const reduced = useReducedMotion();
   const [coachName, setCoachName] = useState('');
   const [coachSpecialty, setCoachSpecialty] = useState('');
   const [coachProfileId, setCoachProfileId] = useState('');
@@ -187,14 +194,8 @@ export default function ReviewScreen() {
       return;
     }
 
-    Alert.alert(
-      existingReviewId ? 'Reseña actualizada' : '¡Gracias por tu reseña!',
-      existingReviewId
-        ? 'Tu reseña fue actualizada correctamente'
-        : 'Tu experiencia ayuda a otros a elegir mejor',
-      [{ text: 'Listo', onPress: () => router.back() }],
-    );
-  }, [rating, comment, coachProfileId, user, bookingId, existingReviewId, callQuality, callProblems, existingCallId, router]);
+    setEnviada(true);
+  }, [rating, comment, coachProfileId, user, bookingId, existingReviewId, callQuality, callProblems, existingCallId]);
 
   if (pageLoading) {
     return (
@@ -336,6 +337,21 @@ export default function ReviewScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <SaveScreen
+        visible={enviada}
+        onDone={() => router.back()}
+        gradient={CIERRE_GRADIENT}
+        title={existingReviewId ? 'Reseña actualizada' : '¡Gracias por tu reseña!'}
+        recap={
+          <Text style={s.cierreTexto}>
+            {existingReviewId
+              ? 'Tu reseña fue actualizada correctamente'
+              : 'Tu experiencia ayuda a otros a elegir mejor'}
+          </Text>
+        }
+        origen="resena"
+        reduced={reduced}
+      />
       {!!bookingId && (
         <SessionIssueSheet
           visible={problemaOpen}
@@ -356,6 +372,7 @@ const s = StyleSheet.create({
   },
   safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  cierreTexto: { fontFamily: ViveFonts.feedback, fontSize: 15, color: ViveColors.text, lineHeight: 24, textAlign: 'center' },
   errorText: { fontFamily: ViveFonts.regular, fontSize: 15, color: '#87835C' },
 
   header: {

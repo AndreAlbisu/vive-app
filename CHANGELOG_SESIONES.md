@@ -1,3 +1,20 @@
+## 2026-10-12 — Andre (Claude · cierres con vibración: reserva, guardado, herramientas y reseña)
+
+**Tocado:** `lib/vibracion.ts` (nuevo), `components/ui/Cierre.tsx` (nuevo), `components/ui/SaveScreen.tsx`, `screens/BookingScreen_Success.tsx`, `screens/ReviewScreen.tsx`, `screens/RespiracionScreen.tsx`, `screens/MeditacionScreen.tsx`, `screens/RelajacionScreen.tsx`, `screens/AnclajeScreen.tsx`, `screens/EscanerScreen.tsx`, `screens/SuenoScreen.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Salió de mirar Duolingo: de ahí se toma la artesanía (cada acción con respuesta inmediata, vibración y animación en el mismo instante) y no el motor de compulsión (rachas por miedo, ligas, notificaciones con culpa), que choca con el porqué de Vita.
+- Relevamiento: fuera de las bienvenidas casi nada vibraba. Ahora la vibración sale de un solo lugar (`lib/vibracion.ts`) con tres intensidades: toque, guardado y logro.
+- Reserva confirmada: el tilde ya no entra con rebote y vibra al aparecer. Diario y Gratitud vibran suave al guardar. Las seis herramientas terminan con vibración y una entrada suave del mensaje final (`Cierre`); Sueño usa la vibración suave para no despertar. La reseña dejó el cartel del sistema y cierra con la misma pantalla de guardado que el Diario.
+- Las rachas quedaron como estaban por decisión de Andre: Gratitud ("días seguidos") y Progreso ("Racha actual") vuelven a cero; el Diario cuenta entradas del mes.
+
+**Pendiente para la próxima sesión:**
+- Nada de esto se probó en un teléfono, y la vibración no se siente en el simulador. En Android la vibración de logro y la de guardado no se probaron nunca.
+- El tilde de la pantalla de guardado (Diario, Gratitud, reseña) todavía entra con rebote; no se tocó.
+- Sonidos cortos de interfaz: no hay ninguno. Hace falta conseguir los archivos y que Andre los elija de oído.
+- Notificaciones: la única que invita a volver es el recordatorio que arma el propio usuario ("Es hora de ..."); el resto son avisos de reservas, con los textos repartidos entre la app, las funciones y la base. Falta el inventario completo para revisar el tono.
+- Duolingo: Andre iba a pasar una grabación de pantalla con sonido para medir tiempos de animación.
+
 ## 2026-10-12 — Andre (Claude · bienvenida 5: los pétalos se vuelven aros; bienvenida 4: sin títulos de diapositiva)
 
 **Tocado:** `screens/OnboardingCerca.tsx`, `screens/OnboardingPuente.tsx`. **Sin migraciones.**

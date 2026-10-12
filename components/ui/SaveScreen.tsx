@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { RachaPill } from '@/components/ui/RachaPill';
+import { vibrarGuardado } from '@/lib/vibracion';
 
 // La pieza principal del rediseño: al guardar, una pantalla completa teñida con
 // el color de la herramienta. Antes guardabas y no pasaba nada.
@@ -85,6 +86,8 @@ export function SaveScreen({
 
   useEffect(() => {
     if (!visible) return;
+    // Acuse de recibo, en el mismo instante en que aparece la pantalla.
+    vibrarGuardado();
     // Pop del check: escala desde 0.4 con rebote.
     pop.setValue(reduced ? 1 : 0.4);
     if (!reduced) {

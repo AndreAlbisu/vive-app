@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Platform,
   Animated,
+  Easing,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { CoachAvatar } from '@/components/CoachAvatar';
 import { localEquivalentLabel } from '@/lib/time';
+import { vibrarLogro } from '@/lib/vibracion';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -76,15 +78,19 @@ export default function BookingScreen_Success() {
   const horaLocal = time ? localEquivalentLabel(dateStr, time) : null;
 
   // Animations
-  const checkScale = useRef(new Animated.Value(0)).current;
+  // El tilde entra sin rebote: crece un poco mientras aparece y se queda. La
+  // vibración sale en el mismo instante, que es cuando la reserva "cae".
+  const checkIn = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
+  const checkScale = checkIn.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] });
 
   useEffect(() => {
+    vibrarLogro();
     Animated.sequence([
-      Animated.spring(checkScale, {
+      Animated.timing(checkIn, {
         toValue: 1,
-        tension: 60,
-        friction: 7,
+        duration: 420,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(contentOpacity, {
@@ -103,7 +109,7 @@ export default function BookingScreen_Success() {
         {/* Centro — ícono + texto */}
         <View style={s.center}>
 
-          <Animated.View style={[s.checkCircle, { transform: [{ scale: checkScale }] }]}>
+          <Animated.View style={[s.checkCircle, { opacity: checkIn, transform: [{ scale: checkScale }] }]}>
             <MaterialIcons name="check" size={48} color="#565E32" />
           </Animated.View>
 

@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppBg } from '@/components/ui/AppBg';
+import { Cierre } from '@/components/ui/Cierre';
 import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
@@ -146,7 +147,7 @@ export default function MeditacionScreen() {
         )}
 
         {phase === 'done' && (
-          <View style={s.idleContent}>
+          <Cierre style={s.idleContent}>
             <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} style={{ marginBottom: 8 }} />
             <Text style={s.subtitle}>Sesión completada</Text>
             <Text style={s.description}>
@@ -156,7 +157,7 @@ export default function MeditacionScreen() {
             <ScaleCard style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
             </ScaleCard>
-          </View>
+          </Cierre>
         )}
       </SafeAreaView>
     </AppBg>

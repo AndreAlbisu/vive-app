@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppBg } from '@/components/ui/AppBg';
+import { Cierre } from '@/components/ui/Cierre';
 import { ViveFonts, ViveColors } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
@@ -334,7 +335,7 @@ export default function RespiracionScreen() {
           )}
 
           {phase === 'done' && (
-            <>
+            <Cierre style={s.cierre}>
               <View style={s.doneIconWrap}>
                 <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} />
               </View>
@@ -348,7 +349,7 @@ export default function RespiracionScreen() {
               <ScaleCard style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Volver</Text>
               </ScaleCard>
-            </>
+            </Cierre>
           )}
         </View>
       </SafeAreaView>
@@ -375,6 +376,7 @@ const s = StyleSheet.create({
   },
 
   content:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 16 },
+  cierre:      { alignSelf: 'stretch', alignItems: 'center', gap: 16 },
   // El setup (idle) sube y se ordena; running/done siguen centrados en `content`.
   idleScroll:  { flex: 1, alignSelf: 'stretch' },
   // paddingTop 24 = misma altura del cartel que Gratitud/Diario (su container
