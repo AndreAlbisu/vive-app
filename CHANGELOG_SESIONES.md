@@ -1,3 +1,17 @@
+## 2026-10-12 — Andre (Claude · las bienvenidas 5 a 8, con más espectáculo)
+
+**Tocado:** `components/ui/Festejo.tsx` (nuevo), `screens/OnboardingCerca.tsx`, `screens/OnboardingAbrirse.tsx`, `screens/OnboardingEncuentro.tsx`, `screens/OnboardingOndas.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Andre vio las cuatro bienvenidas nuevas y pidió que fueran "visuales, divertidas, asombrosas, no aburridas". Se rehízo el movimiento de las cuatro; las frases, los isotipos finales y las reglas (un toque, 4 segundos, el segundo toque la saltea) no cambiaron.
+- `Festejo.tsx` junta los tres golpes de efecto que comparten: `Oleada` (una franja terracota que barre toda la pantalla), `Anillo` (un aro fino que crece y se apaga) y `Chispas` (puntitos de la paleta que salen disparados). Están hechos con vistas redondas, sin SVG, para que anden igual en iPhone y Android. Con "reducir movimiento" no se disparan.
+- 5: el círculo larga la franja y salta a su lugar; los tres aros aparecen de golpe, uno atrás del otro, inflándose de más y volviendo. 6: los dos aros que faltan entran rodando desde los costados (giran lo que avanzan) y empujan al isotipo al engancharse. 7: los tres aros dan vueltas mientras esperan y al tocar se vienen encima en remolino y chocan. 8: las ondas no frenan en el isotipo, siguen en tres colores hasta salirse de la pantalla, y el isotipo da un latido cuando se cruzan.
+- Más vibraciones, una por cada golpe (solo iPhone, como en las otras).
+
+**Pendiente para la próxima sesión:**
+- Sigue sin probarse en un teléfono: solo pasaron tipos, lint y las pruebas. Mirar sobre todo que la franja terracota no quede pesada, que las ruedas de la 6 lleguen con el hueco en su lugar, y la 8 en Android.
+- Si a Andre le gusta el nivel, llevar los mismos golpes de efecto a las bienvenidas 1 a 4.
+
 ## 2026-10-12 — Andre (Claude · tres bienvenidas más, una por cada isotipo candidato)
 
 **Tocado:** `screens/OnboardingAbrirse.tsx`, `screens/OnboardingEncuentro.tsx`, `screens/OnboardingOndas.tsx`, `constants/isotipoConcentrico.ts` (nuevos), `app/index.tsx`. **Sin migraciones.**

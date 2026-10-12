@@ -20,6 +20,7 @@ import Animated, {
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { CONCENTRICO_ALTO, CONCENTRICO_ANCHO, CONCENTRICO_D } from '@/constants/isotipoConcentrico';
+import { Anillo } from '@/components/ui/Festejo';
 import { Grain } from '@/components/ui/Grain';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
@@ -29,9 +30,12 @@ import { anotar, cronometro } from '@/lib/analytics';
 //
 //   1. Tres puntos oliva, separados, que laten sobre el crema.
 //      "lo que te pasa le pasa a alguien más"
+//      De cada uno salen aritos chicos, como gotas que caen en el agua.
 //   2. Tocás: de cada punto sale una onda. Los aros aparecen de adentro hacia
-//      afuera, uno tras otro, hasta que las tres ondas se cruzan.
-//   3. Queda el isotipo concéntrico, con "vita / te acompaña" debajo.
+//      afuera, uno tras otro, hasta que las tres ondas se cruzan. Y las ondas
+//      NO frenan en el isotipo: siguen de largo, en terracota, verde y oliva,
+//      hasta salirse de la pantalla.
+//   3. Cuando se cruzan, el isotipo da un latido. Debajo, "vita / te acompaña".
 //
 // 🔴 Cómo está hecho, porque no es como las otras. El isotipo concéntrico es un
 // dibujo calcado y tejido (ver `constants/isotipoConcentrico.ts`): no se puede
@@ -62,12 +66,20 @@ const CENTROS = [
 const VENTANA_R  = 29.6;   // tapa hasta el borde de afuera del aro más grande
 const VENTANA_R0 = 3;      // de arranque: cae en el hueco del aro más chico
 const PUNTO_R    = 1.7;
+const GOTA_R     = 13;     // hasta dónde llegan los aritos mientras esperan
+// Las ondas que siguen de largo: un color por centro, y dos por cada uno.
+const ECO_COLORES = [ViveColors.primary, ViveColors.accent, ViveColors.text];
+const ECO_SEGUNDA = 0.24;  // la segunda onda de cada centro sale más tarde
 
 const FRASE_1 = 'lo que te pasa le pasa a alguien más';
 
 const ONDA_MS    = 1000;
+const ECO_MS     = 1700;   // lo que tardan las ondas en salirse de la pantalla
+const LATE_EN    = 1050;   // las tres ondas ya se cruzaron
+const LATE_MS    = 520;
+const LATE_AMP   = 0.06;
 const MARCA_EN   = 1000;
-const FIN_EN     = 1750;   // todo quieto
+const FIN_EN     = 1800;   // todo quieto
 const HOLD_MS    = 700;
 const EXIT_MS    = 450;
 const AUTO_MS    = 4000;
@@ -156,6 +168,8 @@ export default function OnboardingOndas() {
   const onda0 = useSharedValue(0), onda1 = useSharedValue(0), onda2 = useSharedValue(0);
   const ondas = [onda0, onda1, onda2];
   const funde   = useSharedValue(1);  // reduced motion: el isotipo se funde entero
+  const eco     = useSharedValue(0);  // las ondas que siguen de largo
+  const latido  = useSharedValue(0);  // el del final, cuando se cruzan
   const marca   = useSharedValue(0);
   const sale    = useSharedValue(0);
   const reloj   = useSharedValue(0);  // 0→1 en loop: el latido de los puntos
@@ -202,8 +216,11 @@ export default function OnboardingOndas() {
       ondas.forEach((o, i) => {
         o.value = withDelay(CENTROS[i].espera, withTiming(1, { duration: ONDA_MS, easing: EASE_IN_OUT }));
       });
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), 60);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Light), CENTROS[2].espera + ONDA_MS - 140);
+      eco.value = withTiming(1, { duration: ECO_MS, easing: Easing.linear });
+      latido.value = withDelay(LATE_EN, withTiming(1, { duration: LATE_MS, easing: EASE_OUT }));
+      // Una gota por punto, y el latido cuando se cruzan.
+      CENTROS.forEach(c => luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), c.espera + 40));
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Medium), LATE_EN);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -279,6 +296,10 @@ export default function OnboardingOndas() {
 
   // ── Animados ───────────────────────────────────────────────────────────────
   const isotipoStyle = useAnimatedStyle(() => ({ opacity: funde.value }));
+  // El latido: el isotipo entero se infla un poco y vuelve.
+  const lateStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + LATE_AMP * Math.sin(Math.PI * latido.value) }],
+  }));
 
   // Los tres puntos: laten mientras esperan y se van cuando sale la primera onda.
   const puntosStyle = useAnimatedStyle(() => {
@@ -316,6 +337,7 @@ export default function OnboardingOndas() {
   const veloStyle = useAnimatedStyle(() => ({ opacity: sale.value }));
 
   const punto = 2 * PUNTO_R * K;
+  const ecoRadio = Math.max(width, height) * 0.72;
 
   return (
     <View style={styles.fondo}>
@@ -329,11 +351,32 @@ export default function OnboardingOndas() {
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
-        <View
+        {/* Debajo de todo: las ondas que siguen de largo hasta salirse. */}
+        {CENTROS.map((c, i) => [0, 1].map(j => (
+          <Anillo
+            key={`${i}-${j}`}
+            t={eco}
+            x={width / 2 + (c.cx - CONCENTRICO_ANCHO / 2) * K}
+            y={centroY + (c.cy - CONCENTRICO_ALTO / 2) * K}
+            radio={ecoRadio}
+            color={ECO_COLORES[i]}
+            retraso={c.espera / ECO_MS + j * ECO_SEGUNDA}
+          />
+        )))}
+
+        <Animated.View
           pointerEvents="none"
-          style={[styles.centrado, { top: centroY - H / 2, marginLeft: -S / 2, width: S, height: H }]}
+          style={[styles.centrado, { top: centroY - H / 2, marginLeft: -S / 2, width: S, height: H }, lateStyle]}
         >
           <Animated.View style={[StyleSheet.absoluteFill, puntosStyle]}>
+            {/* Las gotas: aritos que salen de cada punto mientras esperan. */}
+            {CENTROS.map((c, i) => (
+              <Anillo
+                key={`gota-${i}`}
+                t={reloj} x={c.cx * K} y={c.cy * K} radio={GOTA_R * K}
+                color={ECO_COLORES[i]} retraso={i * 0.16} trazo={2} fuerza={0.7}
+              />
+            ))}
             {CENTROS.map((c, i) => (
               <View
                 key={i}
@@ -347,7 +390,7 @@ export default function OnboardingOndas() {
           <Animated.View style={[StyleSheet.absoluteFill, isotipoStyle]}>
             {CENTROS.map((c, i) => <Ventana key={i} cx={c.cx} cy={c.cy} k={K} onda={ondas[i]} />)}
           </Animated.View>
-        </View>
+        </Animated.View>
 
         {/* El papel: quieto, encima del isotipo y debajo del texto. */}
         <Grain opacity={0.05} />
