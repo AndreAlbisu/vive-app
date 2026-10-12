@@ -1,3 +1,19 @@
+## 2026-10-12 — Andre (Claude · tres bienvenidas más, una por cada isotipo candidato)
+
+**Tocado:** `screens/OnboardingAbrirse.tsx`, `screens/OnboardingEncuentro.tsx`, `screens/OnboardingOndas.tsx`, `constants/isotipoConcentrico.ts` (nuevos), `app/index.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Después de la del isotipo B, Andre pidió lo mismo con los otros logos. Ahora hay ocho bienvenidas en el sorteo, y de la 5 a la 8 cada una termina en un isotipo candidato distinto, así que sirven también para comparar los logos en el teléfono.
+- 6, "abrirse" (aros abiertos): un aro cerrado se abre y por el hueco entran los otros dos. Frase: "abrirse es el primer paso".
+- 7, "el encuentro" (círculos con el centro relleno): tres aros separados se juntan y el pedacito que comparten se llena. Frase: "un lugar para encontrarse".
+- 8, "las ondas" (concéntrico): tres puntos de los que salen ondas hasta cruzarse. Frase: "lo que te pasa le pasa a alguien más". Este isotipo es un dibujo calcado y tejido, no círculos sueltos, así que no se anima aro por aro: tres ventanas redondas que crecen van descubriendo el dibujo entero, guardado en `constants/isotipoConcentrico.ts`.
+- Las tres frases las propuso Claude, sin género a propósito. Andre todavía no las vio.
+- El isotipo de círculos completos sin relleno no tiene bienvenida propia: es casi igual al de `VitaMark`, donde ya terminan las cuatro primeras.
+
+**Pendiente para la próxima sesión:**
+- Ninguna de las cuatro nuevas (5 a 8) se probó en un teléfono: solo pasaron el chequeo de tipos, el lint y las pruebas. Lo más dudoso es la 8 en Android (ventanas redondas que recortan con `overflow: hidden` mientras cambian de escala).
+- Ocho bienvenidas al azar son muchas para medir cuál funciona mejor. Cuando Andre elija isotipo, sacar del sorteo las que terminan en los descartados.
+
 ## 2026-10-12 — Andre (Claude · quinta bienvenida, "alguien cerca", con el isotipo B)
 
 **Tocado:** `screens/OnboardingCerca.tsx` (nueva), `app/index.tsx`. **Sin migraciones.**

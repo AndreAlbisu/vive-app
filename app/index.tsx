@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,7 +14,15 @@ import { ViveColors } from '@/constants/theme';
 //       entre "vos" y "la ayuda", un punto cruza y aparece el isotipo.
 //   5 = "alguien cerca": un círculo lleno, solo; el toque le trae compañía y
 //       queda el isotipo B (el del círculo terracota), no el de los tres aros.
-// El selector "1 · 2 · 3 · 4 · 5" de arriba sale SOLO en desarrollo, para forzar una.
+//   6 = "abrirse": un aro cerrado que se abre para que entren los otros dos.
+//       Termina en el isotipo de aros abiertos.
+//   7 = "el encuentro": tres aros separados que se juntan, y el pedacito que
+//       comparten se llena. Termina en el de círculos con el centro relleno.
+//   8 = "las ondas": tres puntos de los que salen ondas hasta cruzarse.
+//       Termina en el isotipo concéntrico.
+// 📌 De la 5 a la 8 terminan cada una en un isotipo candidato distinto (Andre,
+// 12/10): sirven también para comparar los logos en el teléfono.
+// El selector "1 · 2 · … · 8" de arriba sale SOLO en desarrollo, para forzar una.
 // Cuál salió queda anotado (`onboarding_variante`), así se puede ver después
 // cuál lleva más gente a la pantalla siguiente.
 import OnboardingLlega from '@/screens/OnboardingLlega';
@@ -22,13 +30,26 @@ import OnboardingScreen1 from '@/screens/OnboardingScreen1';
 import OnboardingTresEnUno from '@/screens/OnboardingTresEnUno';
 import OnboardingPuente from '@/screens/OnboardingPuente';
 import OnboardingCerca from '@/screens/OnboardingCerca';
+import OnboardingAbrirse from '@/screens/OnboardingAbrirse';
+import OnboardingEncuentro from '@/screens/OnboardingEncuentro';
+import OnboardingOndas from '@/screens/OnboardingOndas';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { limpiarTono } from '@/constants/onboardingTonos';
 import { destinoTrasEntrar } from '@/lib/entrada';
 import { anotar } from '@/lib/analytics';
 
-type Opcion = 1 | 2 | 3 | 4 | 5;
-const OPCIONES: Opcion[] = [1, 2, 3, 4, 5];
+type Opcion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+const PANTALLAS: Record<Opcion, ComponentType> = {
+  1: OnboardingLlega,
+  2: OnboardingTresEnUno,
+  3: OnboardingScreen1,
+  4: OnboardingPuente,
+  5: OnboardingCerca,
+  6: OnboardingAbrirse,
+  7: OnboardingEncuentro,
+  8: OnboardingOndas,
+};
+const OPCIONES: Opcion[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
 // La última que salió en esta apertura de la app, para no repetirla seguida
 // (por ejemplo al cerrar sesión y volver a la bienvenida).
@@ -78,13 +99,11 @@ export default function Index() {
 
   if (user) return null;
 
+  const Pantalla = PANTALLAS[opcion];
+
   return (
     <View style={styles.todo}>
-      {opcion === 1 ? <OnboardingLlega key={vuelta} />
-        : opcion === 2 ? <OnboardingTresEnUno key={vuelta} />
-        : opcion === 3 ? <OnboardingScreen1 key={vuelta} />
-        : opcion === 4 ? <OnboardingPuente key={vuelta} />
-        : <OnboardingCerca key={vuelta} />}
+      <Pantalla key={vuelta} />
       {__DEV__ && (
         <View style={[styles.selector, { top: insets.top + 6 }]}>
           {OPCIONES.map(n => (
@@ -108,12 +127,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 14,
     flexDirection: 'row',
-    gap: 6,
+    gap: 5,
   },
   opcion: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(86,94,50,0.10)',
