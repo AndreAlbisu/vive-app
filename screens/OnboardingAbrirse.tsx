@@ -32,8 +32,9 @@ import { anotar, cronometro } from '@/lib/analytics';
 //      Cada uno gira a su ritmo y para su lado, así que los huecos se
 //      persiguen, se cruzan y casi nunca coinciden: un giroscopio lento.
 //      "abrirse es el primer paso"
-//   2. Tocás: los tres se sueltan del centro. Cada uno termina su vuelta, toma
-//      su tamaño y se desliza hasta su lugar, con el hueco donde va.
+//   2. Tocás: los tres se sueltan del centro DE A UNO, del más chico al más
+//      grande. Cada uno termina la vuelta que venía dando, toma su tamaño y se
+//      desliza hasta su lugar, con el hueco donde va.
 //   3. Quedan los tres aros abiertos, enganchados, y del medio salen dos ondas
 //      finas. Debajo, "vita / te acompaña".
 //
@@ -72,11 +73,12 @@ const RUEDA = 2 * (ARO_R + TRAZO);   // el lado de la vista de cada aro
 
 const FRASE_1 = 'abrirse es el primer paso';
 
-const ACOMODA_MS  = 1300;  // se sueltan y cada uno va a su lugar
-const ONDA_EN     = 900;
+const RUEDA_MS    = 1400;  // lo que tarda cada aro en ir del nido a su lugar
+const PASO_MS     = 170;   // cada uno sale un poco después del anterior
+const ONDA_EN     = 1350;
 const ONDA_MS     = 1500;
-const MARCA_EN    = 1300;
-const FIN_EN      = 2000;  // todo quieto
+const MARCA_EN    = 1500;
+const FIN_EN      = 2200;  // todo quieto
 const HOLD_MS     = 700;
 const EXIT_MS     = 450;
 const AUTO_MS     = 4000;
@@ -85,7 +87,8 @@ const BREATH_MS   = 5200;
 const BREATH_AMP  = 0.03;
 
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
-const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
+// Arranca despacio y frena largo: para ir del nido al isotipo sin tirones.
+const EASE_SUAVE  = Easing.bezier(0.45, 0, 0.15, 1);
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -164,7 +167,9 @@ export default function OnboardingAbrirse() {
 
   // ── Valores compartidos ────────────────────────────────────────────────────
   const aparece = useSharedValue(0);
-  const acomoda = useSharedValue(0);  // del nido a su lugar en el isotipo
+  // Del nido a su lugar en el isotipo: uno por aro, porque salen escalonados.
+  const acom0 = useSharedValue(0), acom1 = useSharedValue(0), acom2 = useSharedValue(0);
+  const acomodas = [acom0, acom1, acom2];
   // El giro de cada aro, en radianes.
   const ang0 = useSharedValue(0), ang1 = useSharedValue(0), ang2 = useSharedValue(0);
   const angulos = [ang0, ang1, ang2];
@@ -209,19 +214,21 @@ export default function OnboardingAbrirse() {
     const f = rapido ? 0 : 1;   // con reduced motion todo cae en el mismo instante
     angulos.forEach((a, i) => {
       cancelAnimation(a);
-      // Completa la vuelta que venía dando; si le faltaba poco, da una más
-      // para no clavar el freno.
-      const dadas = Math.abs(a.value) / VUELTA;
-      const destino = AROS[i].sentido * VUELTA * (rapido ? Math.round(dadas) : dadas > 0.5 ? 2 : 1);
-      a.value = withTiming(destino, { duration: rapido ? 300 : ACOMODA_MS, easing: EASE_OUT });
+      // Sigue girando para el mismo lado hasta completar la vuelta que venía
+      // dando: nunca más de una, y frenando de a poco.
+      const destino = AROS[i].sentido * VUELTA * (rapido ? Math.round(Math.abs(a.value) / VUELTA) : 1);
+      a.value = withTiming(destino, {
+        duration: rapido ? 300 : i * PASO_MS + RUEDA_MS,
+        easing: Easing.out(Easing.quad),
+      });
+      acomodas[i].value = rapido
+        ? withTiming(1, { duration: 300 })
+        : withDelay(i * PASO_MS, withTiming(1, { duration: RUEDA_MS, easing: EASE_SUAVE }));
     });
-    if (rapido) {
-      acomoda.value = withTiming(1, { duration: 300 });
-    } else {
-      acomoda.value = withTiming(1, { duration: ACOMODA_MS, easing: EASE_IN_OUT });
+    if (!rapido) {
       onda.value = withDelay(ONDA_EN, withTiming(1, { duration: ONDA_MS, easing: Easing.linear }));
       luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), 0);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ACOMODA_MS - 150);
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ONDA_EN);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -358,7 +365,7 @@ export default function OnboardingAbrirse() {
           style={[styles.centrado, { top: centroY - S / 2, marginLeft: -S / 2, width: S, height: S }, isotipoStyle]}
         >
           {AROS.map((aro, i) => (
-            <Rueda key={i} aro={aro} k={K} acomoda={acomoda} angulo={angulos[i]} reloj={reloj} />
+            <Rueda key={i} aro={aro} k={K} acomoda={acomodas[i]} angulo={angulos[i]} reloj={reloj} />
           ))}
         </Animated.View>
 

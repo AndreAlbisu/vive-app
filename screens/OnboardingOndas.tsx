@@ -20,7 +20,7 @@ import Animated, {
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { CONCENTRICO_ALTO, CONCENTRICO_ANCHO, CONCENTRICO_D } from '@/constants/isotipoConcentrico';
-import { Anillo } from '@/components/ui/Anillo';
+import { aroCaja } from '@/components/ui/Anillo';
 import { Grain } from '@/components/ui/Grain';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
@@ -28,25 +28,30 @@ import { anotar, cronometro } from '@/lib/analytics';
 // Bienvenida "las ondas" (12/10/2026, pedido de Andre): termina en el isotipo
 // concéntrico. Qué cuenta, en tres tiempos:
 //
-//   1. Tres puntos oliva, separados, que laten sobre el crema.
+//   1. Los tres juegos de aros del isotipo, uno ENCIMA del otro, casi en el
+//      mismo punto, con algunos aros de más hacia afuera. Cada juego da vueltas
+//      apenas corrido del centro, y al cruzarse tantas líneas finas aparecen
+//      dibujos que se mueven solos (un muaré): parece que late.
 //      "lo que te pasa le pasa a alguien más"
-//      De cada uno salen aritos chicos, como gotas que caen en el agua.
-//   2. Tocás: de cada punto sale una onda. Los aros aparecen de adentro hacia
-//      afuera, uno tras otro, hasta que las tres ondas se cruzan. Y las ondas
-//      NO frenan en el isotipo: siguen de largo, en terracota, verde y oliva,
-//      hasta salirse de la pantalla.
-//   3. Cuando se cruzan, el isotipo da un latido. Debajo, "vita / te acompaña".
+//   2. Tocás: los tres juegos se separan despacio, cada uno hacia su lugar.
+//      Mientras se alejan el dibujo cambia todo el tiempo, y los aros de más
+//      se apagan.
+//   3. Queda el isotipo concéntrico, con "vita / te acompaña" debajo.
 //
-// 🔴 Cómo está hecho, porque no es como las otras. El isotipo concéntrico es un
-// dibujo calcado y tejido (ver `constants/isotipoConcentrico.ts`): no se puede
-// animar aro por aro. Lo que se anima son tres VENTANAS redondas, una por cada
-// centro, que crecen. Cada ventana recorta una copia entera y quieta del
-// dibujo; entre las tres lo terminan mostrando todo. La ventana se agranda con
-// `scale` y su contenido se achica con la inversa, así el dibujo no se mueve.
-// No usa recortes ni máscaras de SVG, que al animarse fallan en Android.
+// 📌 Andre las pidió "artísticas y modernas, bellas, hasta hipnóticas", sin
+// confeti ni circo. La primera versión (ondas que crecían como gotas) le
+// pareció aburrida y se trababa.
 //
-// 📌 Los centros salen de medir el dibujo. Si el isotipo cambia, hay que volver
-// a medirlos: si quedan corridos, los aros dejan de aparecer de a uno.
+// 🔴 Cómo está hecho. El isotipo es un dibujo calcado y tejido (los aros pasan
+// por arriba y por abajo, ver `constants/isotipoConcentrico.ts`): no se puede
+// animar aro por aro. Entonces lo que se mueve son aros SIMPLES, vistas con
+// borde, con los centros y los radios medidos del dibujo. Recién cuando
+// llegaron a su lugar se funden con el dibujo verdadero, que es igual salvo
+// por el tejido. Nada de SVG en movimiento ni de recortes: eso era lo que se
+// trababa.
+//
+// 📌 Los centros y los radios salen de medir el dibujo. Si el isotipo cambia,
+// hay que volver a medirlos: si quedan corridos, se nota un salto al fundir.
 //
 // Mismas reglas que las otras bienvenidas: se puede tocar desde el primer
 // instante, alcanza con un toque, 4 segundos como mucho, un segundo toque la
@@ -57,84 +62,89 @@ const CREMA     = ViveColors.background;
 const CREMA_APP = '#F7F2EA';   // el fondo de la pantalla que sigue
 
 // ── El isotipo concéntrico, en su viewBox de 100 × 87,92 ─────────────────────
-// El centro de cada juego de aros y cuánto tarda en salir su onda.
-const CENTROS = [
-  { cx: 50, cy: 32,   espera: 0 },
-  { cx: 31, cy: 57.2, espera: 110 },
-  { cx: 69, cy: 57.2, espera: 220 },
+// Los tres juegos de aros: su centro y los radios, medidos al medio del trazo.
+const JUEGOS = [
+  { cx: 50, cy: 32,   radios: [7.45, 13.6, 20.1, 26.85] },
+  { cx: 31, cy: 57.2, radios: [6.4, 12.7, 19.0, 25.7] },
+  { cx: 69, cy: 57.2, radios: [6.4, 12.7, 19.0, 25.7] },
 ] as const;
-const VENTANA_R  = 29.6;   // tapa hasta el borde de afuera del aro más grande
-const VENTANA_R0 = 3;      // de arranque: cae en el hueco del aro más chico
-const PUNTO_R    = 1.7;
-const GOTA_R     = 13;     // hasta dónde llegan los aritos mientras esperan
-// Las ondas que siguen de largo: un color por centro, y dos por cada uno.
-const ECO_COLORES = [ViveColors.primary, ViveColors.accent, ViveColors.text];
-const ECO_PASO    = 0.17;  // cada onda de un centro sale un poco después de la anterior
-const ECO_N       = 3;     // cuántas ondas siguen de largo por centro
-const GOTA_N      = 2;     // cuántos aritos hay a la vez en cada punto
+type Juego = (typeof JUEGOS)[number];
+const TRAZO = 2.1;
+// Donde esperan los tres, encimados: el punto medio entre los tres centros.
+const NIDO = { x: 50, y: (32 + 57.2 + 57.2) / 3 };
+// Los aros de más, que solo están mientras esperan: siguen el mismo paso hacia
+// afuera. 🔴 Si sube la cantidad, el dibujo se sale de la pantalla en teléfonos
+// chicos y baja el texto.
+const DE_MAS     = 3;
+const DE_MAS_OP  = 0.55;
+const RONDA      = 6;      // cuánto se corre cada juego del centro, como mucho
+const TERCIO     = (2 * Math.PI) / 3;
 
 const FRASE_1 = 'lo que te pasa le pasa a alguien más';
 
-const ONDA_MS    = 1000;
-const ECO_MS     = 2100;   // lo que tardan las ondas en salirse de la pantalla
-const LATE_EN    = 1050;   // las tres ondas ya se cruzaron
-const LATE_MS    = 520;
-const LATE_AMP   = 0.035;
-const MARCA_EN   = 1000;
-const FIN_EN     = 1800;   // todo quieto
+const SEPARA_MS  = 1500;   // los tres juegos van a su lugar
+const TEJE_EN    = 1300;   // ya casi están: se funden con el dibujo verdadero
+const TEJE_MS    = 450;
+const MARCA_EN   = 1400;
+const FIN_EN     = 2150;   // todo quieto
 const HOLD_MS    = 700;
 const EXIT_MS    = 450;
 const AUTO_MS    = 4000;
 const SALTEAR_MS = 600;
-const LATIDO_MS  = 3200;
+const VUELTA_MS  = 9000;   // una vuelta de la ronda
+const LATIDO_MS  = 5200;   // la ronda se abre y se cierra
 
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
-const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
+// Arranca despacio y frena largo: para separarse sin tirones.
+const EASE_SUAVE  = Easing.bezier(0.45, 0, 0.15, 1);
 
 function clamp01(x: number): number {
   'worklet';
   return Math.min(1, Math.max(0, x));
 }
 
-/** Qué fracción de su tamaño entero tiene la ventana con la onda en `v`. */
-function escala(v: number): number {
-  'worklet';
-  return (VENTANA_R0 + (VENTANA_R - VENTANA_R0) * v) / VENTANA_R;
+/** Hasta dónde llega un juego con sus aros de más, desde su centro. */
+function radioEntero(j: Juego): number {
+  const paso = j.radios[3] - j.radios[2];
+  return j.radios[3] + DE_MAS * paso + TRAZO / 2;
 }
 
 /**
- * Una ventana redonda sobre el isotipo, centrada en uno de los tres centros.
- * `onda` la lleva de un punto a su tamaño entero.
+ * Uno de los tres juegos de aros. Mientras espera está en el nido, dando
+ * vueltas apenas corrido del centro; con `separa` va a su lugar.
  */
-function Ventana({ cx, cy, k, onda }: {
-  cx: number; cy: number; k: number; onda: SharedValue<number>;
+function Aros({ j, i, k, separa, giro, reloj }: {
+  j: Juego; i: number; k: number;
+  separa: SharedValue<number>; giro: SharedValue<number>; reloj: SharedValue<number>;
 }) {
-  const lado = 2 * VENTANA_R * k;
-  const ventanaStyle = useAnimatedStyle(() => ({
-    opacity: onda.value > 0 ? 1 : 0,
-    transform: [{ scale: escala(onda.value) }],
-  }));
-  // La inversa: el dibujo de adentro queda del mismo tamaño y en el mismo lugar.
-  const dibujoStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 / escala(onda.value) }],
-  }));
+  const style = useAnimatedStyle(() => {
+    const g = separa.value;
+    const abre = 0.5 + 0.5 * Math.sin(reloj.value * 2 * Math.PI);
+    const ronda = RONDA * (0.45 + 0.55 * abre) * (1 - g);
+    const angulo = giro.value + i * TERCIO;
+    return {
+      transform: [
+        { translateX: ((NIDO.x - j.cx) * (1 - g) + ronda * Math.cos(angulo)) * k },
+        { translateY: ((NIDO.y - j.cy) * (1 - g) + ronda * Math.sin(angulo)) * k },
+      ],
+    };
+  });
+  const deMasStyle = useAnimatedStyle(() => ({ opacity: DE_MAS_OP * (1 - clamp01(separa.value * 1.5)) }));
+
+  const paso = j.radios[3] - j.radios[2];
+  const lado = 2 * radioEntero(j) * k;
+  const medio = lado / 2;
   return (
     <Animated.View
-      style={[
-        styles.ventana,
-        { left: (cx - VENTANA_R) * k, top: (cy - VENTANA_R) * k, width: lado, height: lado, borderRadius: lado / 2 },
-        ventanaStyle,
-      ]}
+      style={[{ position: 'absolute', left: j.cx * k - medio, top: j.cy * k - medio, width: lado, height: lado }, style]}
     >
-      <Animated.View style={[StyleSheet.absoluteFill, dibujoStyle]}>
-        <View style={{ position: 'absolute', left: -(cx - VENTANA_R) * k, top: -(cy - VENTANA_R) * k }}>
-          <Svg
-            width={CONCENTRICO_ANCHO * k} height={CONCENTRICO_ALTO * k}
-            viewBox={`0 0 ${CONCENTRICO_ANCHO} ${CONCENTRICO_ALTO}`}
-          >
-            <Path d={CONCENTRICO_D} fill={OLIVA} fillRule="evenodd" />
-          </Svg>
-        </View>
+      {j.radios.map(r => (
+        <View key={r} style={[aroCaja(medio, medio, r * k, TRAZO * k), styles.aro]} />
+      ))}
+      <Animated.View style={[StyleSheet.absoluteFill, deMasStyle]}>
+        {Array.from({ length: DE_MAS }, (_, n) => (
+          <View key={n} style={[aroCaja(medio, medio, (j.radios[3] + (n + 1) * paso) * k, TRAZO * k), styles.aro]} />
+        ))}
       </Animated.View>
     </Animated.View>
   );
@@ -163,15 +173,14 @@ export default function OnboardingOndas() {
   const K = S / CONCENTRICO_ANCHO;         // px por unidad del viewBox
   const H = CONCENTRICO_ALTO * K;
   const centroY = height * 0.45;
-  const textoY = centroY + H / 2 + 22;
+  // El texto va debajo de hasta donde llega el dibujo mientras espera.
+  const textoY = centroY - H / 2 + (NIDO.y + radioEntero(JUEGOS[0]) + RONDA) * K + 4;
 
   // ── Valores compartidos ────────────────────────────────────────────────────
   const aparece = useSharedValue(0);
-  const onda0 = useSharedValue(0), onda1 = useSharedValue(0), onda2 = useSharedValue(0);
-  const ondas = [onda0, onda1, onda2];
-  const funde   = useSharedValue(1);  // reduced motion: el isotipo se funde entero
-  const eco     = useSharedValue(0);  // las ondas que siguen de largo
-  const latido  = useSharedValue(0);  // el del final, cuando se cruzan
+  const separa  = useSharedValue(0);  // los tres juegos van del nido a su lugar
+  const giro    = useSharedValue(0);  // en radianes: la ronda alrededor del nido
+  const teje    = useSharedValue(0);  // los aros simples se funden con el dibujo
   const marca   = useSharedValue(0);
   const sale    = useSharedValue(0);
   const reloj   = useSharedValue(0);  // 0→1 en loop: el latido de los puntos
@@ -211,18 +220,13 @@ export default function OnboardingOndas() {
 
     const f = rapido ? 0 : 1;   // con reduced motion todo cae en el mismo instante
     if (rapido) {
-      funde.value = 0;
-      ondas.forEach(o => { o.value = 1; });
-      funde.value = withTiming(1, { duration: 300 });
+      separa.value = withTiming(1, { duration: 300 });
+      teje.value = withDelay(200, withTiming(1, { duration: 300 }));
     } else {
-      ondas.forEach((o, i) => {
-        o.value = withDelay(CENTROS[i].espera, withTiming(1, { duration: ONDA_MS, easing: EASE_IN_OUT }));
-      });
-      eco.value = withTiming(1, { duration: ECO_MS, easing: Easing.linear });
-      latido.value = withDelay(LATE_EN, withTiming(1, { duration: LATE_MS, easing: EASE_OUT }));
-      // Una gota por punto, y el latido cuando se cruzan.
-      CENTROS.forEach(c => luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), c.espera + 40));
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Light), LATE_EN);
+      separa.value = withTiming(1, { duration: SEPARA_MS, easing: EASE_SUAVE });
+      teje.value = withDelay(TEJE_EN, withTiming(1, { duration: TEJE_MS, easing: Easing.linear }));
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), 0);
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), TEJE_EN);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -242,7 +246,7 @@ export default function OnboardingOndas() {
         hintOp.value = withTiming(1, { duration: 300 });
         setEsperaToque(true);
       }
-    }, rapido ? 350 : FIN_EN);
+    }, rapido ? 550 : FIN_EN);
   }, [salir, vibrar, luego]);
 
   // ── Entrada ────────────────────────────────────────────────────────────────
@@ -257,15 +261,20 @@ export default function OnboardingOndas() {
     return () => { clearTimeout(t); lista.forEach(clearTimeout); };
   }, []);
 
-  // El latido de los puntos mientras esperan.
+  // Mientras nadie toca: los tres juegos dan vueltas alrededor del nido, y la
+  // ronda se abre y se cierra. No hace falta frenarla al tocar: se achica sola
+  // a medida que se separan.
   useEffect(() => {
     if (reduced) {
       cancelAnimation(reloj);
+      cancelAnimation(giro);
       return;
     }
     reloj.value = 0;
     reloj.value = withRepeat(withTiming(1, { duration: LATIDO_MS, easing: Easing.linear }), -1, false);
-    return () => cancelAnimation(reloj);
+    giro.value = 0;
+    giro.value = withRepeat(withTiming(2 * Math.PI, { duration: VUELTA_MS, easing: Easing.linear }), -1, false);
+    return () => { cancelAnimation(reloj); cancelAnimation(giro); };
   }, [reduced]);
 
   // ── Dedo ───────────────────────────────────────────────────────────────────
@@ -297,19 +306,12 @@ export default function OnboardingOndas() {
   }, [esperaToque, salir, arrancar, reduced]);
 
   // ── Animados ───────────────────────────────────────────────────────────────
-  const isotipoStyle = useAnimatedStyle(() => ({ opacity: funde.value }));
-  // El latido: el isotipo entero se infla un poco y vuelve.
-  const lateStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + LATE_AMP * Math.sin(Math.PI * latido.value) }],
+  // El fundido: primero aparece el dibujo verdadero encima, y recién después
+  // se van los aros simples. Así nunca se ve más claro en el medio.
+  const dibujoStyle = useAnimatedStyle(() => ({ opacity: clamp01(teje.value * 2) }));
+  const arosStyle = useAnimatedStyle(() => ({
+    opacity: aparece.value * (1 - clamp01(teje.value * 2 - 1)),
   }));
-
-  // Los tres puntos: laten mientras esperan y se van cuando sale la primera onda.
-  const puntosStyle = useAnimatedStyle(() => {
-    const late = 0.5 - 0.5 * Math.cos(reloj.value * 2 * Math.PI);
-    return {
-      opacity: aparece.value * (0.7 + 0.3 * late) * (1 - clamp01(onda0.value * 6)),
-    };
-  });
 
   const frase1Style = useAnimatedStyle(() => ({
     opacity: frase1.value,
@@ -338,9 +340,6 @@ export default function OnboardingOndas() {
   // La salida: un velo del crema de la pantalla siguiente.
   const veloStyle = useAnimatedStyle(() => ({ opacity: sale.value }));
 
-  const punto = 2 * PUNTO_R * K;
-  const ecoRadio = Math.max(width, height) * 0.72;
-
   return (
     <View style={styles.fondo}>
       <StatusBar barStyle="dark-content" />
@@ -353,48 +352,20 @@ export default function OnboardingOndas() {
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
-        {/* Debajo de todo: las ondas que siguen de largo hasta salirse. */}
-        {CENTROS.map((c, i) => Array.from({ length: ECO_N }, (_, j) => (
-          <Anillo
-            key={`${i}-${j}`}
-            t={eco}
-            x={width / 2 + (c.cx - CONCENTRICO_ANCHO / 2) * K}
-            y={centroY + (c.cy - CONCENTRICO_ALTO / 2) * K}
-            radio={ecoRadio}
-            color={ECO_COLORES[i]}
-            retraso={c.espera / ECO_MS + j * ECO_PASO}
-            fuerza={0.45}
-          />
-        )))}
-
-        <Animated.View
+        <View
           pointerEvents="none"
-          style={[styles.centrado, { top: centroY - H / 2, marginLeft: -S / 2, width: S, height: H }, lateStyle]}
+          style={[styles.centrado, { top: centroY - H / 2, marginLeft: -S / 2, width: S, height: H }]}
         >
-          <Animated.View style={[StyleSheet.absoluteFill, puntosStyle]}>
-            {/* Las gotas: aritos que salen de cada punto mientras esperan. */}
-            {CENTROS.map((c, i) => Array.from({ length: GOTA_N }, (_, j) => (
-              <Anillo
-                key={`gota-${i}-${j}`}
-                t={reloj} fase={i / 3 + j / GOTA_N}
-                x={c.cx * K} y={c.cy * K} radio={GOTA_R * K}
-                color={ECO_COLORES[i]} fuerza={0.7}
-              />
-            )))}
-            {CENTROS.map((c, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.punto,
-                  { left: c.cx * K - punto / 2, top: c.cy * K - punto / 2, width: punto, height: punto, borderRadius: punto / 2 },
-                ]}
-              />
-            ))}
+          <Animated.View style={[StyleSheet.absoluteFill, arosStyle]}>
+            {JUEGOS.map((j, i) => <Aros key={i} j={j} i={i} k={K} separa={separa} giro={giro} reloj={reloj} />)}
           </Animated.View>
-          <Animated.View style={[StyleSheet.absoluteFill, isotipoStyle]}>
-            {CENTROS.map((c, i) => <Ventana key={i} cx={c.cx} cy={c.cy} k={K} onda={ondas[i]} />)}
+          {/* El dibujo verdadero, quieto: aparece cuando los aros ya llegaron. */}
+          <Animated.View style={[StyleSheet.absoluteFill, dibujoStyle]}>
+            <Svg width={S} height={H} viewBox={`0 0 ${CONCENTRICO_ANCHO} ${CONCENTRICO_ALTO}`}>
+              <Path d={CONCENTRICO_D} fill={OLIVA} fillRule="evenodd" />
+            </Svg>
           </Animated.View>
-        </Animated.View>
+        </View>
 
         {/* El papel: quieto, encima del isotipo y debajo del texto. */}
         <Grain opacity={0.05} />
@@ -424,8 +395,7 @@ const styles = StyleSheet.create({
   todo: { flex: 1 },
   velo: { backgroundColor: CREMA_APP },
   centrado: { position: 'absolute', left: '50%' },
-  ventana: { position: 'absolute', overflow: 'hidden' },
-  punto: { position: 'absolute', backgroundColor: OLIVA },
+  aro: { borderColor: OLIVA },
   dedo: {
     position: 'absolute', left: 0, top: 0,
     width: 80, height: 80, borderRadius: 40,

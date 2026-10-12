@@ -1,3 +1,20 @@
+## 2026-10-12 — Andre (Claude · bienvenidas 5 a 8: se arregla el lag y se rehacen la 5 y la 8)
+
+**Tocado:** `components/ui/Anillo.tsx`, `screens/OnboardingCerca.tsx`, `screens/OnboardingAbrirse.tsx`, `screens/OnboardingEncuentro.tsx`, `screens/OnboardingOndas.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Primera vez que Andre las probó en el iPhone. Veredicto: la 7 le gusta pero se traba; la 6 está bien, mejorable la llegada al logo; la 5 medio aburrida; la 8 aburrida y con mucho lag.
+- El lag venía de mover círculos de SVG en cada cuadro (en la 7 eran quince) y, en la 8, de recortes redondos sobre un dibujo pesado. Ahora todo aro que se mueve es una vista con borde (`aroCaja` en `Anillo.tsx`); el SVG queda solo para lo que está quieto. **No se volvió a probar en el teléfono**: hay que confirmar que el lag se fue.
+- 5, idea nueva: el círculo terracota quieto y los dos aros dando vueltas a su alrededor; donde lo pisan se vuelven crema. Al tocar frenan en su lugar. (En el isotipo B los dos aros están a la misma distancia del círculo, así que el logo es un momento de esa órbita.)
+- 8, idea nueva: los tres juegos de aros encimados y girando apenas corridos, lo que arma un muaré; al tocar se separan a su lugar y se funden con el dibujo verdadero.
+- 6: los aros salen del centro de a uno, y ya no pegan el acelerón de hasta vuelta y media.
+- Aprendizaje de gusto: a Andre le aburren las ondas finas tipo gota; le atraen órbitas, giros y capas de líneas que se cruzan.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el iPhone que la 7 y la 8 ya no se traban, y después mirar Android.
+- En la 8, mirar el momento en que los aros simples se funden con el dibujo tejido: si se nota un salto, hay que ajustar centros y radios.
+- En la 5 y la 7 el texto quedó más abajo, para no pisarse con los aros que giran: ver si el hueco entre logo y "vita" molesta.
+
 ## 2026-10-12 — Andre (Claude · las bienvenidas 5 a 8, ahora hipnóticas y sin confeti)
 
 **Tocado:** `components/ui/Anillo.tsx` (era `Festejo.tsx`), `screens/OnboardingCerca.tsx`, `screens/OnboardingAbrirse.tsx`, `screens/OnboardingEncuentro.tsx`, `screens/OnboardingOndas.tsx`. **Sin migraciones.**

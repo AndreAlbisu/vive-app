@@ -6,11 +6,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import Animated, {
   Easing,
   cancelAnimation,
-  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -20,7 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { Anillo } from '@/components/ui/Anillo';
+import { Anillo, aroCaja } from '@/components/ui/Anillo';
 import { Grain } from '@/components/ui/Grain';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
@@ -39,6 +38,10 @@ import { anotar, cronometro } from '@/lib/analytics';
 //
 // 📌 Andre las pidió "artísticas y modernas, bellas, hasta hipnóticas", sin
 // confeti ni circo. Por eso acá no hay rebotes ni golpes: todo es continuo.
+//
+// 🔴 Los aros son VISTAS con borde, no círculos de SVG. La primera versión los
+// movía en SVG y se trababa: eran quince círculos redibujando el lienzo en cada
+// cuadro. Solo el centro relleno sigue en SVG, y ese no se redibuja.
 //
 // 🔴 El giro se puede frenar en cualquier tercio de vuelta: los tres aros son
 // iguales, así que girado 120° el dibujo es el mismo. Por eso al tocar se
@@ -94,8 +97,6 @@ const BREATH_MS  = 5200;
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
 const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
 function clamp01(x: number): number {
   'worklet';
   return Math.min(1, Math.max(0, x));
@@ -105,30 +106,31 @@ function clamp01(x: number): number {
  * Uno de los tres aros, o una copia de su estela. `atras` dice cuántos pasos
  * viene detrás (0 es el aro mismo); la estela se cierra a medida que se juntan.
  */
-function Aro({ cx, cy, atras, junta, giro, reloj }: {
-  cx: number; cy: number; atras: number;
+function Aro({ cx, cy, atras, k, junta, giro, reloj }: {
+  cx: number; cy: number; atras: number; k: number;
   junta: SharedValue<number>; giro: SharedValue<number>; reloj: SharedValue<number>;
 }) {
-  const props = useAnimatedProps(() => {
+  const style = useAnimatedStyle(() => {
     const suelto = 1 - junta.value;
     const amague = 1 - AMAGUE * (0.5 - 0.5 * Math.cos(reloj.value * 2 * Math.PI));
     const lejos = 1 + SEPARA * suelto * amague;
-    const dx = (cx - MEDIO.x) * lejos;
-    const dy = (cy - MEDIO.y) * lejos;
+    const dx = (cx - MEDIO.x) * lejos * k;
+    const dy = (cy - MEDIO.y) * lejos * k;
     const angulo = giro.value - atras * ESTELA_PASO * suelto;
     const cos = Math.cos(angulo);
     const sin = Math.sin(angulo);
     return {
-      cx: MEDIO.x + dx * cos - dy * sin,
-      cy: MEDIO.y + dx * sin + dy * cos,
+      transform: [{ translateX: dx * cos - dy * sin }, { translateY: dx * sin + dy * cos }],
     };
   });
+  // Quieto está en el medio de los tres; el `transform` lo saca a su lugar.
   return (
-    <AnimatedCircle
-      animatedProps={props}
-      r={ARO_R}
-      stroke={OLIVA} strokeWidth={TRAZO} fill="none"
-      opacity={atras === 0 ? 1 : ESTELA[atras - 1]}
+    <Animated.View
+      style={[
+        aroCaja((MEDIO.x + MARGEN) * k, (MEDIO.y + MARGEN) * k, ARO_R * k, TRAZO * k),
+        { borderColor: OLIVA, opacity: atras === 0 ? 1 : ESTELA[atras - 1] },
+        style,
+      ]}
     />
   );
 }
@@ -361,14 +363,12 @@ export default function OnboardingEncuentro() {
 
         <Animated.View
           pointerEvents="none"
-          style={[styles.centrado, { top: centroY - lienzoPx / 2, marginLeft: -lienzoPx / 2 }, arosStyle]}
+          style={[styles.centrado, { top: centroY - lienzoPx / 2, marginLeft: -lienzoPx / 2, width: lienzoPx, height: lienzoPx }, arosStyle]}
         >
-          <Svg width={lienzoPx} height={lienzoPx} viewBox={`${-MARGEN} ${-MARGEN} ${LIENZO} ${LIENZO}`}>
-            {/* Primero las estelas, de la más tenue a la más marcada; arriba, los aros. */}
-            {[4, 3, 2, 1, 0].map(atras => AROS.map((a, i) => (
-              <Aro key={`${atras}-${i}`} cx={a.cx} cy={a.cy} atras={atras} junta={junta} giro={giro} reloj={reloj} />
-            )))}
-          </Svg>
+          {/* Primero las estelas, de la más tenue a la más marcada; arriba, los aros. */}
+          {[4, 3, 2, 1, 0].map(atras => AROS.map((a, i) => (
+            <Aro key={`${atras}-${i}`} cx={a.cx} cy={a.cy} atras={atras} k={K} junta={junta} giro={giro} reloj={reloj} />
+          )))}
         </Animated.View>
 
         {/* El centro va en su propia vista para poder agrandarlo desde el medio. */}
