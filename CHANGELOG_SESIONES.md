@@ -1,3 +1,14 @@
+## 2026-10-12 — Andre (Claude · ondas del final sin trabarse)
+
+**Tocado:** `components/ui/Anillo.tsx`
+
+**Resumen:**
+- Andre: las ondas que salen al final (bienvenidas 6 y 7) le gustan, pero se veían trabadas. Causa probable: en iPhone, React Native pinta un aro con borde en una imagen del tamaño de la vista salvo que la vista recorte; la onda es más grande que la pantalla, así que eran dos imágenes enormes estiradas en cada cuadro.
+- Arreglo: `overflow: 'hidden'` en `Anillo` y en `aroCaja`, para que el borde lo dibuje el sistema. No cambia cómo se ve ni los tiempos. De paso alcanza a los aros de las 5, 7 y 8.
+
+**Pendiente para la próxima sesión:**
+- Sin probar en teléfono. Si las ondas siguen trabadas en la 6, el sospechoso que queda es el grosor de los tres aros, que todavía se anima en SVG mientras sale la onda.
+
 ## 2026-10-12 — Andre (Claude · cierres con vibración: reserva, guardado, herramientas y reseña)
 
 **Tocado:** `lib/vibracion.ts` (nuevo), `components/ui/Cierre.tsx` (nuevo), `components/ui/SaveScreen.tsx`, `screens/BookingScreen_Success.tsx`, `screens/ReviewScreen.tsx`, `screens/RespiracionScreen.tsx`, `screens/MeditacionScreen.tsx`, `screens/RelajacionScreen.tsx`, `screens/AnclajeScreen.tsx`, `screens/EscanerScreen.tsx`, `screens/SuenoScreen.tsx`. **Sin migraciones.**

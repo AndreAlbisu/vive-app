@@ -22,10 +22,14 @@ import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reani
  * `transform`. 🔴 Los aros que se mueven van así y no en SVG: mover un círculo
  * de SVG redibuja el lienzo entero en cada cuadro, y con varios a la vez la
  * animación se traba (pasó en las bienvenidas 7 y 8).
+ *
+ * 🔴 `overflow: 'hidden'` no recorta nada (el aro no tiene hijos): está para
+ * que en iPhone el borde lo dibuje el sistema. Sin eso, React Native pinta el
+ * aro en una imagen del tamaño de la vista y después estira esa imagen.
  */
 export function aroCaja(x: number, y: number, r: number, trazo: number): ViewStyle {
   const R = r + trazo / 2;
-  return { position: 'absolute', left: x - R, top: y - R, width: 2 * R, height: 2 * R, borderRadius: R, borderWidth: trazo };
+  return { position: 'absolute', left: x - R, top: y - R, width: 2 * R, height: 2 * R, borderRadius: R, borderWidth: trazo, overflow: 'hidden' };
 }
 
 export function Anillo({ t, x, y, radio, color, retraso = 0, fase, trazo = 2, fuerza = 0.5 }: {
@@ -61,5 +65,8 @@ export function Anillo({ t, x, y, radio, color, retraso = 0, fase, trazo = 2, fu
 }
 
 const styles = StyleSheet.create({
-  aro: { position: 'absolute' },
+  // 🔴 `overflow: 'hidden'`: ver `aroCaja`. Esta vista es más grande que la
+  // pantalla; sin eso eran dos imágenes enormes y las ondas salían trabadas
+  // (Andre, 12/10/2026).
+  aro: { position: 'absolute', overflow: 'hidden' },
 });
