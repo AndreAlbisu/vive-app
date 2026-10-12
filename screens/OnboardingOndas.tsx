@@ -20,7 +20,7 @@ import Animated, {
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { CONCENTRICO_ALTO, CONCENTRICO_ANCHO, CONCENTRICO_D } from '@/constants/isotipoConcentrico';
-import { Anillo } from '@/components/ui/Festejo';
+import { Anillo } from '@/components/ui/Anillo';
 import { Grain } from '@/components/ui/Grain';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
@@ -69,22 +69,24 @@ const PUNTO_R    = 1.7;
 const GOTA_R     = 13;     // hasta dónde llegan los aritos mientras esperan
 // Las ondas que siguen de largo: un color por centro, y dos por cada uno.
 const ECO_COLORES = [ViveColors.primary, ViveColors.accent, ViveColors.text];
-const ECO_SEGUNDA = 0.24;  // la segunda onda de cada centro sale más tarde
+const ECO_PASO    = 0.17;  // cada onda de un centro sale un poco después de la anterior
+const ECO_N       = 3;     // cuántas ondas siguen de largo por centro
+const GOTA_N      = 2;     // cuántos aritos hay a la vez en cada punto
 
 const FRASE_1 = 'lo que te pasa le pasa a alguien más';
 
 const ONDA_MS    = 1000;
-const ECO_MS     = 1700;   // lo que tardan las ondas en salirse de la pantalla
+const ECO_MS     = 2100;   // lo que tardan las ondas en salirse de la pantalla
 const LATE_EN    = 1050;   // las tres ondas ya se cruzaron
 const LATE_MS    = 520;
-const LATE_AMP   = 0.06;
+const LATE_AMP   = 0.035;
 const MARCA_EN   = 1000;
 const FIN_EN     = 1800;   // todo quieto
 const HOLD_MS    = 700;
 const EXIT_MS    = 450;
 const AUTO_MS    = 4000;
 const SALTEAR_MS = 600;
-const LATIDO_MS  = 2600;
+const LATIDO_MS  = 3200;
 
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
 const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
@@ -220,7 +222,7 @@ export default function OnboardingOndas() {
       latido.value = withDelay(LATE_EN, withTiming(1, { duration: LATE_MS, easing: EASE_OUT }));
       // Una gota por punto, y el latido cuando se cruzan.
       CENTROS.forEach(c => luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), c.espera + 40));
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Medium), LATE_EN);
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Light), LATE_EN);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -352,7 +354,7 @@ export default function OnboardingOndas() {
         onAccessibilityAction={alActivar}
       >
         {/* Debajo de todo: las ondas que siguen de largo hasta salirse. */}
-        {CENTROS.map((c, i) => [0, 1].map(j => (
+        {CENTROS.map((c, i) => Array.from({ length: ECO_N }, (_, j) => (
           <Anillo
             key={`${i}-${j}`}
             t={eco}
@@ -360,7 +362,8 @@ export default function OnboardingOndas() {
             y={centroY + (c.cy - CONCENTRICO_ALTO / 2) * K}
             radio={ecoRadio}
             color={ECO_COLORES[i]}
-            retraso={c.espera / ECO_MS + j * ECO_SEGUNDA}
+            retraso={c.espera / ECO_MS + j * ECO_PASO}
+            fuerza={0.45}
           />
         )))}
 
@@ -370,13 +373,14 @@ export default function OnboardingOndas() {
         >
           <Animated.View style={[StyleSheet.absoluteFill, puntosStyle]}>
             {/* Las gotas: aritos que salen de cada punto mientras esperan. */}
-            {CENTROS.map((c, i) => (
+            {CENTROS.map((c, i) => Array.from({ length: GOTA_N }, (_, j) => (
               <Anillo
-                key={`gota-${i}`}
-                t={reloj} x={c.cx * K} y={c.cy * K} radio={GOTA_R * K}
-                color={ECO_COLORES[i]} retraso={i * 0.16} trazo={2} fuerza={0.7}
+                key={`gota-${i}-${j}`}
+                t={reloj} fase={i / 3 + j / GOTA_N}
+                x={c.cx * K} y={c.cy * K} radio={GOTA_R * K}
+                color={ECO_COLORES[i]} fuerza={0.7}
               />
-            ))}
+            )))}
             {CENTROS.map((c, i) => (
               <View
                 key={i}

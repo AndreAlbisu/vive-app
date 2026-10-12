@@ -20,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { Chispas, Oleada } from '@/components/ui/Festejo';
+import { Anillo } from '@/components/ui/Anillo';
 import { Grain } from '@/components/ui/Grain';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
@@ -29,13 +29,17 @@ import { anotar, cronometro } from '@/lib/analytics';
 // primera que termina en el isotipo B (`vita-isotipo-B.svg`) en vez de los tres
 // aros de `VitaMark`. Qué cuenta, en tres tiempos:
 //
-//   1. Un círculo terracota, lleno, solo en el medio del crema. Respira.
+//   1. Un círculo terracota, lleno, solo en el medio del crema. De él salen
+//      ondas finas, una atrás de la otra, como una señal que nadie contesta.
 //      "hay alguien cerca"
-//   2. Tocás: el círculo larga una franja terracota que barre toda la pantalla
-//      y salta a su lugar. Los tres aros aparecen de golpe, uno atrás del otro
-//      (pop, pop, pop), cada uno inflándose de más y volviendo, con chispas.
-//      Donde los aros pisan el círculo lleno, pasan a crema.
+//   2. Tocás: el círculo se corre despacio y hace lugar. A su lado y arriba
+//      alguien contesta: nacen ondas oliva que crecen desde un punto. Unas
+//      siguen de largo hasta salirse de la pantalla; tres se quedan, y son los
+//      aros del isotipo. Donde pisan el círculo lleno, pasan a crema.
 //   3. Queda el isotipo B, con "vita / te acompaña" debajo.
+//
+// 📌 Andre las pidió "artísticas y modernas, bellas, hasta hipnóticas", sin
+// confeti ni circo. Por eso acá no hay rebotes ni golpes: todo es continuo.
 //
 // 📌 El círculo lleno NUNCA cambia: no se vacía ni pierde el color. Es la
 // diferencia con "alguien llega", donde las tintas se van y queda solo el trazo.
@@ -67,15 +71,17 @@ const DISCO_DY = DISCO.cy - 50;
 const FRASE_1 = 'hay alguien cerca';
 
 const SOLO_ESCALA = 0.86;  // el círculo solo, un poco más chico que en el isotipo
-const ACOMODA_MS  = 620;   // el círculo salta a su lugar
-const ONDA_EN     = 280;
-const ONDA_MS     = 560;
-const ECO_RETRASO = 0.3;   // el aro de adentro sale un poco después
-const ARRIBA_EN   = 640;
-const ARRIBA_MS   = 520;
-const FESTEJO_MS  = 900;
-const MARCA_EN    = 1100;
-const FIN_EN      = 1750;  // todo quieto
+const ACOMODA_MS  = 1000;  // el círculo hace lugar
+const ONDA_EN     = 250;
+const ONDA_MS     = 1000;
+const ECO_RETRASO = 0.25;  // el aro de adentro sale un poco después
+const ARRIBA_EN   = 600;
+const ARRIBA_MS   = 1000;
+const ECO_MS      = 2000;  // lo que tardan en salirse las ondas que siguen de largo
+const SENAL_R     = 56;    // hasta dónde llega la señal del círculo solo
+const SENAL_N     = 3;     // cuántas ondas de la señal hay a la vez
+const MARCA_EN    = 1350;
+const FIN_EN      = 2050;  // todo quieto
 const HOLD_MS     = 700;
 const EXIT_MS     = 450;
 const AUTO_MS     = 4000;
@@ -84,8 +90,7 @@ const BREATH_MS   = 5200;
 const BREATH_AMP  = 0.035;
 
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
-// Se pasa de largo y vuelve: el círculo salta y los aros se inflan de más.
-const EASE_REBOTE = Easing.bezier(0.34, 1.56, 0.64, 1);
+const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -94,16 +99,12 @@ function clamp01(x: number): number {
   return Math.min(1, Math.max(0, x));
 }
 
-/**
- * Un aro que aparece de golpe: crece desde su centro hasta el radio `r`, se
- * pasa un poco y vuelve. 🔴 `onda` llega a valer más de 1 (el rebote): no hay
- * que recortarlo por arriba.
- */
+/** Una onda que se queda: crece desde su centro hasta el radio `r`. */
 function Onda({ cx, cy, r, retraso, color, onda }: {
   cx: number; cy: number; r: number; retraso: number; color: string; onda: SharedValue<number>;
 }) {
   const props = useAnimatedProps(() => {
-    const t = Math.max(0, (onda.value - retraso) / (1 - retraso));
+    const t = clamp01((onda.value - retraso) / (1 - retraso));
     return { r: r * t, opacity: t > 0 ? 1 : 0 };
   });
   return (
@@ -138,15 +139,19 @@ export default function OnboardingCerca() {
   const K = S / 100;                       // px por unidad del viewBox
   const centroY = height * 0.46;
   const textoY = centroY + S * 0.44 + 24;
+  // De dónde contestan, en la pantalla: los centros de los aros del isotipo.
+  const izqX = width / 2 + (IZQ.cx - 50) * K;
+  const izqY = centroY + (IZQ.cy - 50) * K;
+  const arribaX = width / 2 + (ARRIBA.cx - 50) * K;
+  const arribaY = centroY + (ARRIBA.cy - 50) * K;
+  const ecoRadio = Math.max(width, height) * 0.7;
 
   // ── Valores compartidos ────────────────────────────────────────────────────
   const aparece = useSharedValue(0);
   const acomoda = useSharedValue(0);  // el círculo va del medio a su lugar
   const onda    = useSharedValue(0);  // los dos aros de al lado
   const dibuja  = useSharedValue(0);  // el aro de arriba
-  const oleada  = useSharedValue(0);  // la franja que barre la pantalla
-  const chispaI = useSharedValue(0);
-  const chispaA = useSharedValue(0);
+  const eco     = useSharedValue(0);  // las ondas que siguen de largo
   const aros    = useSharedValue(1);  // reduced motion: los aros se funden, no se dibujan
   const marca   = useSharedValue(0);
   const sale    = useSharedValue(0);
@@ -193,16 +198,12 @@ export default function OnboardingCerca() {
       aros.value = withTiming(1, { duration: 300 });
       acomoda.value = withTiming(1, { duration: 300 });
     } else {
-      oleada.value = withTiming(1, { duration: FESTEJO_MS, easing: EASE_OUT });
-      acomoda.value = withTiming(1, { duration: ACOMODA_MS, easing: EASE_REBOTE });
-      onda.value = withDelay(ONDA_EN, withTiming(1, { duration: ONDA_MS, easing: EASE_REBOTE }));
-      dibuja.value = withDelay(ARRIBA_EN, withTiming(1, { duration: ARRIBA_MS, easing: EASE_REBOTE }));
-      chispaI.value = withDelay(ONDA_EN, withTiming(1, { duration: FESTEJO_MS, easing: Easing.linear }));
-      chispaA.value = withDelay(ARRIBA_EN, withTiming(1, { duration: FESTEJO_MS, easing: Easing.linear }));
-      // Pop, pop, pop: un golpecito por cada aro que aparece.
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Light), ONDA_EN);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ONDA_EN + ONDA_MS * ECO_RETRASO);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Medium), ARRIBA_EN);
+      acomoda.value = withTiming(1, { duration: ACOMODA_MS, easing: EASE_IN_OUT });
+      onda.value = withDelay(ONDA_EN, withTiming(1, { duration: ONDA_MS, easing: EASE_OUT }));
+      dibuja.value = withDelay(ARRIBA_EN, withTiming(1, { duration: ARRIBA_MS, easing: EASE_OUT }));
+      eco.value = withDelay(ONDA_EN, withTiming(1, { duration: ECO_MS, easing: Easing.linear }));
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ONDA_EN);
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ARRIBA_EN);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -295,6 +296,10 @@ export default function OnboardingCerca() {
   });
 
   const arosStyle = useAnimatedStyle(() => ({ opacity: aros.value }));
+  // La señal del círculo solo: se apaga en cuanto alguien contesta.
+  const senalStyle = useAnimatedStyle(() => ({
+    opacity: aparece.value * (1 - clamp01(acomoda.value * 4)),
+  }));
 
   const frase1Style = useAnimatedStyle(() => ({
     opacity: frase1.value,
@@ -335,11 +340,24 @@ export default function OnboardingCerca() {
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
-        {/* Debajo de todo: la franja que larga el círculo al tocar. */}
-        <Oleada
-          t={oleada} x={width / 2} y={centroY} radio={Math.hypot(width, height) * 0.8}
-          color={TERRACOTA} fondo={CREMA}
-        />
+        {/* Debajo de todo. La señal: ondas que salen del círculo mientras está solo. */}
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, senalStyle]}>
+          {Array.from({ length: SENAL_N }, (_, i) => (
+            <Anillo
+              key={i}
+              t={reloj} fase={i / SENAL_N}
+              x={width / 2} y={centroY} radio={SENAL_R * K}
+              color={TERRACOTA} fuerza={0.6}
+            />
+          ))}
+        </Animated.View>
+        {/* La respuesta: las ondas oliva que no se quedan y siguen de largo. */}
+        {[0.12, 0.34].map(r => (
+          <Anillo key={`i${r}`} t={eco} x={izqX} y={izqY} radio={ecoRadio} color={OLIVA} fuerza={0.4} retraso={r} />
+        ))}
+        {[0.3, 0.52].map(r => (
+          <Anillo key={`a${r}`} t={eco} x={arribaX} y={arribaY} radio={ecoRadio} color={OLIVA} fuerza={0.4} retraso={r} />
+        ))}
 
         <Animated.View
           pointerEvents="none"
@@ -380,16 +398,6 @@ export default function OnboardingCerca() {
           <Animated.Text style={[styles.marca, marcaStyle]}>vita</Animated.Text>
           <Animated.Text style={[styles.lema, lemaStyle]}>te acompaña</Animated.Text>
         </View>
-
-        {/* De donde aparece cada aro. */}
-        <Chispas
-          t={chispaI} x={width / 2 + (IZQ.cx - 50) * K} y={centroY + (IZQ.cy - 50) * K}
-          cantidad={12} alcance={S * 0.6}
-        />
-        <Chispas
-          t={chispaA} x={width / 2 + (ARRIBA.cx - 50) * K} y={centroY + (ARRIBA.cy - 50) * K}
-          cantidad={12} alcance={S * 0.6}
-        />
 
         {/* La onda del toque. */}
         <Animated.View pointerEvents="none" style={[styles.dedo, dedoStyle]} />

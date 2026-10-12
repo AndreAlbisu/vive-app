@@ -15,13 +15,12 @@ import Animated, {
   useSharedValue,
   withDelay,
   withRepeat,
-  withSequence,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { Chispas, Oleada } from '@/components/ui/Festejo';
+import { Anillo } from '@/components/ui/Anillo';
 import { Grain } from '@/components/ui/Grain';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
@@ -29,29 +28,29 @@ import { anotar, cronometro } from '@/lib/analytics';
 // Bienvenida "abrirse" (12/10/2026, pedido de Andre): termina en el isotipo de
 // aros abiertos (`Logo Vita - aros abiertos`). Qué cuenta, en tres tiempos:
 //
-//   1. Un aro oliva, CERRADO, solo en el medio del crema. Respira.
+//   1. Los tres aros abiertos, uno adentro del otro, con el mismo centro.
+//      Cada uno gira a su ritmo y para su lado, así que los huecos se
+//      persiguen, se cruzan y casi nunca coinciden: un giroscopio lento.
 //      "abrirse es el primer paso"
-//   2. Tocás: el aro se abre (aparece el hueco) y sube a hacer lugar. Los
-//      otros dos entran RODANDO desde los costados de la pantalla, uno por
-//      lado, y se enganchan: cada llegada empuja al isotipo y saca chispas.
-//   3. Con el último, una franja terracota barre la pantalla. Quedan los tres
-//      aros abiertos, enganchados, con "vita / te acompaña".
+//   2. Tocás: los tres se sueltan del centro. Cada uno termina su vuelta, toma
+//      su tamaño y se desliza hasta su lugar, con el hueco donde va.
+//   3. Quedan los tres aros abiertos, enganchados, y del medio salen dos ondas
+//      finas. Debajo, "vita / te acompaña".
 //
-// 🔴 Ruedan de verdad: lo que giran sale de lo que avanzan (distancia / radio),
-// así que llegan con el hueco justo donde va. Si se cambia de dónde salen, el
-// giro se acomoda solo; no hay un ángulo escrito a mano.
-//
-// 📌 El concepto es el hueco: en este isotipo ningún aro está cerrado, y cada
-// uno termina adentro de otro. Por eso el primero arranca cerrado.
+// 📌 Andre las pidió "artísticas y modernas, bellas, hasta hipnóticas", sin
+// confeti ni circo. Por eso acá no hay rebotes ni golpes: todo es continuo.
 //
 // 📌 Los tres arcos son los del SVG, sin retoques (radio 26, trazo 2,2, puntas
 // redondas, 318° de vuelta cada uno). Si el isotipo cambia, cambian los `d`.
+//
+// 🔴 Cada aro termina en un múltiplo exacto de vuelta entera: así el hueco cae
+// donde lo dibuja el SVG. Por eso al tocar se le hace completar la vuelta que
+// venía dando en vez de frenarlo donde esté.
 //
 // Mismas reglas que las otras bienvenidas: se puede tocar desde el primer
 // instante, alcanza con un toque, 4 segundos como mucho, un segundo toque la
 // saltea, y si nadie toca pasa sola y espera un toque al final.
 
-const TERRACOTA = ViveColors.primary;
 const OLIVA     = ViveColors.text;
 const CREMA     = ViveColors.background;
 const CREMA_APP = '#F7F2EA';   // el fondo de la pantalla que sigue
@@ -59,44 +58,34 @@ const CREMA_APP = '#F7F2EA';   // el fondo de la pantalla que sigue
 // ── El isotipo de aros abiertos, en un viewBox de 100 ────────────────────────
 const ARO_R = 26;
 const TRAZO = 2.2;
-const VUELTA  = 2 * Math.PI * ARO_R;                 // un aro cerrado
-const ABIERTO = (ARO_R * 318 * Math.PI) / 180;       // lo que queda dibujado
-const HUECO   = VUELTA - ABIERTO;
-// El de arriba, con la vuelta entera: el último tramo es el hueco, y se
-// esconde corriendo el punteado.
-const ARRIBA_CERRADO = 'M24.129 31.409A26 26 0 1 1 29.040 49.385A26 26 0 0 1 24.129 31.409';
-// Los dos que llegan rodando: su arco y el centro alrededor del que giran.
-const IZQ = { d: 'M42.218 89.697A26 26 0 1 1 55.327 76.452', cx: 31.52, cy: 66 };
-const DER = { d: 'M83.655 44.888A26 26 0 1 1 65.630 40.157', cx: 68.48, cy: 66 };
-const RUEDA = 2 * (ARO_R + TRAZO);   // el lado de la vista de cada rueda
-// Cuánto se aparta el aro de arriba del centro del isotipo.
-const ARRIBA_DY = 34 - 50;
+const VUELTA = 2 * Math.PI;
+// Cada aro: su arco, el centro alrededor del que gira, y cómo espera (de qué
+// tamaño, para qué lado gira y cuánto tarda en dar una vuelta).
+const AROS = [
+  { d: 'M24.129 31.409A26 26 0 1 1 29.040 49.385', cx: 50,    cy: 34, escala: 0.6,  sentido: 1,  vuelta: 6500 },
+  { d: 'M42.218 89.697A26 26 0 1 1 55.327 76.452', cx: 31.52, cy: 66, escala: 1,    sentido: -1, vuelta: 10000 },
+  { d: 'M83.655 44.888A26 26 0 1 1 65.630 40.157', cx: 68.48, cy: 66, escala: 1.4,  sentido: 1,  vuelta: 15000 },
+] as const;
+type Aro = (typeof AROS)[number];
+const NIDO  = { x: 50, y: 50 };      // donde esperan los tres, uno adentro del otro
+const RUEDA = 2 * (ARO_R + TRAZO);   // el lado de la vista de cada aro
 
 const FRASE_1 = 'abrirse es el primer paso';
 
-const SOLO_ESCALA = 0.86;  // el aro solo, un poco más chico que en el isotipo
-const ACOMODA_MS  = 600;   // el aro sube y hace lugar
-const ABRE_EN     = 60;
-const ABRE_MS     = 420;
-const IZQ_EN      = 220;
-const DER_EN      = 480;
-const RUEDA_MS    = 680;
-const LLEGA       = 0.45;  // en qué parte del viaje la rueda toca su lugar
-const EMPUJE_PX   = 7;     // cuánto corre al isotipo cada llegada
-const FESTEJO_MS  = 900;
-const MARCA_EN    = 1150;
-const FIN_EN      = 1800;  // todo quieto
+const ACOMODA_MS  = 1300;  // se sueltan y cada uno va a su lugar
+const ONDA_EN     = 900;
+const ONDA_MS     = 1500;
+const MARCA_EN    = 1300;
+const FIN_EN      = 2000;  // todo quieto
 const HOLD_MS     = 700;
 const EXIT_MS     = 450;
 const AUTO_MS     = 4000;
 const SALTEAR_MS  = 600;
 const BREATH_MS   = 5200;
-const BREATH_AMP  = 0.035;
+const BREATH_AMP  = 0.03;
 
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
 const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
-// Llega, se pasa un poco de largo y vuelve: la rueda rebota contra las otras.
-const EASE_REBOTE = Easing.bezier(0.34, 1.4, 0.64, 1);
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -106,21 +95,30 @@ function clamp01(x: number): number {
 }
 
 /**
- * Uno de los dos aros que llegan. Entra rodando desde `desde` (px, con signo:
- * negativo viene de la izquierda) y gira lo que le toca por lo que avanza.
+ * Uno de los tres aros. Mientras espera está en el nido, a su escala y girando;
+ * con `acomoda` va a su lugar y a su tamaño. El trazo se afina o engorda al
+ * revés que la escala, así los tres se ven siempre del mismo grosor.
  */
-function Rueda({ aro, k, llega, desde }: {
-  aro: { d: string; cx: number; cy: number }; k: number;
-  llega: SharedValue<number>; desde: number;
+function Rueda({ aro, k, acomoda, angulo, reloj }: {
+  aro: Aro; k: number;
+  acomoda: SharedValue<number>; angulo: SharedValue<number>; reloj: SharedValue<number>;
 }) {
   const lado = RUEDA * k;
   const style = useAnimatedStyle(() => {
-    const tx = desde * (1 - llega.value);
+    const g = acomoda.value;
+    const respira = 1 + BREATH_AMP * (1 - g) * Math.sin(reloj.value * 2 * Math.PI);
     return {
-      opacity: llega.value > 0 ? 1 : 0,
-      transform: [{ translateX: tx }, { rotate: `${tx / (ARO_R * k)}rad` }],
+      transform: [
+        { translateX: (NIDO.x - aro.cx) * k * (1 - g) },
+        { translateY: (NIDO.y - aro.cy) * k * (1 - g) },
+        { rotate: `${angulo.value}rad` },
+        { scale: (aro.escala + (1 - aro.escala) * g) * respira },
+      ],
     };
   });
+  const props = useAnimatedProps(() => ({
+    strokeWidth: TRAZO / (aro.escala + (1 - aro.escala) * acomoda.value),
+  }));
   return (
     <Animated.View
       style={[
@@ -129,7 +127,11 @@ function Rueda({ aro, k, llega, desde }: {
       ]}
     >
       <Svg width={lado} height={lado} viewBox={`${aro.cx - RUEDA / 2} ${aro.cy - RUEDA / 2} ${RUEDA} ${RUEDA}`}>
-        <Path d={aro.d} stroke={OLIVA} strokeWidth={TRAZO} strokeLinecap="round" fill="none" />
+        <AnimatedPath
+          animatedProps={props}
+          d={aro.d}
+          stroke={OLIVA} strokeLinecap="round" fill="none"
+        />
       </Svg>
     </Animated.View>
   );
@@ -158,19 +160,15 @@ export default function OnboardingAbrirse() {
   const K = S / 100;                       // px por unidad del viewBox
   const centroY = height * 0.46;
   const textoY = centroY + S * 0.44 + 24;
+  const ondaRadio = Math.max(width, height) * 0.6;
 
   // ── Valores compartidos ────────────────────────────────────────────────────
   const aparece = useSharedValue(0);
-  const acomoda = useSharedValue(0);  // el aro va del medio a su lugar
-  const abre    = useSharedValue(0);  // se le abre el hueco
-  const izq     = useSharedValue(0);  // el segundo aro
-  const der     = useSharedValue(0);  // el tercero
-  const llegan  = useSharedValue(1);  // reduced motion: los que llegan se funden
-  const empujeI = useSharedValue(0);  // el golpe de cada llegada contra el isotipo
-  const empujeD = useSharedValue(0);
-  const oleada  = useSharedValue(0);  // la franja que barre la pantalla
-  const chispaI = useSharedValue(0);
-  const chispaD = useSharedValue(0);
+  const acomoda = useSharedValue(0);  // del nido a su lugar en el isotipo
+  // El giro de cada aro, en radianes.
+  const ang0 = useSharedValue(0), ang1 = useSharedValue(0), ang2 = useSharedValue(0);
+  const angulos = [ang0, ang1, ang2];
+  const onda    = useSharedValue(0);  // las dos ondas finas del final
   const marca   = useSharedValue(0);
   const sale    = useSharedValue(0);
   const reloj   = useSharedValue(0);  // 0→1 en loop: la respiración
@@ -209,33 +207,21 @@ export default function OnboardingAbrirse() {
     frase1.value = withTiming(0, { duration: 280 });
 
     const f = rapido ? 0 : 1;   // con reduced motion todo cae en el mismo instante
+    angulos.forEach((a, i) => {
+      cancelAnimation(a);
+      // Completa la vuelta que venía dando; si le faltaba poco, da una más
+      // para no clavar el freno.
+      const dadas = Math.abs(a.value) / VUELTA;
+      const destino = AROS[i].sentido * VUELTA * (rapido ? Math.round(dadas) : dadas > 0.5 ? 2 : 1);
+      a.value = withTiming(destino, { duration: rapido ? 300 : ACOMODA_MS, easing: EASE_OUT });
+    });
     if (rapido) {
-      llegan.value = 0;
-      abre.value = 1;
-      izq.value = 1;
-      der.value = 1;
-      llegan.value = withTiming(1, { duration: 300 });
       acomoda.value = withTiming(1, { duration: 300 });
     } else {
       acomoda.value = withTiming(1, { duration: ACOMODA_MS, easing: EASE_IN_OUT });
-      abre.value = withDelay(ABRE_EN, withTiming(1, { duration: ABRE_MS, easing: EASE_OUT }));
-      izq.value = withDelay(IZQ_EN, withTiming(1, { duration: RUEDA_MS, easing: EASE_REBOTE }));
-      der.value = withDelay(DER_EN, withTiming(1, { duration: RUEDA_MS, easing: EASE_REBOTE }));
-      // Cada llegada: un empujón al isotipo, chispas donde se enganchan y un golpe.
-      const golpeI = IZQ_EN + RUEDA_MS * LLEGA;
-      const golpeD = DER_EN + RUEDA_MS * LLEGA;
-      const empujon = () => withSequence(
-        withTiming(1, { duration: 90, easing: EASE_OUT }),
-        withTiming(0, { duration: 320, easing: EASE_REBOTE }),
-      );
-      empujeI.value = withDelay(golpeI, empujon());
-      empujeD.value = withDelay(golpeD, empujon());
-      chispaI.value = withDelay(golpeI, withTiming(1, { duration: FESTEJO_MS, easing: Easing.linear }));
-      chispaD.value = withDelay(golpeD, withTiming(1, { duration: FESTEJO_MS, easing: Easing.linear }));
-      oleada.value = withDelay(golpeD, withTiming(1, { duration: FESTEJO_MS, easing: EASE_OUT }));
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ABRE_EN);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Light), golpeI);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Medium), golpeD);
+      onda.value = withDelay(ONDA_EN, withTiming(1, { duration: ONDA_MS, easing: Easing.linear }));
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), 0);
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ACOMODA_MS - 150);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -270,7 +256,7 @@ export default function OnboardingAbrirse() {
     return () => { clearTimeout(t); lista.forEach(clearTimeout); };
   }, []);
 
-  // La respiración del aro mientras está solo.
+  // Mientras nadie toca: los tres giran, cada uno a su ritmo, y respiran.
   useEffect(() => {
     if (reduced) {
       cancelAnimation(reloj);
@@ -278,7 +264,19 @@ export default function OnboardingAbrirse() {
     }
     reloj.value = 0;
     reloj.value = withRepeat(withTiming(1, { duration: BREATH_MS, easing: Easing.linear }), -1, false);
-    return () => cancelAnimation(reloj);
+    // 🔴 Si ya arrancó, el giro es de la secuencia: no se pisa.
+    if (!armado.current) {
+      angulos.forEach((a, i) => {
+        a.value = 0;
+        a.value = withRepeat(
+          withTiming(AROS[i].sentido * VUELTA, { duration: AROS[i].vuelta, easing: Easing.linear }), -1, false,
+        );
+      });
+    }
+    return () => {
+      cancelAnimation(reloj);
+      if (!armado.current) angulos.forEach(a => cancelAnimation(a));
+    };
   }, [reduced]);
 
   // ── Dedo ───────────────────────────────────────────────────────────────────
@@ -310,26 +308,7 @@ export default function OnboardingAbrirse() {
   }, [esperaToque, salir, arrancar, reduced]);
 
   // ── Animados ───────────────────────────────────────────────────────────────
-  // Todo el isotipo es una sola vista. Antes del toque está bajada y achicada
-  // para que el aro de arriba quede justo en el medio; con `acomoda` vuelve a
-  // su lugar.
-  const isotipoStyle = useAnimatedStyle(() => {
-    const g = acomoda.value;
-    const respira = 1 + BREATH_AMP * (1 - g) * Math.sin(reloj.value * 2 * Math.PI);
-    const escala = (SOLO_ESCALA + (1 - SOLO_ESCALA) * g) * respira;
-    return {
-      opacity: aparece.value,
-      transform: [
-        { translateX: EMPUJE_PX * (empujeI.value - empujeD.value) },
-        { translateY: -ARRIBA_DY * K * escala * (1 - g) },
-        { scale: escala },
-      ],
-    };
-  });
-
-  // El hueco: el último tramo de la vuelta deja de dibujarse.
-  const arribaProps = useAnimatedProps(() => ({ strokeDashoffset: HUECO * abre.value }));
-  const lleganStyle = useAnimatedStyle(() => ({ opacity: llegan.value }));
+  const isotipoStyle = useAnimatedStyle(() => ({ opacity: aparece.value }));
 
   const frase1Style = useAnimatedStyle(() => ({
     opacity: frase1.value,
@@ -370,28 +349,17 @@ export default function OnboardingAbrirse() {
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
-        {/* Debajo de todo: la franja que barre la pantalla con la última llegada. */}
-        <Oleada
-          t={oleada} x={width / 2} y={centroY} radio={Math.hypot(width, height) * 0.8}
-          color={TERRACOTA} fondo={CREMA}
-        />
+        {/* Debajo de todo: las ondas que salen del medio cuando quedan enganchados. */}
+        <Anillo t={onda} x={width / 2} y={centroY} radio={ondaRadio} color={OLIVA} fuerza={0.4} />
+        <Anillo t={onda} x={width / 2} y={centroY} radio={ondaRadio} color={OLIVA} fuerza={0.4} retraso={0.28} />
 
         <Animated.View
           pointerEvents="none"
           style={[styles.centrado, { top: centroY - S / 2, marginLeft: -S / 2, width: S, height: S }, isotipoStyle]}
         >
-          <Svg width={S} height={S} viewBox="0 0 100 100">
-            <AnimatedPath
-              animatedProps={arribaProps}
-              d={ARRIBA_CERRADO}
-              stroke={OLIVA} strokeWidth={TRAZO} strokeLinecap="round" fill="none"
-              strokeDasharray={[VUELTA]}
-            />
-          </Svg>
-          <Animated.View style={[StyleSheet.absoluteFill, lleganStyle]}>
-            <Rueda aro={IZQ} k={K} llega={izq} desde={-width} />
-            <Rueda aro={DER} k={K} llega={der} desde={width} />
-          </Animated.View>
+          {AROS.map((aro, i) => (
+            <Rueda key={i} aro={aro} k={K} acomoda={acomoda} angulo={angulos[i]} reloj={reloj} />
+          ))}
         </Animated.View>
 
         {/* El papel: quieto, encima del isotipo y debajo del texto. */}
@@ -403,10 +371,6 @@ export default function OnboardingAbrirse() {
           <Animated.Text style={[styles.marca, marcaStyle]}>vita</Animated.Text>
           <Animated.Text style={[styles.lema, lemaStyle]}>te acompaña</Animated.Text>
         </View>
-
-        {/* Donde cada rueda se engancha con el aro de arriba. */}
-        <Chispas t={chispaI} x={width / 2 - 9.24 * K} y={centroY} cantidad={10} alcance={S * 0.5} />
-        <Chispas t={chispaD} x={width / 2 + 9.24 * K} y={centroY} cantidad={12} alcance={S * 0.6} />
 
         {/* La onda del toque. */}
         <Animated.View pointerEvents="none" style={[styles.dedo, dedoStyle]} />

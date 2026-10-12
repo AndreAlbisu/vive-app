@@ -20,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { Chispas, Oleada } from '@/components/ui/Festejo';
+import { Anillo } from '@/components/ui/Anillo';
 import { Grain } from '@/components/ui/Grain';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
@@ -28,29 +28,26 @@ import { anotar, cronometro } from '@/lib/analytics';
 // Bienvenida "el encuentro" (12/10/2026, pedido de Andre): termina en el
 // isotipo de círculos completos con el centro relleno. Qué cuenta:
 //
-//   1. Tres aros oliva separados, sin tocarse, que giran despacio alrededor
-//      del medio, como buscándose. "un lugar para encontrarse"
-//   2. Tocás: el giro se acelera, los tres se vienen encima en remolino y
-//      CHOCAN (se pasan un poco de largo y vuelven).
-//   3. En el choque el pedacito que comparten salta lleno de oliva, una franja
-//      terracota barre la pantalla y vuelan chispas. Debajo, "vita / te acompaña".
+//   1. Tres aros oliva separados, sin tocarse, que dan vueltas despacio
+//      alrededor del medio. Cada uno deja una ESTELA: copias de sí mismo cada
+//      vez más tenues que lo siguen, como una foto de exposición larga.
+//      "un lugar para encontrarse"
+//   2. Tocás: se vienen hacia el medio en espiral, sin apuro, y las estelas se
+//      van cerrando hasta que cada aro queda nítido.
+//   3. Cuando los tres se cruzan, el pedacito que comparten aparece lleno de
+//      oliva y del medio salen dos ondas finas. Debajo, "vita / te acompaña".
+//
+// 📌 Andre las pidió "artísticas y modernas, bellas, hasta hipnóticas", sin
+// confeti ni circo. Por eso acá no hay rebotes ni golpes: todo es continuo.
 //
 // 🔴 El giro se puede frenar en cualquier tercio de vuelta: los tres aros son
 // iguales, así que girado 120° el dibujo es el mismo. Por eso al tocar se
-// redondea al tercio que viene y no hace falta volver al ángulo cero.
-//
-// 📌 El concepto es el centro: es lo único que este isotipo tiene de distinto
-// respecto de los tres aros de `VitaMark`, y solo existe cuando los tres se
-// encuentran. Por eso arrancan separados y el relleno llega último.
-//
-// 📌 Geometría, trazo y la forma del centro son los del SVG, sin retoques. Si
-// el isotipo cambia, cambian las constantes de abajo.
+// redondea a un tercio y no hace falta volver al ángulo cero.
 //
 // Mismas reglas que las otras bienvenidas: se puede tocar desde el primer
 // instante, alcanza con un toque, 4 segundos como mucho, un segundo toque la
 // saltea, y si nadie toca pasa sola y espera un toque al final.
 
-const TERRACOTA = ViveColors.primary;
 const OLIVA     = ViveColors.text;
 const CREMA     = ViveColors.background;
 const CREMA_APP = '#F7F2EA';   // el fondo de la pantalla que sigue
@@ -76,15 +73,18 @@ const LIENZO = 100 + 2 * MARGEN;
 const FRASE_1 = 'un lugar para encontrarse';
 
 const SEPARA     = 0.7;    // cuánto más lejos del medio arranca cada aro
-const AMAGUE     = 0.12;   // cuánto se acercan y se alejan mientras esperan
+const AMAGUE     = 0.14;   // cuánto se acercan y se alejan mientras esperan
+// La estela: cuánto se ve cada copia y cuánto ángulo la separa de la anterior.
+const ESTELA       = [0.34, 0.2, 0.12, 0.06];
+const ESTELA_PASO  = 0.15;
 const TERCIO     = (2 * Math.PI) / 3;
-const VUELTA_MS  = 15000;  // lo que tarda una vuelta entera mientras esperan
-const JUNTA_MS   = 720;
-const CHOQUE_EN  = 450;    // cuando los tres se pisan: de acá sale todo lo demás
-const CENTRO_MS  = 460;
-const FESTEJO_MS = 950;
-const MARCA_EN   = 980;
-const FIN_EN     = 1700;   // todo quieto
+const VUELTA_MS  = 11000;  // lo que tarda una vuelta entera mientras esperan
+const JUNTA_MS   = 1250;
+const CRUCE_EN   = 900;    // los tres ya se pisan: aparece el centro
+const CENTRO_MS  = 650;
+const ONDA_MS    = 1500;
+const MARCA_EN   = 1300;
+const FIN_EN     = 2000;   // todo quieto
 const HOLD_MS    = 700;
 const EXIT_MS    = 450;
 const AUTO_MS    = 4000;
@@ -92,9 +92,7 @@ const SALTEAR_MS = 600;
 const BREATH_MS  = 5200;
 
 const EASE_OUT    = Easing.bezier(0.22, 1, 0.36, 1);
-const EASE_REBOTE = Easing.bezier(0.34, 1.56, 0.64, 1);
-// Se pasa de largo y vuelve: los aros se aprietan de más y aflojan.
-const EASE_CHOQUE = Easing.bezier(0.6, 0, 0.3, 1.5);
+const EASE_IN_OUT = Easing.bezier(0.65, 0, 0.35, 1);
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -103,18 +101,23 @@ function clamp01(x: number): number {
   return Math.min(1, Math.max(0, x));
 }
 
-/** Uno de los tres aros: va de su lugar separado al del isotipo. */
-function Aro({ cx, cy, junta, giro, reloj }: {
-  cx: number; cy: number;
+/**
+ * Uno de los tres aros, o una copia de su estela. `atras` dice cuántos pasos
+ * viene detrás (0 es el aro mismo); la estela se cierra a medida que se juntan.
+ */
+function Aro({ cx, cy, atras, junta, giro, reloj }: {
+  cx: number; cy: number; atras: number;
   junta: SharedValue<number>; giro: SharedValue<number>; reloj: SharedValue<number>;
 }) {
   const props = useAnimatedProps(() => {
+    const suelto = 1 - junta.value;
     const amague = 1 - AMAGUE * (0.5 - 0.5 * Math.cos(reloj.value * 2 * Math.PI));
-    const lejos = 1 + SEPARA * (1 - junta.value) * amague;
+    const lejos = 1 + SEPARA * suelto * amague;
     const dx = (cx - MEDIO.x) * lejos;
     const dy = (cy - MEDIO.y) * lejos;
-    const cos = Math.cos(giro.value);
-    const sin = Math.sin(giro.value);
+    const angulo = giro.value - atras * ESTELA_PASO * suelto;
+    const cos = Math.cos(angulo);
+    const sin = Math.sin(angulo);
     return {
       cx: MEDIO.x + dx * cos - dy * sin,
       cy: MEDIO.y + dx * sin + dy * cos,
@@ -125,6 +128,7 @@ function Aro({ cx, cy, junta, giro, reloj }: {
       animatedProps={props}
       r={ARO_R}
       stroke={OLIVA} strokeWidth={TRAZO} fill="none"
+      opacity={atras === 0 ? 1 : ESTELA[atras - 1]}
     />
   );
 }
@@ -163,8 +167,7 @@ export default function OnboardingEncuentro() {
   const junta   = useSharedValue(0);  // los tres aros se acercan
   const giro    = useSharedValue(0);  // en radianes: la ronda alrededor del medio
   const centro  = useSharedValue(0);  // el pedacito compartido se llena
-  const oleada  = useSharedValue(0);  // la franja que barre la pantalla
-  const chispas = useSharedValue(0);
+  const onda    = useSharedValue(0);  // las dos ondas finas que salen del medio
   const marca   = useSharedValue(0);
   const sale    = useSharedValue(0);
   const reloj   = useSharedValue(0);  // 0→1 en loop: el amague
@@ -210,15 +213,12 @@ export default function OnboardingEncuentro() {
       junta.value = withTiming(1, { duration: 300 });
       centro.value = withTiming(1, { duration: 300 });
     } else {
-      // Un tercio de vuelta largo de yapa: se vienen encima en remolino.
-      giro.value = withTiming((Math.floor(giro.value / TERCIO) + 2) * TERCIO, { duration: JUNTA_MS, easing: EASE_OUT });
-      junta.value = withTiming(1, { duration: JUNTA_MS, easing: EASE_CHOQUE });
-      // El choque: el centro salta, la franja barre y vuelan las chispas.
-      centro.value = withDelay(CHOQUE_EN, withTiming(1, { duration: CENTRO_MS, easing: EASE_REBOTE }));
-      oleada.value = withDelay(CHOQUE_EN, withTiming(1, { duration: FESTEJO_MS, easing: EASE_OUT }));
-      chispas.value = withDelay(CHOQUE_EN, withTiming(1, { duration: FESTEJO_MS, easing: Easing.linear }));
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Medium), CHOQUE_EN);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), CHOQUE_EN + 170);
+      // Dos tercios de vuelta de yapa: se vienen hacia el medio en espiral.
+      giro.value = withTiming((Math.floor(giro.value / TERCIO) + 3) * TERCIO, { duration: JUNTA_MS, easing: EASE_OUT });
+      junta.value = withTiming(1, { duration: JUNTA_MS, easing: EASE_IN_OUT });
+      centro.value = withDelay(CRUCE_EN, withTiming(1, { duration: CENTRO_MS, easing: EASE_OUT }));
+      onda.value = withDelay(CRUCE_EN, withTiming(1, { duration: ONDA_MS, easing: Easing.linear }));
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), CRUCE_EN);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -308,8 +308,8 @@ export default function OnboardingEncuentro() {
 
   // El centro crece desde su punto medio, que es también el de los tres aros.
   const centroStyle = useAnimatedStyle(() => ({
-    opacity: clamp01(centro.value * 3),
-    transform: [{ scale: Math.max(0.001, centro.value) }],
+    opacity: centro.value,
+    transform: [{ scale: 0.6 + 0.4 * centro.value }],
   }));
 
   const frase1Style = useAnimatedStyle(() => ({
@@ -340,6 +340,7 @@ export default function OnboardingEncuentro() {
   const veloStyle = useAnimatedStyle(() => ({ opacity: sale.value }));
 
   const lienzoPx = LIENZO * K;
+  const ondaRadio = Math.max(width, height) * 0.6;
   const centroPx = CENTRO_LADO * K;
 
   return (
@@ -354,18 +355,19 @@ export default function OnboardingEncuentro() {
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
-        {/* Debajo de todo: la franja que barre la pantalla en el choque. */}
-        <Oleada
-          t={oleada} x={medioX} y={medioY} radio={Math.hypot(width, height) * 0.8}
-          color={TERRACOTA} fondo={CREMA}
-        />
+        {/* Debajo de todo: las ondas que salen del medio cuando se cruzan. */}
+        <Anillo t={onda} x={medioX} y={medioY} radio={ondaRadio} color={OLIVA} fuerza={0.4} />
+        <Anillo t={onda} x={medioX} y={medioY} radio={ondaRadio} color={OLIVA} fuerza={0.4} retraso={0.28} />
 
         <Animated.View
           pointerEvents="none"
           style={[styles.centrado, { top: centroY - lienzoPx / 2, marginLeft: -lienzoPx / 2 }, arosStyle]}
         >
           <Svg width={lienzoPx} height={lienzoPx} viewBox={`${-MARGEN} ${-MARGEN} ${LIENZO} ${LIENZO}`}>
-            {AROS.map((a, i) => <Aro key={i} cx={a.cx} cy={a.cy} junta={junta} giro={giro} reloj={reloj} />)}
+            {/* Primero las estelas, de la más tenue a la más marcada; arriba, los aros. */}
+            {[4, 3, 2, 1, 0].map(atras => AROS.map((a, i) => (
+              <Aro key={`${atras}-${i}`} cx={a.cx} cy={a.cy} atras={atras} junta={junta} giro={giro} reloj={reloj} />
+            )))}
           </Svg>
         </Animated.View>
 
@@ -400,8 +402,6 @@ export default function OnboardingEncuentro() {
           <Animated.Text style={[styles.marca, marcaStyle]}>vita</Animated.Text>
           <Animated.Text style={[styles.lema, lemaStyle]}>te acompaña</Animated.Text>
         </View>
-
-        <Chispas t={chispas} x={medioX} y={medioY} cantidad={18} alcance={S * 0.85} />
 
         {/* La onda del toque. */}
         <Animated.View pointerEvents="none" style={[styles.dedo, dedoStyle]} />

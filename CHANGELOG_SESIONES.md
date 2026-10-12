@@ -1,3 +1,18 @@
+## 2026-10-12 — Andre (Claude · las bienvenidas 5 a 8, ahora hipnóticas y sin confeti)
+
+**Tocado:** `components/ui/Anillo.tsx` (era `Festejo.tsx`), `screens/OnboardingCerca.tsx`, `screens/OnboardingAbrirse.tsx`, `screens/OnboardingEncuentro.tsx`, `screens/OnboardingOndas.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Andre vio la versión "con espectáculo" de la entrada de abajo y la rechazó: "no me gustan esos confetis, tampoco la idea es que sea un circo. Más bien animaciones artísticas y a su vez modernas. Bellas, hasta hipnóticas". Se sacaron las chispas, la franja terracota a pantalla completa y todos los rebotes. Quedó guardado como preferencia para las próximas animaciones.
+- Criterio nuevo: movimiento continuo y lento, que ya hipnotice ANTES del toque, y un toque que lo resuelve en el isotipo sin golpes. De `Festejo.tsx` quedó una sola pieza, el aro fino que crece y se apaga (`Anillo.tsx`), que ahora también puede salir en ronda.
+- 5: el círculo emite una señal de ondas terracota; al tocar le contestan ondas oliva, y tres se quedan como aros. 6: cambió la idea, ya no hay aro cerrado que se abre: los tres aros abiertos esperan uno adentro del otro girando cada uno a su ritmo (un giroscopio) y al tocar se sueltan a su lugar. 7: los tres aros orbitan dejando estela y al tocar entran en espiral. 8: aritos como gotas mientras espera, y ondas en tres colores que se salen de la pantalla.
+- Las secuencias duran un poco más (unos 2 segundos después del toque, antes 1,7).
+
+**Pendiente para la próxima sesión:**
+- Sigue sin probarse en un teléfono: solo pasaron tipos, lint y las pruebas.
+- La frase de la 6, "abrirse es el primer paso", quedó de la idea anterior. Los aros siguen siendo abiertos, pero conviene que Andre la revise.
+- Si este nivel le gusta, llevar el mismo criterio a las bienvenidas 1 a 4.
+
 ## 2026-10-12 — Andre (Claude · las bienvenidas 5 a 8, con más espectáculo)
 
 **Tocado:** `components/ui/Festejo.tsx` (nuevo), `screens/OnboardingCerca.tsx`, `screens/OnboardingAbrirse.tsx`, `screens/OnboardingEncuentro.tsx`, `screens/OnboardingOndas.tsx`. **Sin migraciones.**
