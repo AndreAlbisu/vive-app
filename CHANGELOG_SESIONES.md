@@ -1,3 +1,15 @@
+## 2026-10-12 — Andre (Claude · bienvenida 5: los pétalos se vuelven aros; bienvenida 4: sin títulos de diapositiva)
+
+**Tocado:** `screens/OnboardingCerca.tsx`, `screens/OnboardingPuente.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- 5: a Andre le gusta el comienzo (la flor de círculos terracota) pero no cómo salían los aros de atrás del círculo naranja. Ahora no aparece nada nuevo: de los seis pétalos, tres se juntan en el círculo lleno y los otros tres se vacían (pierden el color, les queda el borde oliva) y viajan a su lugar como los aros del isotipo.
+- 4: Andre dijo que no le gustan los títulos, que venían directo del PowerPoint del pitch. Se fue el título grande de arriba ("La ayuda existe." / "Falta el puente.") con su subrayado en arco. La frase quedó como en las demás bienvenidas: una línea en minúscula debajo del dibujo, "la ayuda existe. falta el puente.", en el lugar donde después aparece "vita". Las etiquetas de las orillas quedaron, en minúscula y más livianas ("vos", "la ayuda").
+
+**Pendiente para la próxima sesión:**
+- Sin probar en teléfono. En la 4, ver si la frase entra en una línea en pantallas angostas y si las etiquetas "vos" / "la ayuda" siguen haciendo falta o también suenan a diapositiva.
+- El texto de la frase de la 4 es el del pitch pasado a minúscula; Andre no lo eligió.
+
 ## 2026-10-12 — Andre (Claude · bienvenidas: 5 y 8 con idea nueva, 4 con otro comienzo y otro paso al logo)
 
 **Tocado:** `screens/OnboardingCerca.tsx`, `screens/OnboardingOndas.tsx`, `screens/OnboardingPuente.tsx`. **Sin migraciones.**

@@ -34,6 +34,11 @@ import { anotar, cronometro } from '@/lib/analytics';
 //      por los puntos hacia la otra orilla, pero se apaga antes de llegar.
 //      📌 12/10 (Andre: "el comienzo no me cierra"). Antes el hueco era una
 //      línea punteada quieta; ahora cuenta que se intenta y no se llega.
+//      📌 12/10 (Andre: "no me gustan los títulos, los trajimos directo del
+//      powerpoint"). Se fue el título grande de arriba con su subrayado. Ahora
+//      la frase va como en las otras bienvenidas: una sola línea, en
+//      minúscula, debajo del dibujo, en el mismo lugar donde después aparece
+//      "vita". Las etiquetas de las orillas quedaron, más chicas y en minúscula.
 //   2. Tocás: el puente se tiende en lima (tablero, arco y columnas), un punto
 //      crema cruza y la otra orilla late al recibirlo.
 //      📌 Arranca en oscuro (Andre, 08/10). La diapositiva empieza en lima y
@@ -139,8 +144,7 @@ const LUZ_ANCHO   = 0.1;   // el tamaño de la luz que camina (la soga entera es
 const LUZ_LLEGA   = 0.72;  // hasta dónde llega antes de apagarse del todo
 const SOGA_MS     = 3400;  // una pasada de la luz
 
-const FRASE_1 = 'La ayuda existe.';
-const FRASE_2 = 'Falta el puente.';
+const FRASE_1 = 'la ayuda existe. falta el puente.';
 
 // Geometría de `VitaMark` (viewBox de 100): radio, trazo y centros.
 const MARK_R = 26;
@@ -255,7 +259,6 @@ export default function OnboardingPuente() {
   const [hint, setHint] = useState('tocá la pantalla');
   const [esperaToque, setEsperaToque] = useState(false);
   const [oscuroYa, setOscuroYa] = useState(true);    // barra de estado clara hasta salir
-  const [anchoFrase, setAnchoFrase] = useState(0);   // para el arco que la subraya
 
   // ── Geometría ──────────────────────────────────────────────────────────────
   const W = Math.min(width - 32, 420);     // ancho del puente
@@ -264,7 +267,6 @@ export default function OnboardingPuente() {
   const pisoY = height * 0.52;             // el tablero, un poco bajo el centro
   const puenteTop = pisoY - PISO * K;
   const etiquetaY = pisoY + ORILLA_R * K + 10;
-  const arribaY = height * 0.17;           // la frase
   // El isotipo se arma sobre el puente: sus dos círculos de abajo quedan a la
   // altura del tablero (ahí terminan las orillas) y el de arriba cae donde
   // estaba la cima del arco.
@@ -294,8 +296,6 @@ export default function OnboardingPuente() {
   const cols = [col0, col1, col2, col3, col4, col5, col6];
   const cruza   = useSharedValue(0);  // el punto
   const late    = useSharedValue(0);  // la otra orilla al recibirlo
-  const frase2  = useSharedValue(0);  // la segunda línea del título
-  const subraya = useSharedValue(0);  // el arco que la subraya
   const morf    = useSharedValue(0);  // orillas y puente → isotipo
   const reloj   = useSharedValue(0);  // 0→1 en loop: la luz que camina por la soga
   const marca   = useSharedValue(0);
@@ -380,8 +380,6 @@ export default function OnboardingPuente() {
     anotar('onboarding_pantalla_vista', { pantalla: 'bienvenida' });
     // 🔴 Se puede tocar desde el primer instante: todo aparece junto y rápido.
     aparece.value = withTiming(1, { duration: 450, easing: EASE_OUT });
-    frase2.value = withDelay(140, withTiming(1, { duration: 480, easing: EASE_OUT }));
-    subraya.value = withDelay(420, withTiming(1, { duration: 520, easing: EASE_IN_OUT }));
     hintOp.value = withDelay(300, withTiming(1, { duration: 350 }));
     const t = setTimeout(() => arrancar(reducedRef.current), AUTO_MS);
     const lista = pendientes.current;
@@ -503,16 +501,7 @@ export default function OnboardingPuente() {
 
   const fraseStyle = useAnimatedStyle(() => ({
     opacity: aparece.value * (1 - clamp01(oscuro.value * 2.5)),
-    transform: [{ translateY: 10 * (1 - aparece.value) - 12 * oscuro.value }],
-  }));
-
-  const frase2Style = useAnimatedStyle(() => ({
-    opacity: frase2.value,
-    transform: [{ translateY: 10 * (1 - frase2.value) }],
-  }));
-  const subrayaProps = useAnimatedProps(() => ({
-    strokeDashoffset: anchoFrase * 1.03 * (1 - subraya.value),
-    opacity: subraya.value > 0 ? 1 : 0,
+    transform: [{ translateY: 8 * (1 - aparece.value) }],
   }));
 
   const marcaStyle = useAnimatedStyle(() => ({
@@ -547,32 +536,6 @@ export default function OnboardingPuente() {
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
-        {/* Antes del toque: la frase. */}
-        <Animated.View style={[styles.arriba, { top: arribaY }, fraseStyle]} pointerEvents="none">
-          {/* Dos pesos: la primera línea prepara, la segunda es el golpe. */}
-          <Animated.Text style={styles.fraseChica}>{FRASE_1}</Animated.Text>
-          <Animated.Text
-            style={[styles.fraseGrande, frase2Style]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.8}
-            onLayout={e => setAnchoFrase(e.nativeEvent.layout.width)}>
-            {FRASE_2}
-          </Animated.Text>
-          {/* El subrayado es un arco terracota: un puente chiquito que se
-              dibuja debajo de "Falta el puente." */}
-          {anchoFrase > 0 && (
-            <Svg width={anchoFrase} height={16} style={styles.arcoFrase}>
-              <AnimatedPath
-                animatedProps={subrayaProps}
-                d={`M3 13Q${anchoFrase / 2} -3 ${anchoFrase - 3} 13`}
-                stroke={TERRACOTA} strokeWidth={4} strokeLinecap="round" fill="none"
-                strokeDasharray={[anchoFrase * 1.03]}
-              />
-            </Svg>
-          )}
-        </Animated.View>
-
         {/* El puente: tablero, arco, columnas y el punto que cruza. */}
         <Animated.View
           pointerEvents="none"
@@ -659,12 +622,13 @@ export default function OnboardingPuente() {
           pointerEvents="none"
           style={[styles.etiquetas, { top: etiquetaY, width: W, marginLeft: -W / 2 }]}
         >
-          <Animated.Text style={[styles.etiqueta, { width: 2 * ORILLA_IZQ * K }, etiquetaStyle]}>Vos</Animated.Text>
-          <Animated.Text style={[styles.etiqueta, styles.etiquetaDer, etiquetaStyle]}>La ayuda</Animated.Text>
+          <Animated.Text style={[styles.etiqueta, { width: 2 * ORILLA_IZQ * K }, etiquetaStyle]}>vos</Animated.Text>
+          <Animated.Text style={[styles.etiqueta, styles.etiquetaDer, etiquetaStyle]}>la ayuda</Animated.Text>
         </View>
 
-        {/* Debajo del isotipo: ese puente es Vita. */}
+        {/* Un solo lugar para leer: la frase → "vita / te acompaña". */}
         <View style={[styles.arriba, { top: textoY }]} pointerEvents="none">
+          <Animated.Text style={[styles.frase, styles.encima, fraseStyle]}>{FRASE_1}</Animated.Text>
           <Animated.Text style={[styles.marca, marcaStyle]}>vita</Animated.Text>
           <Animated.Text style={[styles.lema, lemaStyle]}>te acompaña</Animated.Text>
         </View>
@@ -689,25 +653,15 @@ const styles = StyleSheet.create({
   lleno: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 },
   centrado: { position: 'absolute', left: '50%' },
   arriba: { position: 'absolute', left: 20, right: 20, alignItems: 'center' },
-  fraseChica: {
+  encima: { position: 'absolute', top: 14, left: 0, right: 0 },
+  frase: {
     textAlign: 'center',
-    fontFamily: ViveFonts.titleSemiBold,
-    fontSize: 22,
+    fontFamily: ViveFonts.title,
+    fontSize: 21,
     lineHeight: 28,
-    letterSpacing: -0.3,
-    color: LIMA,
-    opacity: 0.85,
-  },
-  fraseGrande: {
-    marginTop: 2,
-    textAlign: 'center',
-    fontFamily: ViveFonts.wordmark,
-    fontSize: 38,
-    lineHeight: 46,
-    letterSpacing: -1.2,
+    letterSpacing: -0.2,
     color: CREMA,
   },
-  arcoFrase: { marginTop: 2 },
   marca: {
     fontFamily: ViveFonts.wordmark,
     fontSize: 58,
@@ -728,9 +682,11 @@ const styles = StyleSheet.create({
   },
   etiqueta: {
     textAlign: 'center',
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    letterSpacing: 0.4,
     color: LIMA,
+    opacity: 0.85,
   },
   // "La ayuda" es más ancha que su orilla: se alinea al borde derecho del puente.
   etiquetaDer: { textAlign: 'right' },
