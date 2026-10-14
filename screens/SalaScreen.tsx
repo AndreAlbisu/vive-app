@@ -2050,14 +2050,17 @@ export default function SalaScreen() {
             </View>
           ) : (
             <>
-              {isCurrentUserCoach && coachInternalId && (
+              {isCurrentUserCoach && (coachInternalId || (!recipientIsCoach && notesBookingId && recipientProfile)) && (
                 <TouchableOpacity
                   style={styles.recoBtn}
                   // El "+" junta lo que el profesional agrega a la conversación.
-                  // Las notas solo aparecen si hay una sesión sobre la cual
-                  // anotar; sin eso, abre directo los recursos como antes.
+                  // Las notas NO dependen de `coachInternalId` (solo las usa la
+                  // recomendación): si ese fetch falla/tarda, el "+" igual aparece
+                  // para anotar. Se abre lo que haya disponible (review 14/10, #3).
                   onPress={() => {
-                    if (!recipientIsCoach && notesBookingId && recipientProfile) {
+                    const puedeNotas = !recipientIsCoach && !!notesBookingId && !!recipientProfile;
+                    const puedeReco = !!coachInternalId;
+                    if (puedeNotas && puedeReco) {
                       setMenuSesion({
                         title: 'Agregar',
                         opciones: [
@@ -2065,6 +2068,8 @@ export default function SalaScreen() {
                           { text: 'Notas de la sesión', onPress: () => setNotesOpen(true) },
                         ],
                       });
+                    } else if (puedeNotas) {
+                      setNotesOpen(true);
                     } else {
                       void openRecoSheet();
                     }
