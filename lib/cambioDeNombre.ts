@@ -14,7 +14,16 @@ export type EstadoNombre =
   | { editable: false; nota: string };
 
 function fechaLarga(d: Date): string {
-  return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+  // En hora de Buenos Aires, NO la del dispositivo: la base impone los 30 días en
+  // esa zona (`trg_limitar_cambio_de_nombre` usa `at time zone
+  // 'America/Argentina/Buenos_Aires'`). Sin fijarla, un usuario lejos de Argentina
+  // veía la fecha de "próximo cambio" corrida un día respecto a la que la base
+  // realmente aplica (detectado corriendo los tests en zona AEST +10).
+  return d.toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  });
 }
 
 export function proximoCambio(nameChangedAt: string | null): Date | null {
@@ -67,7 +76,11 @@ export function mensajeDeRechazo(error: { message?: string; details?: string | n
   }
   if (msg.includes('NOMBRE_CAMBIADO_HACE_POCO')) {
     const iso = error?.details ?? '';
-    const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00`) : null;
+    // La base manda la fecha ya en términos de Buenos Aires (una fecha pelada
+    // YYYY-MM-DD). Se ancla al MEDIODÍA de Buenos Aires (-03:00, Argentina no
+    // tiene horario de verano) para que `fechaLarga` —que ya formatea en esa
+    // zona— muestre exactamente ese día, sin importar la zona del dispositivo.
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00-03:00`) : null;
     return d
       ? `Ya cambiaste tu nombre hace poco. Vas a poder cambiarlo de nuevo el ${fechaLarga(d)}`
       : 'Ya cambiaste tu nombre hace poco. Vas a poder cambiarlo de nuevo en unos días';
