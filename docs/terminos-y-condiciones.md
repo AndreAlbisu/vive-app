@@ -9,8 +9,8 @@
 
 # Términos y Condiciones de Uso de Vita
 
-**Última actualización:** 25 de septiembre de 2026
-**Vigencia a partir de:** 25 de septiembre de 2026
+**Última actualización:** 13 de octubre de 2026
+**Vigencia a partir de:** 13 de octubre de 2026
 
 ## 1. Aceptación de los Términos
 
@@ -74,6 +74,13 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 
 7.3. Vita puede cancelar o reprogramar automáticamente reservas en conflicto (por ejemplo, cuando dos Clientes reservan el mismo horario), notificando a las partes.
 
+7.4. **Cambio de horario.** El Cliente puede cambiar el horario de una Sesión confirmada desde la Plataforma. El cambio no modifica el pago ni la comisión: es la misma Sesión en otro horario.
+
+- **Con más de 24 horas de antelación** respecto del horario agendado: el Cliente elige cualquier horario disponible del mismo Profesional, sin necesidad de su conformidad.
+- **Dentro de las 24 horas previas**: el Cliente puede solicitarlo **una sola vez por Sesión**, y el cambio queda sujeto a que el Profesional lo acepte. Si no lo acepta, la Sesión mantiene su horario.
+
+El Profesional puede, por su parte, proponer al Cliente horarios alternativos, que solo se aplican si el Cliente elige uno. Cambiado el horario, la antelación de la cláusula 9.1 se mide respecto del nuevo horario.
+
 ## 8. Precios, Pagos y Comisiones
 
 8.1. **Precios.** Los precios de las Sesiones son fijados por cada Profesional. Según los medios de pago que el Profesional acepte, puede fijar un precio en **pesos argentinos (ARS)**, un precio en **dólares estadounidenses (USD)** para pagos desde el exterior, o ambos. **El precio aplicable es el informado al Cliente al momento de la reserva, en la moneda en que se le cobra.**
@@ -98,6 +105,8 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 8.7. **Liberación de fondos.** La liberación de los fondos al Profesional puede estar sujeta a plazos operativos del procesador de pagos.
 
 8.8. **Garantía de primera sesión: efecto sobre el Profesional.** El Profesional conoce y acepta, como condición para operar en la Plataforma, la garantía prevista en la cláusula 9.3: cuando un Cliente la ejerce, el importe reintegrado **se debita de los fondos percibidos por esa Sesión**. La garantía alcanza únicamente a la primera Sesión de cada vínculo Cliente–Profesional y solo puede ejercerse una vez por Cliente en toda la Plataforma. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía, de modo que el costo del reintegro no se traslada a la comisión de Sesiones posteriores.
+
+8.9. **Descuento por invitación.** Quien se registra en la Plataforma con el código de invitación de otro Usuario obtiene un **descuento del 10% sobre el precio de su primera Sesión abonada**, por única vez. El descuento rige para los pagos en pesos a través de Mercado Pago y **se descuenta de la comisión de Vita**: el Profesional percibe el mismo importe que percibiría sin el descuento. Si esa Sesión no genera comisión (ver la excepción de 8.3), el descuento no se aplica. Quien invita no recibe beneficio alguno.
 
 ## 9. Cancelaciones, Reembolsos y Garantía
 
@@ -142,7 +151,9 @@ Condiciones:
 - **Cómo se determina.** Vita constata la asistencia a partir de los **registros de conexión a la videollamada** (quién ingresó, cuándo y por cuánto tiempo), que son **metadatos de conexión y en ningún caso contenido**: Vita no accede al audio, al video ni a transcripción alguna de las Sesiones, conforme a la Política de Privacidad.
 - Lo previsto en esta cláusula **no desplaza** la garantía de la cláusula 9.3, que cubre un supuesto distinto: la insatisfacción del Cliente con una Sesión efectivamente prestada.
 
-9.6. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
+9.6. **Reintegros de pagos en USDT.** En los pagos en USDT no interviene un procesador de pagos. Los reintegros previstos en esta cláusula no se procesan de forma automática: los realiza Vita mediante una transferencia a la dirección que el Cliente indique desde la Plataforma.
+
+9.7. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
 
 ## 10. Uso Exclusivo de la Plataforma (No Elusión)
 

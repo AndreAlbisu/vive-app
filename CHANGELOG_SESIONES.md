@@ -1,3 +1,19 @@
+## 2026-10-13 — Andre (Claude · revisión de los legales contra la app y paquete del abogado)
+
+**Tocado:** `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/paquete-abogado.md`, y lo que genera `npm run sync:legal` (`constants/legal.ts`, `web/legal-version.js`, `web/legal/*.html`). **Sin migraciones.**
+
+**Resumen:**
+- Se contrastaron los Términos y la Política contra el código, contra la normativa argentina (de memoria, sin fuentes) y con el consejo de asesores (`llm-council`). Comisiones, cancelación, garantía, ausencias y los borrados automáticos coinciden con la app.
+- Términos: entraron tres cosas que la app ya hacía y el texto no decía. §7.4 cambio de horario, §8.9 descuento del 10% por invitación, §9.6 reintegros en USDT (no son automáticos). La vieja §9.6 pasó a §9.7.
+- Política: §2.2 nombra PayPal y USDT; §6 suma Vercel (aloja la web) y Google Fonts (tipografía de las páginas web). Fechas de los dos documentos al 13/10/2026. Versión de los legales: `dfb5f2a950b4`.
+- Paquete del abogado: B.4 estaba desactualizado (decía que las notas del profesional se conservan al darse de baja el cliente; hoy se borran). Se ampliaron A.5 (quién absorbe la revocación; en Mercado Pago se debita del profesional y §8.8 no lo avisa) y B.7 (BCRA, CNV por USDT, Monotributo), y se agregaron B.10 a B.14.
+- Plugins legales: `anthropics/claude-for-legal` es para equipos legales y no trae derecho argentino. La adaptación `juanmartincalvete-boop/claude-for-legal-argentina` es una copia de mayo con una carpeta de perfiles (civil, laboral, penal, etc.) sin consumo ni datos personales en profundidad. No se instaló ninguno.
+
+**Pendiente para la próxima sesión:**
+- Decisiones de Andre: lanzar solo con Mercado Pago o también con PayPal y USDT; convertir el botón de arrepentimiento en formulario que emita el código solo; qué domicilio publicar.
+- Los textos nuevos (§7.4, §8.9, §9.6) los redactó Claude describiendo el código; no los vio un abogado.
+- Falta publicar: la web toma los cambios cuando Andre haga push.
+
 ## 2026-10-13 — Andre (Claude · se va "Perfil de ejemplo" del menú de Perfil)
 
 **Tocado:** `screens/ProfileOwnScreen.tsx`. **Sin migraciones.**

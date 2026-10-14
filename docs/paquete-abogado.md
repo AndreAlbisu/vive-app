@@ -213,6 +213,16 @@ prestado? Los arts. 1110 a 1116 del CCyC no parecen contemplar expresamente esa
 hipótesis para servicios. Necesito la cláusula redactada en consecuencia.
 *25/09/2026: mientras tanto, §9.4 dice reintegro total aunque la sesión ya se
 haya prestado (lo más favorable al consumidor). Si se puede limitar, se cambia.*
+- [ ] **¿Quién absorbe ese reintegro?** §9.4 dice que lo reintegra Vita y no
+      dice de dónde sale. En Mercado Pago el importe de la sesión ya está en la
+      cuenta del profesional, y la devolución se debita de ahí. §8.8 solo le
+      avisa al profesional que se le debita la garantía de §9.3, no la
+      revocación. ¿Puedo trasladársela al profesional si lo digo en §8.8, o la
+      tengo que absorber yo? Si el profesional no tiene saldo, la devolución
+      falla.
+- [ ] Como casi todas las reservas se hacen con menos de 10 días, la revocación
+      deja sin efecto práctico el "sin reembolso dentro de las 24hs" de §9.1 y
+      el "una sola vez" de §9.3. ¿Hay forma válida de que no sea así?
 
 **A.6 — Cancelación dentro de las 24hs sin reembolso (T&C §9.1).**
 Hoy quien cancela con menos de 24 horas de anticipación **pierde el reembolso**, y
@@ -234,6 +244,10 @@ procesador de pagos". Es cierto para Mercado Pago y PayPal. **Para los pagos en
 criptomoneda (USDT) no hay procesador**: lo ejecuta una persona haciendo una
 transferencia a mano. ¿Alcanza con aclararlo en la cláusula, o hay que comprometer
 un plazo máximo? ¿Y qué plazo sería defendible?
+*13/10/2026: aclarado en §9.6 de los Términos (lo hace Vita por transferencia a
+la dirección que indique el Cliente, no es automático). Sigue sin plazo
+comprometido ni definición de quién paga la comisión de la red, y §9.4 dice que
+la revocación "no tiene costo alguno".*
 
 **A.9 — Precio en dólares a un consumidor en Argentina.**
 Un profesional puede fijar **dos precios**: uno en pesos y uno en dólares. Y puede
@@ -392,11 +406,19 @@ Además, la Política §11 tiene un espacio reservado para **la mención
 informativa sobre la AAIP que la normativa exija** — decime qué texto va ahí.
 
 **B.4 — Notas de sesión después de una baja de cuenta.**
-Cuando alguien pide eliminar su cuenta, se borran o anonimizan sus datos. Pero
-**las notas privadas que el profesional escribió sobre esa persona hoy se
-conservan.** Es la pregunta más delicada del modelo de borrado: son
+Cuando alguien pide eliminar su cuenta, se borran o anonimizan sus datos.
+*Corregido el 13/10/2026: hoy **las notas que el profesional escribió sobre esa
+persona también se borran**, de inmediato (Política §10). Antes este punto decía
+que se conservaban.* Es la pregunta más delicada del modelo de borrado: son
 documentación del profesional sobre un tratamiento, y a la vez datos de alguien
 que pidió irse. ¿Qué corresponde?
+- [ ] Si el profesional es psicólogo, ¿esas notas pueden considerarse parte de
+      la historia clínica, con deber de conservación de 10 años (Ley 26.529)?
+      De ser así, borrarlas cuando el cliente se da de baja lo dejaría en
+      falta. ¿Alcanza con decir en §16 que las notas de Vita no reemplazan la
+      historia clínica y que el profesional debe llevar la suya?
+- [ ] Lo mismo cuando quien se da de baja es el profesional: sus notas privadas
+      se borran de inmediato.
 
 **B.5 — ¿Me alcanza el reglamento europeo?** 🔴 *Puede subir a la sección A si
 lanzamos la función que lo dispara.*
@@ -451,6 +473,17 @@ En los pagos por PayPal o USDT, Vita recibe la plata y después le transfiere su
 parte al profesional. La cláusula ya dice que Vita "percibe el pago por cuenta y
 orden del Profesional". ¿Corresponde encuadrarlo expresamente como mandato de
 cobranza, y hace falta alguna previsión adicional en §8.2 o en §4?
+- [ ] Soy una persona física recibiendo y reteniendo fondos de terceros. ¿Eso
+      exige inscripción como proveedor de servicios de pago ante el BCRA?
+- [ ] Por los cobros en USDT: ¿me alcanza el registro de proveedores de
+      servicios de activos virtuales de la CNV (Ley 27.739), o alguna
+      obligación ante la UIF?
+- [ ] El importe bruto entra a mis cuentas aunque mi ingreso sea solo la
+      comisión. ¿Cómo lo documento para que no cuente contra el tope del
+      Monotributo?
+- [ ] Alternativa que estoy evaluando: **lanzar solo con Mercado Pago**, donde
+      la plata no pasa por mí, y sumar PayPal y USDT más adelante. ¿Con eso
+      desaparecen estas tres preguntas?
 
 **B.8 — Cifrado de los datos sensibles.**
 El diario y la gratitud se cifran en el teléfono antes de guardarse, así que en
@@ -485,6 +518,42 @@ cuenta, todos enlazados desde ese mismo pie.
       para estos fines, sin formar una sociedad?
 - [ ] ¿Conviene pasar a una sociedad antes de lanzar, entre otras cosas para que
       figuren sus datos y no los míos?
+
+**B.10 — Modificación unilateral (T&C §20 y §8.3).**
+§20 dice que el uso continuado después de un cambio implica aceptarlo, y §8.3
+que Vita puede modificar sus comisiones "notificando con antelación razonable",
+sin plazo. ¿Son abusivas así (art. 37 Ley 24.240, arts. 985 a 989 CCyC)? ¿Qué
+plazo de preaviso y qué forma de aceptación corresponden?
+
+**B.11 — El profesional como adherente.**
+El profesional no es consumidor, pero firma un contrato de adhesión. ¿Son
+atacables por él la jurisdicción en Córdoba (§22.3), la comisión modificable
+(§8.3), el débito de la garantía (§8.8) y la no elusión sin plazo (§10.2, que no
+dice cuánto dura "el vínculo originado en Vita")? ¿Hay riesgo de que la
+exclusividad más las sanciones se lean como relación de dependencia?
+
+**B.12 — Matrícula y atención entre jurisdicciones.**
+La matrícula de psicólogos y nutricionistas es provincial. ¿Puede un profesional
+matriculado en una provincia atender por videollamada a alguien que está en otra,
+o en otro país? ¿Vita tiene que controlarlo o alcanza con dejarlo a cargo del
+profesional en §5.2?
+
+**B.13 — Traspaso a una futura sociedad (T&C §23.2 y Política §6).**
+Los dos documentos hablan de "reorganizaciones societarias", pero hoy no hay
+sociedad. Si más adelante constituyo una, ¿qué cláusula necesito hoy para poder
+pasarle los contratos y los datos sin volver a pedirle consentimiento a cada
+usuario?
+
+**B.14 — Obligaciones de la web pública.**
+- [ ] El botón de arrepentimiento hoy es un enlace que abre un correo. El código
+      de revocación en 24 horas (Res. 424/2020) depende de que yo lo conteste a
+      mano. ¿Cumple, o tiene que ser un formulario que emita el código solo?
+- [ ] ¿Me corresponde el "botón de baja" (Res. 271/2020), o no aplica porque no
+      hay suscripción?
+- [ ] ¿Tiene que estar en la portada el enlace a Defensa del Consumidor / la
+      Ventanilla Única Federal? Hoy solo figura dentro de la página de
+      arrepentimiento.
+- [ ] ¿Tengo que mostrar el código QR de Data Fiscal siendo monotributista?
 
 ### C. Solo si decidimos que Sofía conversa — *decidir antes de enviar*
 
