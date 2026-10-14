@@ -1,3 +1,13 @@
+## 2026-10-13 — Andre (Claude · bienvenida 8: otra frase)
+
+**Tocado:** `screens/OnboardingOndas.tsx`
+
+**Resumen:**
+- A Andre no le encantaba "lo que te pasa le pasa a alguien más" (la frase, no la animación). Ahora dice "lo que sentís se puede compartir", también para lectores de pantalla. La propuso Claude; Andre todavía no la aprobó.
+
+**Pendiente para la próxima sesión:**
+- Que Andre confirme las frases nuevas de la 5 y la 8 o elija otras.
+
 ## 2026-10-13 — Andre (Claude · bienvenida 5: otra frase)
 
 **Tocado:** `screens/OnboardingCerca.tsx`

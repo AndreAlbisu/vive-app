@@ -32,7 +32,7 @@ import { anotar, cronometro } from '@/lib/analytics';
 //      aro se inclina hacia atrás y hacia adelante, como una moneda que se
 //      balancea, y cada uno lo hace un instante después que el de adentro:
 //      una ola lenta recorre el juego de adentro hacia afuera.
-//      "lo que te pasa le pasa a alguien más"
+//      "lo que sentís se puede compartir"
 //   2. Tocás: los tres juegos se acercan y, mientras tanto, cada aro da media
 //      vuelta sobre sí mismo y queda de frente. No lo hacen todos juntos: va
 //      de adentro hacia afuera y un juego detrás del otro, así que se ve una
@@ -84,7 +84,8 @@ const PERSPECTIVA = 700;
 // Cada juego se inclina alrededor de un eje distinto.
 const EJES = [0, (2 * Math.PI) / 3, -(2 * Math.PI) / 3];
 
-const FRASE_1 = 'lo que te pasa le pasa a alguien más';
+// 📌 Antes decía "lo que te pasa le pasa a alguien más": a Andre no le encantó (13/10/2026).
+const FRASE_1 = 'lo que sentís se puede compartir';
 
 const JUNTA_MS   = 1300;   // los tres juegos se acercan
 const VOLTEA_MS  = 800;    // lo que tarda un aro en dar su media vuelta
@@ -366,7 +367,7 @@ export default function OnboardingOndas() {
         onPressIn={alApoyar}
         accessible
         accessibilityRole="button"
-        accessibilityLabel="Lo que te pasa le pasa a alguien más. Vita te acompaña. Empezar"
+        accessibilityLabel="Lo que sentís se puede compartir. Vita te acompaña. Empezar"
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
