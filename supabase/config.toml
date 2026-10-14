@@ -33,3 +33,8 @@ verify_jwt = false
 # El control es el token de la URL (ver supabase/functions/calendario).
 [functions.calendario]
 verify_jwt = false
+
+# Formulario público del botón de arrepentimiento: la norma prohíbe pedir
+# registro, así que no hay sesión que verificar. Se defiende con tope por IP.
+[functions.revocacion]
+verify_jwt = false

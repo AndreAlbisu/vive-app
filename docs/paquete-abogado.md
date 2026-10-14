@@ -1,43 +1,46 @@
 # Paquete para la consulta legal — Vita
 
-> **Cómo usar este archivo.** Es lo que se le manda al abogado/a: contexto +
-> preguntas, redactado para que se entienda sin conocer la app. El estado de
-> cada punto (qué está construido, qué se destraba con cada respuesta) vive en
-> `docs/legal-instrucciones.md` y **no** se manda — es interno.
->
-> Antes de enviarlo: decidir si va la sección **C**, que depende de una decisión
-> de producto todavía abierta.
->
-> Los borradores completos están en `docs/terminos-y-condiciones.md` y
-> `docs/politica-de-privacidad.md`, y publicados en
-> `https://vive-app.vercel.app/legal/` (con aviso de borrador visible).
-
----
-
 ## Mail de encuadre
 
 > Hola,
 >
 > Te escribo por **Vita**, una aplicación de bienestar y desarrollo personal
 > para Argentina que estoy por publicar en App Store y Google Play. Tengo los
-> Términos y Condiciones y la Política de Privacidad **redactados en borrador**
-> y necesito una revisión antes de enviarla a las tiendas.
+> Términos y Condiciones y la Política de Privacidad **redactados y publicados
+> por mi cuenta, sin revisión profesional**, y necesito esa revisión antes de
+> enviar la app a las tiendas.
 >
 > No busco que los escribas de cero: están completos y contrastados contra lo
 > que el sistema hace de verdad. Lo que necesito es (a) que valides los puntos
 > donde no me alcanza el criterio, y (b) que me digas qué está mal.
 >
 > Abajo te dejo el contexto del negocio y las preguntas concretas, agrupadas
-> por si bloquean o no la publicación. Los textos completos van adjuntos.
+> por si bloquean o no la publicación. Los textos completos van adjuntos y
+> también están publicados en https://vitaapp.com.ar/legal/.
 >
-> Una sola aclaración de alcance: escribí todo pensando en Argentina, pero hay
-> una función por salir que permite atender a personas que están en el exterior.
+> Una sola aclaración de alcance: escribí todo pensando en Argentina, pero la
+> app ya permite que alguien que está en el exterior reserve y pague en dólares.
 > Si eso cambia el marco aplicable, es la pregunta **B.5** y prefiero saberlo
 > antes que después — incluso si la respuesta es que necesito a otra persona
 > para esa parte.
 >
 > Gracias,
 > Andre
+
+---
+
+## Si solo hay una hora
+
+Las cinco que más pesan, en este orden:
+
+1. **B.7** — cobro plata de terceros en PayPal y USDT siendo persona física
+   (BCRA, CNV, Monotributo). Voy a lanzar con los tres medios, así que bloquea.
+2. **A.5** — arrepentimiento con la sesión ya prestada: si corresponde devolver
+   todo, y quién lo absorbe.
+3. **A.7 y B.1** — si el encuadre de "solo intermediaria" se sostiene, dado que
+   cobro, doy una garantía, verifico y sanciono. Opero sin sociedad (ver B.9).
+4. **A.3** — transferencias de datos sensibles al exterior.
+5. **B.4** — notas de sesión de psicólogos frente a la historia clínica.
 
 ---
 
@@ -57,8 +60,11 @@ Categoría A. Facturación tipo C, sin IVA discriminado.
    meditación, diario personal, registro diario de estado de ánimo.
 
 **Cómo circula el dinero.** La comisión de Vita es del **20% en la primera
-sesión de cada vínculo usuario–profesional y 15% en las siguientes**, en los tres
-rieles. Los reembolsos se ejecutan contra el pago original, así que **salen de
+sesión de cada vínculo usuario–profesional y 15% en las siguientes** cuando se
+cobra en pesos, y del **25% y 20%** cuando se cobra en dólares. Si el cliente
+llegó por el enlace propio del profesional, la primera sesión no tiene comisión.
+Quien se registra invitado por otro usuario tiene 10% de descuento en su primera
+sesión, a cuenta de la comisión de Vita. Los reembolsos se ejecutan contra el pago original, así que **salen de
 los fondos del profesional** y Vita resigna su comisión.
 
 🔴 **Hay tres rieles de cobro y no se comportan igual. La diferencia importa para
@@ -77,7 +83,7 @@ real. No son un plan.
 profesional cobrara por su cuenta del exterior, cada uno pasaría a ser
 **exportador de servicios**, con factura E y registro propio por cada sesión.
 Cobrando Vita, ese circuito es uno solo. Es una decisión tomada, pero es
-exactamente el punto donde quiero tu lectura — ver **A.7**.
+exactamente el punto donde quiero tu lectura — ver **B.7**.
 
 **Posicionamiento declarado.** Vita se declara **intermediaria** entre usuarios y
 profesionales (T&C §4) y **expresamente no prestadora de servicios de salud**
@@ -102,20 +108,18 @@ pero no está publicada.
 
 ### A. Bloquean la publicación
 
-Los primeros están marcados dentro de los borradores como
-`[Validar con abogado…]` y son los que impiden sacar el aviso de "documento en
-borrador" que hoy se muestra en la app y en el sitio. Los últimos se sumaron
-después, a medida que el sistema creció.
+Son los puntos donde el texto publicado es mi mejor lectura y no una certeza.
+Los últimos se sumaron a medida que el sistema creció.
 
 **A.1 — Jurisdicción frente a consumidores (T&C §22.2).**
-La cláusula hoy dice `[ordinarios de la Ciudad Autónoma de Buenos Aires / los que
-correspondan]`. Entiendo que las cláusulas de jurisdicción frente a consumidores
-tienen límites estrictos. ¿Qué corresponde poner, considerando que opero desde
-**Córdoba** y los usuarios pueden estar en cualquier provincia?
+La cláusula hoy dice que es competente el tribunal del lugar donde el consumidor
+recibió o debió recibir la prestación (art. 1109 CCyC) y que no hay prórroga en
+su perjuicio. Para los profesionales, §22.3 fija los tribunales de la Ciudad de
+Córdoba. ¿Es correcta así, considerando que opero desde **Córdoba** y los
+usuarios pueden estar en cualquier provincia o en el exterior?
 
 **A.2 — Consentimiento de datos sensibles (Política §3).**
-📌 *Investigué esto antes de preguntarte — el relevamiento está en
-`docs/consentimiento-datos-sensibles.md`. Lo que sigue es lo que no pude
+📌 *Investigué esto antes de preguntarte. Lo que sigue es lo que no pude
 resolver solo.*
 
 Me llamó la atención que el **art. 7 no menciona el consentimiento** entre las
@@ -125,19 +129,22 @@ admite el consentimiento expreso y escrito integrando el art. 7 con el art. 5,
 pero quiero saber **qué tan firme es esa lectura**, porque de eso depende toda la
 mitad de bienestar de la app y no una función suelta.
 
-¿Cómo hay que **obtener y registrar** el consentimiento explícito para el
-registro de ánimo, el diario y los mensajes? Hoy hay un checkbox de aceptación
-de los Términos al registrarse, y se guarda fecha y una versión del texto
-aceptado. ¿Alcanza, o los datos sensibles necesitan un consentimiento
-**separado y específico**, con su propia pantalla?
+Lo que está construido hoy: además del checkbox de aceptación de los Términos
+al registrarse, los datos sensibles tienen un consentimiento **separado**, con
+su propia pantalla, que se pide la primera vez que la persona usa el registro
+de ánimo, el diario o la gratitud. Muestra qué datos se tratan y para qué, es
+voluntario (sin él se puede reservar y usar el resto), se puede revocar desde
+el perfil, y se guarda la fecha y la versión del texto. ¿Alcanza así? ¿Los
+mensajes con el profesional necesitan uno propio?
 
 **A.3 — Transferencia internacional de datos (Política §7).** 🔴 *Es el punto
 más débil de todo el borrador, y el que más me sorprendió al revisarlo.*
 
-Hoy la Política §7 dice que Vita *"procurará que existan garantías adecuadas"*.
-Eso es una intención, no un instrumento — y mientras tanto la app ya transfiere
-datos a Estados Unidos todos los días, incluida la categoría más sensible que
-maneja.
+Hoy la Política §7 invoca el acuerdo de tratamiento de datos de Supabase y, para
+el resto, dice que *"Vita trabaja para que el resto de las transferencias cuente
+con garantías equivalentes"*. Eso último es una intención, no un instrumento — y
+mientras tanto la app ya transfiere datos al exterior todos los días, incluida la
+categoría más sensible que maneja.
 
 Los destinatarios reales, verificados contra el código y contra la consola de
 cada proveedor. **Separo a propósito dónde queda el dato de dónde está la
@@ -150,6 +157,11 @@ empresa**, porque no es lo mismo y creo que las dos cosas cuentan:
 | **Expo** | el token del dispositivo y el texto de la notificación | El token queda guardado; **el contenido no** (va por memoria y colas, no a una base) hasta entregarlo a Apple/Google | EEUU |
 | **Mercado Pago** | datos de pago | Argentina | Argentina |
 | **PayPal** | datos de pago del riel en dólares | EEUU | EEUU |
+| **Resend** | la dirección de correo y el contenido de los mails que manda la app | EEUU | EEUU |
+| **Anthropic** | una categoría, un tono y dos o tres números, sin identificador (ver B.15) | EEUU | EEUU |
+| **Cloudflare** | IP y datos técnicos, al crear una cuenta o pedir un código | fuera del país | EEUU |
+| **Vercel** | IP y datos técnicos de quien visita las páginas web | fuera del país | EEUU |
+| **Google, Apple, YouTube** | lo mínimo de la cuenta si se inicia sesión con ellos; IP al reproducir un video o cargar la tipografía de la web | fuera del país | EEUU |
 
 Entiendo que **ni Brasil ni Estados Unidos figuran en la lista de países con
 nivel adecuado de la AAIP**. La lista de la Disposición 60-E/2016 son los
@@ -170,8 +182,7 @@ Tres preguntas que me quedan de la tabla misma:
       lista. Si eso resuelve el punto, es el camino que prefiero.
 
 📌 **Investigué esto por mi cuenta antes de preguntarte, así que la consulta es
-más chica de lo que parece.** El relevamiento completo está en
-`docs/transferencias-internacionales.md`. En resumen: los tres proveedores tienen
+más chica de lo que parece.** En resumen: Supabase, Daily y Expo tienen
 acuerdos de tratamiento de datos, y el de Supabase incorpora las cláusulas tipo
 europeas y se acepta con los términos, sin firma. La Res. 198/2023 admite
 expresamente contratos distintos de su modelo si reflejan los mismos principios.
@@ -190,18 +201,19 @@ Preguntas:
       publica, o hay que firmar el modelo de la AAIP con cada uno?
 - [ ] ¿Cambia algo que el dato sea **sensible** (ánimo, diario, mensajes) y no
       dato común?
-- [ ] ¿Qué tiene que decir el texto de la Política §7 una vez resuelto? Hoy no
-      dice nada verificable.
+- [ ] ¿Qué tiene que decir el texto de la Política §7 una vez resuelto? Hoy solo
+      es verificable lo de Supabase.
 
-⚠️ **Esta pregunta absorbe a C.3.** Cuando la escribí, la transferencia al
-proveedor de IA me parecía un problema aparte; revisándola, es la transferencia
-**más chica** de todas las que ya hago, por varios órdenes de magnitud. Si esto
-se resuelve, C.3 se resuelve con lo mismo.
+⚠️ **Esta pregunta absorbe la parte de transferencia de B.15.** La que va al
+proveedor de IA es la transferencia **más chica** de todas las que ya hago, por
+varios órdenes de magnitud. Si esto se resuelve, esa parte se resuelve con lo
+mismo.
 
 **A.4 — Aviso de salud y emergencias (T&C §5).**
 La redacción actual aclara que Vita no presta servicios de salud, no diagnostica
-y no reemplaza atención profesional, e incluye líneas de crisis (911, y la línea
-de asistencia al suicida 135 / 0800-345-1435). **Con psicólogos/as operando en
+y no reemplaza atención profesional, e incluye líneas de crisis (911, la línea
+nacional de salud mental 0800-999-0091 y el Centro de Asistencia al Suicida,
+135 / 0800-345-1435), con la aclaración de que no funcionan desde el exterior. **Con psicólogos/as operando en
 la plataforma, ¿esa redacción alcanza?** Es el punto donde más me preocupa
 quedarme corto.
 
@@ -213,6 +225,16 @@ prestado? Los arts. 1110 a 1116 del CCyC no parecen contemplar expresamente esa
 hipótesis para servicios. Necesito la cláusula redactada en consecuencia.
 *25/09/2026: mientras tanto, §9.4 dice reintegro total aunque la sesión ya se
 haya prestado (lo más favorable al consumidor). Si se puede limitar, se cambia.*
+- [ ] **¿Quién absorbe ese reintegro?** §9.4 dice que lo reintegra Vita y no
+      dice de dónde sale. En Mercado Pago el importe de la sesión ya está en la
+      cuenta del profesional, y la devolución se debita de ahí. §8.8 solo le
+      avisa al profesional que se le debita la garantía de §9.3, no la
+      revocación. ¿Puedo trasladársela al profesional si lo digo en §8.8, o la
+      tengo que absorber yo? Si el profesional no tiene saldo, la devolución
+      falla.
+- [ ] Como casi todas las reservas se hacen con menos de 10 días, la revocación
+      deja sin efecto práctico el "sin reembolso dentro de las 24hs" de §9.1 y
+      el "una sola vez" de §9.3. ¿Hay forma válida de que no sea así?
 
 **A.6 — Cancelación dentro de las 24hs sin reembolso (T&C §9.1).**
 Hoy quien cancela con menos de 24 horas de anticipación **pierde el reembolso**, y
@@ -228,12 +250,14 @@ conforme. ¿Ofrecer esa garantía debilita el encuadre de intermediación, o con
 sin problema como garantía comercial? Es el hecho más fuerte que un reclamo podría
 usar para argumentar solidaridad en la cadena de comercialización.
 
-**A.8 — §9 promete un reembolso que en un medio de pago no existe.**
+**A.8 — Reintegros de pagos en USDT (T&C §9.6).**
 §9.1 y §9.2 dicen que el reembolso "se procesa de forma **automática** a través del
 procesador de pagos". Es cierto para Mercado Pago y PayPal. **Para los pagos en
-criptomoneda (USDT) no hay procesador**: lo ejecuta una persona haciendo una
-transferencia a mano. ¿Alcanza con aclararlo en la cláusula, o hay que comprometer
-un plazo máximo? ¿Y qué plazo sería defendible?
+criptomoneda (USDT) no hay procesador**: lo hago yo con una transferencia a la
+dirección que indique el cliente, y §9.6 lo aclara así. No compromete un plazo
+ni dice quién paga la comisión de la red, y §9.4 dice que la revocación "no tiene
+costo alguno". ¿Hay que comprometer un plazo máximo, y cuál sería defendible?
+¿La comisión de la red la tengo que absorber yo?
 
 **A.9 — Precio en dólares a un consumidor en Argentina.**
 Un profesional puede fijar **dos precios**: uno en pesos y uno en dólares. Y puede
@@ -276,7 +300,7 @@ construyó, se apagó, y después una psicóloga consultada corrigió el enfoque
 asociación entre lo que la persona sintió y lo que estaba pasando **es el trabajo
 de la sesión**, no algo que la app deba entregar resuelto. En vez de acceso
 permanente a una tendencia, la persona **arma y manda un paquete** antes de cada
-sesión (`docs/paquete-para-la-sesion.md`). Sin acceso continuo no hay permiso que
+sesión (es la pregunta A.11). Sin acceso continuo no hay permiso que
 consultar. **Contestala igual si te resulta simple** —sirve para saber si el
 camino descartado estaba bien descartado— pero **la pregunta que importa ahora es
 A.11**, y una nueva: ¿cambia algo que la persona envíe texto libre suyo por el
@@ -288,7 +312,7 @@ que es un mensaje como cualquier otro y no una cesión a un tercero.
 
 En vez de darle al profesional acceso permanente al ánimo de su cliente (A.10,
 descartado), la persona **arma y envía un paquete puntual antes de cada sesión**.
-Cómo funciona:
+Ya está construido. Cómo funciona:
 
 - **Lo inicia siempre la persona.** El profesional no puede pedirlo ni verlo
   aparecer solo.
@@ -318,13 +342,10 @@ Preguntas:
       cualquier otro y no una cesión.
 
 **A.12 — La detección de datos de contacto y las sanciones (T&C §10.3 y Política).**
-🔴 *Se sumó el 17/09/2026. Va en A porque **la §10.3 hoy dice algo falso**.*
+🔴 *Va en A porque de esto depende un sistema de sanciones a profesionales.*
 
-La §10.3 dice que las advertencias automáticas *"no implican bloqueo ni monitoreo
-del contenido de las conversaciones más allá de lo descripto en la Política de
-Privacidad"*. Desde el 16/09 las dos mitades dejaron de ser ciertas: la app **sí
-bloquea** en algunos casos, y **la Política no describe nada** de esto. Además,
-lo que antes era solo una advertencia hoy alimenta un sistema de sanciones.
+La §10.3 de los Términos y la §8.3 de la Política ya describen lo que sigue; lo
+que necesito es saber si está bien encuadrado y bien redactado.
 
 Cómo funciona hoy, verificado contra el código:
 
@@ -388,22 +409,28 @@ volverse abusiva?
 Entiendo que es una obligación del Responsable, se hace por TAD, y que con datos
 sensibles de por medio la falta de inscripción agrava ante una denuncia.
 ¿Confirmás? ¿Me guiás con el trámite o lo hago yo?
-Además, la Política §11 tiene un espacio reservado para **la mención
-informativa sobre la AAIP que la normativa exija** — decime qué texto va ahí.
+Además, la Política §9 incluye la leyenda sobre la AAIP como órgano de control.
+Decime si el texto es el que la normativa exige.
 
 **B.4 — Notas de sesión después de una baja de cuenta.**
-Cuando alguien pide eliminar su cuenta, se borran o anonimizan sus datos. Pero
-**las notas privadas que el profesional escribió sobre esa persona hoy se
-conservan.** Es la pregunta más delicada del modelo de borrado: son
+Cuando alguien pide eliminar su cuenta, se borran o anonimizan sus datos, y
+**las notas que el profesional escribió sobre esa persona también se borran**,
+de inmediato (Política §10). Es la pregunta más delicada del modelo de borrado: son
 documentación del profesional sobre un tratamiento, y a la vez datos de alguien
 que pidió irse. ¿Qué corresponde?
+- [ ] Si el profesional es psicólogo, ¿esas notas pueden considerarse parte de
+      la historia clínica, con deber de conservación de 10 años (Ley 26.529)?
+      De ser así, borrarlas cuando el cliente se da de baja lo dejaría en
+      falta. ¿Alcanza con decir en §16 que las notas de Vita no reemplazan la
+      historia clínica y que el profesional debe llevar la suya?
+- [ ] Lo mismo cuando quien se da de baja es el profesional: sus notas privadas
+      se borran de inmediato.
 
-**B.5 — ¿Me alcanza el reglamento europeo?** 🔴 *Puede subir a la sección A si
-lanzamos la función que lo dispara.*
+**B.5 — ¿Me alcanza el reglamento europeo?** 🔴 *La función que lo dispara ya
+existe, así que puede corresponder tratarla como bloqueante.*
 
-Estamos por habilitar **"Sesiones desde el exterior"**: un profesional argentino
-puede atender a alguien que está fuera del país, y la app le muestra a esa
-persona los horarios convertidos a su huso. El caso que usamos para explicarlo
+La app ya permite que un profesional argentino atienda a alguien que está fuera
+del país: esa persona paga en dólares y ve los horarios convertidos a su huso. El caso que usamos para explicarlo
 internamente es literalmente *"alguien en Madrid"*.
 
 Entiendo que ofrecer un servicio a personas que están en la Unión Europea activa
@@ -451,6 +478,18 @@ En los pagos por PayPal o USDT, Vita recibe la plata y después le transfiere su
 parte al profesional. La cláusula ya dice que Vita "percibe el pago por cuenta y
 orden del Profesional". ¿Corresponde encuadrarlo expresamente como mandato de
 cobranza, y hace falta alguna previsión adicional en §8.2 o en §4?
+- [ ] Soy una persona física recibiendo y reteniendo fondos de terceros. ¿Eso
+      exige inscripción como proveedor de servicios de pago ante el BCRA?
+- [ ] Por los cobros en USDT: ¿me alcanza el registro de proveedores de
+      servicios de activos virtuales de la CNV (Ley 27.739), o alguna
+      obligación ante la UIF?
+- [ ] El importe bruto entra a mis cuentas aunque mi ingreso sea solo la
+      comisión. ¿Cómo lo documento para que no cuente contra el tope del
+      Monotributo?
+- [ ] Voy a lanzar con los tres medios (Mercado Pago, PayPal y USDT), así que
+      las tres preguntas de arriba **bloquean el lanzamiento**. Si alguna no
+      tiene salida para una persona física, ¿alcanza con postergar solo ese
+      medio?
 
 **B.8 — Cifrado de los datos sensibles.**
 El diario y la gratitud se cifran en el teléfono antes de guardarse, así que en
@@ -486,33 +525,49 @@ cuenta, todos enlazados desde ese mismo pie.
 - [ ] ¿Conviene pasar a una sociedad antes de lanzar, entre otras cosas para que
       figuren sus datos y no los míos?
 
-### C. Solo si decidimos que Sofía conversa — *decidir antes de enviar*
+**B.10 — Modificación unilateral (T&C §20 y §8.3).**
+§20 dice que el uso continuado después de un cambio implica aceptarlo, y §8.3
+que Vita puede modificar sus comisiones "notificando con antelación razonable",
+sin plazo. ¿Son abusivas así (art. 37 Ley 24.240, arts. 985 a 989 CCyC)? ¿Qué
+plazo de preaviso y qué forma de aceptación corresponden?
 
-> **Nota interna, borrar antes de mandar:** esta sección solo va si se decide
-> que el asistente sea conversacional. Si queda como router de destinos
-> cerrados, se reemplaza por la pregunta de C.2, que es mucho más chica.
+**B.11 — El profesional como adherente.**
+El profesional no es consumidor, pero firma un contrato de adhesión. ¿Son
+atacables por él la jurisdicción en Córdoba (§22.3), la comisión modificable
+(§8.3), el débito de la garantía (§8.8) y la no elusión sin plazo (§10.2, que no
+dice cuánto dura "el vínculo originado en Vita")? ¿Hay riesgo de que la
+exclusividad más las sanciones se lean como relación de dependencia?
 
-La app tiene un asistente llamado **Sofía**. Hoy es solo interfaz: cuatro
-atajos que llevan a pantallas existentes, sin ninguna inteligencia detrás.
-Estamos evaluando conectarlo a un modelo de lenguaje.
+**B.12 — Matrícula y atención entre jurisdicciones.**
+La matrícula de psicólogos y nutricionistas es provincial. ¿Puede un profesional
+matriculado en una provincia atender por videollamada a alguien que está en otra,
+o en otro país? ¿Vita tiene que controlarlo o alcanza con dejarlo a cargo del
+profesional en §5.2?
 
-**C.1 — Chat abierto sobre malestar.**
-Si Sofía conversa libremente, cada mensaje es texto libre de una persona sobre
-cómo se siente, procesado por un proveedor externo fuera del país. ¿Qué exige
-eso — consentimiento propio, aviso específico, algo más? ¿Y cambia el encuadre
-de Vita como no prestadora de servicios de salud el hecho de tener un
-interlocutor automático que responde sobre malestar emocional?
+**B.13 — Traspaso a una futura sociedad (T&C §23.2 y Política §6).**
+Los dos documentos hablan de "reorganizaciones societarias", pero hoy no hay
+sociedad. Si más adelante constituyo una, ¿qué cláusula necesito hoy para poder
+pasarle los contratos y los datos sin volver a pedirle consentimiento a cada
+usuario?
 
-**C.2 — Clasificación de texto libre hacia un destino cerrado.**
-Alternativa mucho más acotada, y la que probablemente elijamos: la persona
-escribe qué necesita y el sistema **solo la deriva** a una de las secciones ya
-existentes, o a profesionales que trabajan uno de 28 temas predefinidos. No hay
-conversación ni respuesta generada. ¿Clasificar un relato de malestar para
-derivar puede interpretarse como **triage** o acto sanitario, aun sin
-diagnóstico ni indicación terapéutica?
+**B.14 — Obligaciones de la web pública.**
+- [ ] El botón de arrepentimiento es un formulario que emite el código de
+      revocación en el momento, en pantalla y por correo. Pide
+      nombre, correo y, opcional, datos para ubicar la reserva. No cancela ni
+      reintegra solo: eso lo hago yo después de ubicar la reserva, porque el
+      formulario no tiene forma de saber quién lo completa. ¿Cumple así con la
+      Res. 424/2020? ¿Hay un plazo máximo para el reintegro?
+- [ ] Guardo esas solicitudes tres años como constancia (Política §10). ¿Es el
+      plazo correcto?
+- [ ] ¿Me corresponde el "botón de baja" (Res. 271/2020), o no aplica porque no
+      hay suscripción?
+- [ ] ¿Tiene que estar en la portada el enlace a Defensa del Consumidor / la
+      Ventanilla Única Federal? Hoy solo figura dentro de la página de
+      arrepentimiento.
+- [ ] ¿Tengo que mostrar el código QR de Data Fiscal siendo monotributista?
 
-**C.3 — Redacción asistida de un texto ya decidido.**
-El caso más chico, y ya está construido y apagado esperando esta respuesta. En
+**B.15 — Una frase redactada con inteligencia artificial.**
+**Está funcionando desde el 04/09/2026** y declarado en la Política (§6 y §7). En
 la pantalla de inicio se muestra una frase sobre la semana de la persona ("Tu
 semana viene pareja. No todo tiene que ser un antes y un después"). **Qué decir
 lo decide un algoritmo en el propio teléfono**, con reglas fijas. Al proveedor
@@ -536,11 +591,34 @@ esa es justamente la pregunta.
 📌 Del lado técnico, y sin depender de esta respuesta: el proveedor ofrece un
 modo de **retención cero** (el dato se descarta al terminar de procesarlo, no se
 conserva). Todavía no lo activamos, pero lo vamos a pedir en cualquier
-escenario — si eso alcanza para cerrar el punto, decímelo y lo hacemos antes de
-encender nada.
+escenario. Si eso alcanza para cerrar el punto, decímelo.
 
-> ⚠️ Independientemente de la respuesta legal, ya está decidido del lado del
-> producto que **la detección de expresiones de riesgo corre antes que
+### C. Una idea a futuro: que el asistente converse
+
+*No está construido ni decidido. Contestala solo si te resulta rápido: me sirve
+para saber si vale la pena avanzar, no para publicar.*
+
+La app tiene un asistente llamado **Sofía**. Hoy es solo interfaz: cuatro
+atajos que llevan a pantallas existentes, sin ninguna inteligencia detrás.
+Es una idea, que puede hacerse o no, conectarlo a un modelo de lenguaje.
+
+**C.1 — Chat abierto sobre malestar.**
+Si Sofía conversa libremente, cada mensaje es texto libre de una persona sobre
+cómo se siente, procesado por un proveedor externo fuera del país. ¿Qué exige
+eso — consentimiento propio, aviso específico, algo más? ¿Y cambia el encuadre
+de Vita como no prestadora de servicios de salud el hecho de tener un
+interlocutor automático que responde sobre malestar emocional?
+
+**C.2 — Clasificación de texto libre hacia un destino cerrado.**
+Alternativa mucho más acotada, y la que probablemente elijamos si avanzamos: la persona
+escribe qué necesita y el sistema **solo la deriva** a una de las secciones ya
+existentes, o a profesionales que trabajan uno de 28 temas predefinidos. No hay
+conversación ni respuesta generada. ¿Clasificar un relato de malestar para
+derivar puede interpretarse como **triage** o acto sanitario, aun sin
+diagnóstico ni indicación terapéutica?
+
+> ⚠️ Independientemente de la respuesta legal, si esto se construye ya está
+> decidido del lado del producto que **la detección de expresiones de riesgo corre antes que
 > cualquier modelo**, con reglas fijas: si el texto trae señales de crisis, el
 > flujo corta y muestra las líneas de emergencia, sin devolver ninguna
 > recomendación. No es negociable ni depende de esta consulta.
@@ -553,8 +631,9 @@ Para que no gastes tiempo ahí:
 
 - **Baja de cuenta dentro de la app**, con borrado y anonimización, y su página
   pública de solicitud (exigida por Google Play).
-- **Botón de arrepentimiento** como página propia, enlazada desde la portada sin
-  requerir registro (Res. 424/2020), con el plazo de 10 días **corridos**.
+- **Botón de arrepentimiento** como página propia con formulario, enlazada desde
+  la portada sin requerir registro (Res. 424/2020), con el plazo de 10 días
+  **corridos**. Lo que sí quiero que mires de esto está en B.14.
 - **Bloqueo y reporte de usuarios** (guideline 1.2 de Apple).
 - **Declaración de mayoría de edad** en el registro, con constancia guardada.
 - **Constancia de qué versión de los textos aceptó cada persona**, con fecha.
@@ -567,9 +646,9 @@ Para que no gastes tiempo ahí:
 
 1. Los **puntos de A** resueltos, con la redacción que corresponda.
 2. Tu lectura de **B**.
-3. La respuesta de **C** si esa sección quedó en el envío.
+3. **C** solo si te resulta rápido.
 4. Cualquier cosa que veas mal y que yo no haya preguntado. Es lo que más me
    sirve.
 
-Después de eso completo las fechas de vigencia, publico y saco el aviso de
-borrador.
+Después de eso corrijo los textos, actualizo las fechas de vigencia y los vuelvo
+a publicar.

@@ -18,6 +18,66 @@
 - Nombre de la app: Joaquín eligió **"vos, de nuevo"** para Puente; y propone **mui/nui** (de Maui, "hogar") para el artifact de nombres de Andre ("Búsqueda de nombre", https://claude.ai/code/artifact/23c07f38-ffd3-4a5e-baaf-0fe3b2acae85) — falta sumarlo ahí.
 - PRs nuestros esperando a Andre: #7, #9, #11 (en #11 quedó documentada la obs. de privacidad #2, sin fix).
 
+## 2026-10-13 — Andre (Claude · paquete del abogado listo para enviar)
+
+**Tocado:** `docs/paquete-abogado.md`. **Sin migraciones.**
+
+**Resumen:**
+- Por pedido de Andre se borraron las notas internas (el recuadro "Cómo usar este archivo" y el de la sección C) y las tres menciones a archivos `docs/…`: ninguno hacía falta adjuntarlo, porque cada pregunta ya resume lo que importa.
+- Sofía conversando es una idea que puede hacerse o no (confirmado por Andre). La sección C quedó como "idea a futuro, contestala solo si es rápido", con C.1 y C.2. La frase con IA, que sí está encendida, salió de ahí y pasó a ser B.15.
+
+**Pendiente para la próxima sesión:**
+- Andre lo lee una vez antes de enviarlo: está en su voz y afirma datos de su Monotributo que Claude no puede verificar. Se adjuntan los Términos, la Política, el botón de arrepentimiento y eliminar cuenta, o se manda el enlace una vez hecho el push.
+- Permiso para que Codex corra tareas: lo tiene que agregar Andre.
+
+## 2026-10-13 — Andre (Claude · paquete del abogado revisado y formulario probado en navegador)
+
+**Tocado:** `docs/paquete-abogado.md`. **Sin migraciones.**
+
+**Resumen:**
+- El paquete describía una app vieja en varios puntos: placeholders que ya no existen (A.1), consentimiento separado que ya está construido (A.2), una §10.3 "falsa" que ya se corrigió (A.12), la frase con IA como apagada cuando está encendida desde el 04/09 (C.3), sesiones desde el exterior como futuras (B.5), comisión única en los tres rieles, la URL vieja de Vercel y el aviso de borrador. Corregido todo contra el código. Se sumó arriba una lista de las cinco preguntas que más pesan y se completó la tabla de proveedores de A.3.
+- El formulario de arrepentimiento se probó en un navegador con tamaño de teléfono, sirviendo el archivo local bajo el dominio real: validaciones sin pedido de red, envío real con código en pantalla, foco en el recuadro, sin scroll horizontal ni errores. La fila de prueba se borró.
+- Se le pidió la prueba a Codex y el control de permisos bloqueó la llamada que le pasa la tarea; la corrió Claude.
+
+**Pendiente para la próxima sesión:**
+- Andre tiene que decidir si la sección C (Sofía conversando) va en el envío; C.3 va igual. Borrar la nota interna de esa sección y las menciones a archivos `docs/…` o adjuntarlos.
+- A vitaappar@gmail.com llegaron cuatro correos de prueba (códigos REV-20261013-N73L53 y REV-20261013-QVBUE4).
+- La página con el formulario sigue sin publicar hasta el push. Main está 3 commits adelante y 1 atrás de origin.
+
+## 2026-10-13 — Andre (Claude · el botón de arrepentimiento pasa a ser un formulario)
+
+**Tocado:** `supabase/migrations/20261013010000_revocaciones.sql` (nuevo), `supabase/functions/revocacion/index.ts` (nuevo), `supabase/config.toml`, `scripts/sync-legal.mjs`, `docs/boton-de-arrepentimiento.md`, `docs/politica-de-privacidad.md`, `docs/paquete-abogado.md`, `SCHEMA.md`, y lo que genera `npm run sync:legal`.
+
+**Resumen:**
+- Andre decidió dos cosas: lanzar con Mercado Pago, PayPal y USDT (las preguntas de BCRA, CNV y Monotributo pasan a bloquear el lanzamiento, anotado en B.7 del paquete) y convertir el botón de arrepentimiento en formulario.
+- El botón era un enlace a un correo y el código de la Res. 424/2020 dependía de contestarlo a mano. Ahora la página tiene un formulario (nombre, correo, detalle opcional) y la función `revocacion` emite el código en el momento: lo muestra en pantalla y lo manda por correo. Vita recibe un aviso con los datos.
+- **Base de datos:** tabla nueva `revocaciones`, sin permisos para `anon` ni `authenticated`, con borrado automático a los 3 años. Corrida y verificada en producción; SCHEMA.md actualizado. Función desplegada (v1) y probada con un envío real a la casilla de Vita; la fila de prueba se borró.
+- El formulario no cancela ni reintegra: no tiene sesión y no puede saber quién lo completa. Eso lo hace Andre al recibir el aviso.
+- Política: §2.7 y §10 declaran los datos del formulario y su plazo. Versión de los legales: `ce89e36e7171`.
+
+**Pendiente para la próxima sesión:**
+- La página con el formulario no está publicada hasta que Andre haga push. No se probó en un navegador real, solo la función por fuera y el script de la página por sintaxis.
+- A Andre le llegaron dos correos de prueba a vitaappar@gmail.com (código REV-20261013-N73L53); no son una solicitud real.
+- No hay pantalla para marcar una solicitud como resuelta ni lista de solicitudes en Administración.
+- El plazo de 3 años lo eligió Claude; está como pregunta en B.14 del paquete.
+- El tope de 5 por hora no se probó hasta el límite.
+
+## 2026-10-13 — Andre (Claude · revisión de los legales contra la app y paquete del abogado)
+
+**Tocado:** `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/paquete-abogado.md`, y lo que genera `npm run sync:legal` (`constants/legal.ts`, `web/legal-version.js`, `web/legal/*.html`). **Sin migraciones.**
+
+**Resumen:**
+- Se contrastaron los Términos y la Política contra el código, contra la normativa argentina (de memoria, sin fuentes) y con el consejo de asesores (`llm-council`). Comisiones, cancelación, garantía, ausencias y los borrados automáticos coinciden con la app.
+- Términos: entraron tres cosas que la app ya hacía y el texto no decía. §7.4 cambio de horario, §8.9 descuento del 10% por invitación, §9.6 reintegros en USDT (no son automáticos). La vieja §9.6 pasó a §9.7.
+- Política: §2.2 nombra PayPal y USDT; §6 suma Vercel (aloja la web) y Google Fonts (tipografía de las páginas web). Fechas de los dos documentos al 13/10/2026. Versión de los legales: `dfb5f2a950b4`.
+- Paquete del abogado: B.4 estaba desactualizado (decía que las notas del profesional se conservan al darse de baja el cliente; hoy se borran). Se ampliaron A.5 (quién absorbe la revocación; en Mercado Pago se debita del profesional y §8.8 no lo avisa) y B.7 (BCRA, CNV por USDT, Monotributo), y se agregaron B.10 a B.14.
+- Plugins legales: `anthropics/claude-for-legal` es para equipos legales y no trae derecho argentino. La adaptación `juanmartincalvete-boop/claude-for-legal-argentina` es una copia de mayo con una carpeta de perfiles (civil, laboral, penal, etc.) sin consumo ni datos personales en profundidad. No se instaló ninguno.
+
+**Pendiente para la próxima sesión:**
+- Decisiones de Andre: lanzar solo con Mercado Pago o también con PayPal y USDT; convertir el botón de arrepentimiento en formulario que emita el código solo; qué domicilio publicar.
+- Los textos nuevos (§7.4, §8.9, §9.6) los redactó Claude describiendo el código; no los vio un abogado.
+- Falta publicar: la web toma los cambios cuando Andre haga push.
+
 ## 2026-10-13 — Andre (Claude · se va "Perfil de ejemplo" del menú de Perfil)
 
 **Tocado:** `screens/ProfileOwnScreen.tsx`. **Sin migraciones.**

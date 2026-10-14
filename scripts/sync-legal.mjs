@@ -262,6 +262,25 @@ const CSS = `
   }
   .nav a.regret[aria-current="page"] { text-decoration: none; }
   .fechas { color: var(--soft); }
+
+  /* Formulario del botón de arrepentimiento. Solo lo usa esa página. */
+  .revocar { margin: 1.25rem 0 2rem; padding: 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; }
+  .revocar label { display: block; margin: 0 0 14px; font-weight: 700; font-size: .92rem; }
+  .revocar .opcional { font-weight: 500; color: var(--soft); }
+  .revocar input, .revocar textarea {
+    display: block; width: 100%; margin-top: 6px; padding: 12px 14px;
+    font: inherit; font-weight: 500; color: var(--olive);
+    background: #FFFFFF; border: 1px solid rgba(86,94,50,.32); border-radius: 12px;
+  }
+  .revocar textarea { min-height: 96px; resize: vertical; }
+  .revocar button {
+    min-height: 48px; padding: 0 22px; border: 0; border-radius: 999px; cursor: pointer;
+    font: inherit; font-weight: 700; background: var(--terra-ink); color: #FFF6EC; touch-action: manipulation;
+  }
+  .revocar button[disabled] { opacity: .6; cursor: default; }
+  .revocar .trampa { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .revocar .aviso { margin: 14px 0 0; font-size: .92rem; color: var(--terra-ink); font-weight: 600; }
+  .revocar .codigo { display: block; margin: 10px 0; font-size: 1.4rem; font-weight: 800; letter-spacing: .04em; overflow-wrap: anywhere; }
   .draft {
     max-width: 720px; margin: 0 auto 2rem; padding: 12px 16px;
     background: rgba(193,105,79,.10); border: 1px solid rgba(193,105,79,.28);
@@ -289,6 +308,74 @@ const HOME_CSS = `
   .contact .datos { color: var(--soft); font-size: .88rem; }
 `;
 
+// ── El formulario del botón de arrepentimiento ───────────────────────────────
+// Va SOLO en la página web: adentro de la app el documento se muestra como
+// texto, y ahí el .md manda a esta página. Lo recibe la edge function
+// `revocacion`, que emite el código en el momento (Res. 424/2020). Sin
+// JavaScript el formulario no se ve y queda el correo, que el texto ya explica.
+const REVOCAR_URL = 'https://ggygiihhnkjrerpinhha.supabase.co/functions/v1/revocacion';
+const REVOCAR_ANCLA = '<h2>Cómo lo ejercés</h2>';
+const REVOCAR_FORM = `
+<form class="revocar" id="revocar" hidden novalidate>
+  <label>Nombre y apellido
+    <input name="nombre" type="text" autocomplete="name" maxlength="120" required>
+  </label>
+  <label>Correo electrónico con el que reservaste o pagaste
+    <input name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required>
+  </label>
+  <label>Fecha de la reserva y profesional <span class="opcional">(si los tenés a mano)</span>
+    <textarea name="detalle" maxlength="600"></textarea>
+  </label>
+  <label class="trampa" aria-hidden="true">No completar
+    <input name="sitio" type="text" tabindex="-1" autocomplete="off">
+  </label>
+  <button type="submit">Enviar arrepentimiento</button>
+  <p class="aviso" role="alert" hidden></p>
+</form>
+<div class="revocar" id="revocar-listo" role="status" tabindex="-1" hidden></div>
+<script>
+(function () {
+  var form = document.getElementById('revocar');
+  var listo = document.getElementById('revocar-listo');
+  if (!form || !window.fetch) return;
+  form.hidden = false;
+  var aviso = form.querySelector('.aviso');
+  var boton = form.querySelector('button');
+  function fallo(texto) { aviso.textContent = texto; aviso.hidden = false; boton.disabled = false; }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    aviso.hidden = true;
+    var d = new FormData(form);
+    var nombre = String(d.get('nombre') || '').trim();
+    var email = String(d.get('email') || '').trim();
+    if (nombre.length < 2) return fallo('Escribí tu nombre y apellido.');
+    if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$/.test(email)) return fallo('Revisá el correo electrónico.');
+    boton.disabled = true;
+    fetch('${REVOCAR_URL}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: nombre, email: email, detalle: String(d.get('detalle') || ''), sitio: String(d.get('sitio') || '') })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; });
+    }).then(function (res) {
+      if (!res.ok || !res.j.codigo) return fallo(res.j.error || 'No pudimos registrar tu solicitud. Escribinos a vitaappar@gmail.com.');
+      form.hidden = true;
+      listo.textContent = '';
+      var p1 = document.createElement('p'); p1.textContent = 'Recibimos tu arrepentimiento. Tu código de identificación de la revocación es:';
+      var c = document.createElement('strong'); c.className = 'codigo'; c.textContent = res.j.codigo;
+      var p2 = document.createElement('p');
+      p2.textContent = res.j.mail === false
+        ? 'Guardalo: es tu constancia. No pudimos mandártelo por correo, así que anotalo o sacale una captura.'
+        : 'Guardalo: es tu constancia. También te lo mandamos por correo.';
+      listo.appendChild(p1); listo.appendChild(c); listo.appendChild(p2);
+      listo.hidden = false; listo.focus();
+    }).catch(function () {
+      fallo('No pudimos conectarnos. Probá de nuevo o escribinos a vitaappar@gmail.com.');
+    });
+  });
+})();
+</script>`;
+
 const draftNotice = unique.length
   ? `<div class="draft"><strong>Borrador.</strong> Este documento todavía tiene campos sin completar y no fue revisado por un/a profesional del derecho. No debe considerarse vigente.</div>`
   : '';
@@ -308,8 +395,14 @@ for (const { key, md } of forWeb) {
   // líneas seguidas y Markdown las junta en un párrafo. Se corrige SOLO al
   // dibujar la página: tocar el .md cambiaría LEGAL_VERSION y las aceptaciones.
   const mdWeb = md.replace(/\n(\*\*Vigencia)/g, '  \n$1');
-  const cuerpo = wrapTables(marked.parse(mdWeb))
+  let cuerpo = wrapTables(marked.parse(mdWeb))
     .replace(/<p>(<strong>Última actualización)/, '<p class="fechas">$1');
+  if (key === 'REGRET') {
+    // Si alguien renombra el título, que el build falle acá y no que la página
+    // salga sin formulario en silencio.
+    if (!cuerpo.includes(REVOCAR_ANCLA)) throw new Error(`sync-legal: no encuentro "${REVOCAR_ANCLA}" en el botón de arrepentimiento, y ahí va el formulario`);
+    cuerpo = cuerpo.replace(REVOCAR_ANCLA, REVOCAR_ANCLA + REVOCAR_FORM);
+  }
   const html = `<!doctype html>
 <html lang="es">
 <head>

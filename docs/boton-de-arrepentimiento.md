@@ -8,7 +8,7 @@
 
 # Botón de arrepentimiento
 
-**Última actualización:** 25 de septiembre de 2026
+**Última actualización:** 13 de octubre de 2026
 
 ## Qué es
 
@@ -18,17 +18,17 @@ Es un derecho **irrenunciable**: no hace falta que expliques por qué, no tiene 
 
 ## Cómo lo ejercés
 
-No necesitás tener cuenta, ni estar logueado, ni hacer ningún trámite previo. Escribinos a **vitaappar@gmail.com** con el asunto **"ARREPENTIMIENTO"** e incluí:
+No necesitás tener cuenta, ni estar logueado, ni hacer ningún trámite previo. Completá el formulario de esta página, en https://vitaapp.com.ar/legal/arrepentimiento, con:
 
 - Tu nombre y apellido.
 - El correo electrónico con el que reservaste (o el que usaste para pagar).
 - La fecha en que hiciste la reserva y, si lo tenés a mano, con qué profesional.
 
-Con eso alcanza. No hace falta ningún formulario ni ningún dato adicional.
+Con eso alcanza. Si preferís, también podés escribirnos a **vitaappar@gmail.com** con el asunto **"ARREPENTIMIENTO"** y esos mismos datos.
 
 ## Qué pasa después
 
-1. **Dentro de las 24 horas** de recibida tu solicitud te enviamos por correo electrónico un **código de identificación de la revocación**. Ese código es tu constancia: guardalo.
+1. Al enviar el formulario te mostramos en pantalla y te mandamos por correo electrónico un **código de identificación de la revocación**. Si nos escribiste por correo, te lo enviamos **dentro de las 24 horas**. Ese código es tu constancia: guardalo.
 2. Damos de baja la Sesión y te **reintegramos el 100% de lo que pagaste**, sin cargo alguno.
 3. El reintegro se hace a través del mismo medio de pago que usaste, por medio del procesador de pagos. **Los tiempos de acreditación dependen de tu banco o de la tarjeta**, no de nosotros: normalmente entre 5 y 20 días hábiles según el medio.
 
