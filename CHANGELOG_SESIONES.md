@@ -1,3 +1,22 @@
+## 2026-10-13 — Andre (Claude · el botón de arrepentimiento pasa a ser un formulario)
+
+**Tocado:** `supabase/migrations/20261013010000_revocaciones.sql` (nuevo), `supabase/functions/revocacion/index.ts` (nuevo), `supabase/config.toml`, `scripts/sync-legal.mjs`, `docs/boton-de-arrepentimiento.md`, `docs/politica-de-privacidad.md`, `docs/paquete-abogado.md`, `SCHEMA.md`, y lo que genera `npm run sync:legal`.
+
+**Resumen:**
+- Andre decidió dos cosas: lanzar con Mercado Pago, PayPal y USDT (las preguntas de BCRA, CNV y Monotributo pasan a bloquear el lanzamiento, anotado en B.7 del paquete) y convertir el botón de arrepentimiento en formulario.
+- El botón era un enlace a un correo y el código de la Res. 424/2020 dependía de contestarlo a mano. Ahora la página tiene un formulario (nombre, correo, detalle opcional) y la función `revocacion` emite el código en el momento: lo muestra en pantalla y lo manda por correo. Vita recibe un aviso con los datos.
+- **Base de datos:** tabla nueva `revocaciones`, sin permisos para `anon` ni `authenticated`, con borrado automático a los 3 años. Corrida y verificada en producción; SCHEMA.md actualizado. Función desplegada (v1) y probada con un envío real a la casilla de Vita; la fila de prueba se borró.
+- El formulario no cancela ni reintegra: no tiene sesión y no puede saber quién lo completa. Eso lo hace Andre al recibir el aviso.
+- Política: §2.7 y §10 declaran los datos del formulario y su plazo. Versión de los legales: `ce89e36e7171`.
+
+**Pendiente para la próxima sesión:**
+- La página con el formulario no está publicada hasta que Andre haga push. No se probó en un navegador real, solo la función por fuera y el script de la página por sintaxis.
+- A Andre le llegaron dos correos de prueba a vitaappar@gmail.com (código REV-20261013-N73L53); no son una solicitud real.
+- No hay pantalla para marcar una solicitud como resuelta ni lista de solicitudes en Administración.
+- El plazo de 3 años lo eligió Claude; está como pregunta en B.14 del paquete.
+- El tope de 5 por hora no se probó hasta el límite.
+
+<<<<<<< HEAD
 ## 2026-10-13 — Andre (Claude · revisión de los legales contra la app y paquete del abogado)
 
 **Tocado:** `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/paquete-abogado.md`, y lo que genera `npm run sync:legal` (`constants/legal.ts`, `web/legal-version.js`, `web/legal/*.html`). **Sin migraciones.**
@@ -13,6 +32,22 @@
 - Decisiones de Andre: lanzar solo con Mercado Pago o también con PayPal y USDT; convertir el botón de arrepentimiento en formulario que emita el código solo; qué domicilio publicar.
 - Los textos nuevos (§7.4, §8.9, §9.6) los redactó Claude describiendo el código; no los vio un abogado.
 - Falta publicar: la web toma los cambios cuando Andre haga push.
+=======
+## 2026-10-14 — Joaquín (Claude · device-test de lo nuevo de Andre + fix de Ondas)
+
+**Tocado:** `screens/OnboardingOndas.tsx`. Directo en `main`.
+
+**Resumen:**
+- **Barrido de calidad** del código nuevo de Andre (23 commits, `499ad611..e1c3f288`, vía subagente con `find-bugs`): el código está muy cuidado, **sin crashes ni fugas reales**. Tres hallazgos menores; el único accionable era el #1.
+- 🟢 **Pendiente de Andre CERRADO — "las ondas de la 8 (Ondas) se traban":** el loop `withRepeat(-1)` de `reloj` (la ola que inclina los aros) solo se cancelaba al desmontar, así que sus worklets seguían recalculando perspective/rotateZ/rotateX cada frame **para siempre**, incluso con los aros ya invisibles (`arosStyle` opacity→0 al terminar de tejerse). Se cancela `reloj` en el fin de `teje`. **Confirmado en device por Joaquín: ya NO se traba.** (Se reconcilió con el rework que Andre pusheó en paralelo del mismo archivo — se tomó su versión y se re-aplicó el fix encima.)
+- Device-test de lo nuevo de Andre, todo OK: 8 bienvenidas, reseña + vibración, guardados de Gratitud/Diario + vibración, cierre de las 6 herramientas (incl. las `visible:false`, a las que se entra por `<Redirect>` → se usó un acceso temporal, ya revertido).
+- **Privacidad fase 5 #2** (`bookings.user_message` que ve la admin): documentado como comentario en el PR #11, **sin fix** (confirmado, pero taparlo exige grants por columna en la tabla central de pagos por un dato que el panel ni muestra — decisión de Andre).
+
+**Pendiente para la próxima sesión:**
+- Hallazgos menores del review, sin accionar (bajo riesgo): #2 timers de `salir()` sin trackear en las 5 bienvenidas (warning post-unmount en ventana angosta de OAuth); #3 notas de sesión en `SalaScreen` requieren `coachInternalId` (confirmar que siempre esté poblado).
+- Dudas de device de Andre aún abiertas: bienvenida 4 (Puente) si la frase entra en una línea en pantallas angostas; splash (grano puntitos + letterSpacing del wordmark).
+- Nombre de la app: Joaquín propone **mui/nui** (de Maui, "hogar") para el artifact de nombres de Andre.
+>>>>>>> ec28e1fa9e5c63e7076391259f831c771ffca2f0
 
 ## 2026-10-13 — Andre (Claude · se va "Perfil de ejemplo" del menú de Perfil)
 

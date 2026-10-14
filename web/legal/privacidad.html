@@ -72,6 +72,25 @@
   }
   .nav a.regret[aria-current="page"] { text-decoration: none; }
   .fechas { color: var(--soft); }
+
+  /* Formulario del botón de arrepentimiento. Solo lo usa esa página. */
+  .revocar { margin: 1.25rem 0 2rem; padding: 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; }
+  .revocar label { display: block; margin: 0 0 14px; font-weight: 700; font-size: .92rem; }
+  .revocar .opcional { font-weight: 500; color: var(--soft); }
+  .revocar input, .revocar textarea {
+    display: block; width: 100%; margin-top: 6px; padding: 12px 14px;
+    font: inherit; font-weight: 500; color: var(--olive);
+    background: #FFFFFF; border: 1px solid rgba(86,94,50,.32); border-radius: 12px;
+  }
+  .revocar textarea { min-height: 96px; resize: vertical; }
+  .revocar button {
+    min-height: 48px; padding: 0 22px; border: 0; border-radius: 999px; cursor: pointer;
+    font: inherit; font-weight: 700; background: var(--terra-ink); color: #FFF6EC; touch-action: manipulation;
+  }
+  .revocar button[disabled] { opacity: .6; cursor: default; }
+  .revocar .trampa { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .revocar .aviso { margin: 14px 0 0; font-size: .92rem; color: var(--terra-ink); font-weight: 600; }
+  .revocar .codigo { display: block; margin: 10px 0; font-size: 1.4rem; font-weight: 800; letter-spacing: .04em; overflow-wrap: anywhere; }
   .draft {
     max-width: 720px; margin: 0 auto 2rem; padding: 12px 16px;
     background: rgba(193,105,79,.10); border: 1px solid rgba(193,105,79,.28);
@@ -125,6 +144,7 @@
 </ul>
 <p><strong>2.5. Lista de espera del sitio web.</strong> Quien deja su correo en vitaapp.com.ar para que le avisemos cuando Vita esté disponible nos proporciona ese correo, si se anota como persona o como Profesional y, si llegó por un enlace de invitación, su código; registramos además la fecha. Lo usamos solo para avisarle del lanzamiento y, si se anotó como Profesional, para contarle cómo postularse. No lo compartimos con terceros ni lo usamos con fines publicitarios.</p>
 <p><strong>2.6. Verificación de identidad de Profesionales.</strong> Al postularse, el Profesional aporta una imagen del frente y del dorso de su documento de identidad y una fotografía de su rostro sosteniendo ese documento. La finalidad es una sola: confirmar que quien ofrece Sesiones es la persona que dice ser, antes de habilitarlo. La comparación la hace <strong>una persona del equipo de Vita</strong>, a simple vista; <strong>Vita no utiliza sistemas automáticos de reconocimiento facial</strong> ni extrae plantillas biométricas. Las imágenes se guardan en un espacio de almacenamiento privado, al que solo accede el equipo de Vita, que <strong>registra quién las abre</strong>; no se muestran en el perfil ni se comparten con otros Usuarios. <strong>Se suprimen apenas se confirma la identidad.</strong> Vita conserva únicamente la constancia: que la identidad fue verificada, la fecha, quién la verificó y el nombre confirmado. Si la postulación no avanza, las imágenes se suprimen al darse de baja la cuenta, o antes si el Profesional lo pide escribiendo a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a>.</p>
+<p><strong>2.7. Formulario de arrepentimiento.</strong> Quien ejerce el derecho de revocación desde el formulario de vitaapp.com.ar/legal/arrepentimiento nos proporciona su nombre, su correo electrónico y, si quiere, los datos para ubicar la reserva. Registramos además la fecha y el código de identificación que le entregamos. Lo usamos solo para tramitar la revocación y dejar constancia de ella. El correo con el código se envía a través de Resend (ver sección 6).</p>
 <h2>3. Datos Sensibles y Consentimiento Explícito</h2>
 <p>Ciertos datos vinculados al Usuario (los registros de estado de ánimo, las entradas de diario y de gratitud, los temas que elige en el cuestionario para encontrar Profesionales, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y <strong>el registro de qué contenidos de bienestar utiliza</strong>) constituyen <strong>datos sensibles</strong> en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.</p>
 <p>3.1. Su tratamiento requiere el <strong>consentimiento libre, expreso e informado</strong> del Usuario. Ese consentimiento se solicita <strong>de forma específica y separada de la aceptación de estos documentos</strong>, la primera vez que el Usuario accede a estas funcionalidades, mostrando previamente qué datos se tratan y con qué finalidad. Vita deja constancia de la fecha y de la versión del texto informado.</p>
@@ -198,6 +218,7 @@
 <li><strong>Reportes y avisos de problemas con una Sesión</strong>: se conservan <strong>disociados de la identidad</strong> del Usuario, porque documentan una actuación de Vita o involucran a otra persona.</li>
 <li><strong>Datos técnicos y de uso</strong> (analítica y calidad de las videollamadas): se conservan <strong>disociados de la identidad</strong> del Usuario.</li>
 <li><strong>Registros de detección de datos de contacto y de pago</strong> (ver 8.3): se conservan <strong>doce (12) meses</strong> desde que se generan y luego se suprimen.</li>
+<li><strong>Solicitudes de arrepentimiento</strong> (ver 2.7): se conservan <strong>tres (3) años</strong> desde la solicitud, como constancia de la revocación, y luego se suprimen de forma automática.</li>
 <li><strong>Correos de la lista de espera</strong> (ver 2.5): se suprimen una vez enviado el aviso, o antes si el titular lo pide por los medios de contacto.</li>
 <li><strong>Imágenes de verificación de identidad</strong> (ver 2.6): se suprimen al confirmarse la identidad. La constancia de la verificación se conserva mientras exista la cuenta y se suprime al darse de baja.</li>
 <li><strong>Datos del Profesional que se da de baja</strong>: su agenda, el enlace de calendario y las notas privadas que escribió <strong>se suprimen de inmediato</strong>. Sus datos de cobro (CBU, alias, cuenta de PayPal, billetera) y la conexión con Mercado Pago se suprimen en el mismo momento si no registra cobros recientes. Si existen cobros, reintegros o reclamos en curso, o cobró alguna Sesión en los últimos ciento ochenta (180) días, se conservan hasta que se completen y transcurra ese plazo, para poder atender reintegros y desconocimientos de pago, y luego se suprimen de forma automática. Las notas que compartió con un Cliente se conservan, porque también pertenecen a ese Cliente. El nombre con el que prestó cada Sesión queda en el registro de esa reserva.</li>

@@ -294,6 +294,8 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 
 **2.6. Verificación de identidad de Profesionales.** Al postularse, el Profesional aporta una imagen del frente y del dorso de su documento de identidad y una fotografía de su rostro sosteniendo ese documento. La finalidad es una sola: confirmar que quien ofrece Sesiones es la persona que dice ser, antes de habilitarlo. La comparación la hace **una persona del equipo de Vita**, a simple vista; **Vita no utiliza sistemas automáticos de reconocimiento facial** ni extrae plantillas biométricas. Las imágenes se guardan en un espacio de almacenamiento privado, al que solo accede el equipo de Vita, que **registra quién las abre**; no se muestran en el perfil ni se comparten con otros Usuarios. **Se suprimen apenas se confirma la identidad.** Vita conserva únicamente la constancia: que la identidad fue verificada, la fecha, quién la verificó y el nombre confirmado. Si la postulación no avanza, las imágenes se suprimen al darse de baja la cuenta, o antes si el Profesional lo pide escribiendo a vitaappar@gmail.com.
 
+**2.7. Formulario de arrepentimiento.** Quien ejerce el derecho de revocación desde el formulario de vitaapp.com.ar/legal/arrepentimiento nos proporciona su nombre, su correo electrónico y, si quiere, los datos para ubicar la reserva. Registramos además la fecha y el código de identificación que le entregamos. Lo usamos solo para tramitar la revocación y dejar constancia de ella. El correo con el código se envía a través de Resend (ver sección 6).
+
 ## 3. Datos Sensibles y Consentimiento Explícito
 
 Ciertos datos vinculados al Usuario (los registros de estado de ánimo, las entradas de diario y de gratitud, los temas que elige en el cuestionario para encontrar Profesionales, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y **el registro de qué contenidos de bienestar utiliza**) constituyen **datos sensibles** en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.
@@ -388,6 +390,7 @@ Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el trat
 - **Reportes y avisos de problemas con una Sesión**: se conservan **disociados de la identidad** del Usuario, porque documentan una actuación de Vita o involucran a otra persona.
 - **Datos técnicos y de uso** (analítica y calidad de las videollamadas): se conservan **disociados de la identidad** del Usuario.
 - **Registros de detección de datos de contacto y de pago** (ver 8.3): se conservan **doce (12) meses** desde que se generan y luego se suprimen.
+- **Solicitudes de arrepentimiento** (ver 2.7): se conservan **tres (3) años** desde la solicitud, como constancia de la revocación, y luego se suprimen de forma automática.
 - **Correos de la lista de espera** (ver 2.5): se suprimen una vez enviado el aviso, o antes si el titular lo pide por los medios de contacto.
 - **Imágenes de verificación de identidad** (ver 2.6): se suprimen al confirmarse la identidad. La constancia de la verificación se conserva mientras exista la cuenta y se suprime al darse de baja.
 - **Datos del Profesional que se da de baja**: su agenda, el enlace de calendario y las notas privadas que escribió **se suprimen de inmediato**. Sus datos de cobro (CBU, alias, cuenta de PayPal, billetera) y la conexión con Mercado Pago se suprimen en el mismo momento si no registra cobros recientes. Si existen cobros, reintegros o reclamos en curso, o cobró alguna Sesión en los últimos ciento ochenta (180) días, se conservan hasta que se completen y transcurra ese plazo, para poder atender reintegros y desconocimientos de pago, y luego se suprimen de forma automática. Las notas que compartió con un Cliente se conservan, porque también pertenecen a ese Cliente. El nombre con el que prestó cada Sesión queda en el registro de esa reserva.
@@ -429,7 +432,7 @@ Consultas o ejercicio de derechos: vitaappar@gmail.com. Andre Albisu Lambertini,
 
 export const REGRET_MD = `# Botón de arrepentimiento
 
-**Última actualización:** 25 de septiembre de 2026
+**Última actualización:** 13 de octubre de 2026
 
 ## Qué es
 
@@ -439,17 +442,17 @@ Es un derecho **irrenunciable**: no hace falta que expliques por qué, no tiene 
 
 ## Cómo lo ejercés
 
-No necesitás tener cuenta, ni estar logueado, ni hacer ningún trámite previo. Escribinos a **vitaappar@gmail.com** con el asunto **"ARREPENTIMIENTO"** e incluí:
+No necesitás tener cuenta, ni estar logueado, ni hacer ningún trámite previo. Completá el formulario de esta página, en https://vitaapp.com.ar/legal/arrepentimiento, con:
 
 - Tu nombre y apellido.
 - El correo electrónico con el que reservaste (o el que usaste para pagar).
 - La fecha en que hiciste la reserva y, si lo tenés a mano, con qué profesional.
 
-Con eso alcanza. No hace falta ningún formulario ni ningún dato adicional.
+Con eso alcanza. Si preferís, también podés escribirnos a **vitaappar@gmail.com** con el asunto **"ARREPENTIMIENTO"** y esos mismos datos.
 
 ## Qué pasa después
 
-1. **Dentro de las 24 horas** de recibida tu solicitud te enviamos por correo electrónico un **código de identificación de la revocación**. Ese código es tu constancia: guardalo.
+1. Al enviar el formulario te mostramos en pantalla y te mandamos por correo electrónico un **código de identificación de la revocación**. Si nos escribiste por correo, te lo enviamos **dentro de las 24 horas**. Ese código es tu constancia: guardalo.
 2. Damos de baja la Sesión y te **reintegramos el 100% de lo que pagaste**, sin cargo alguno.
 3. El reintegro se hace a través del mismo medio de pago que usaste, por medio del procesador de pagos. **Los tiempos de acreditación dependen de tu banco o de la tarjeta**, no de nosotros: normalmente entre 5 y 20 días hábiles según el medio.
 
@@ -538,7 +541,7 @@ export const LEGAL_PLACEHOLDERS: string[] = [];
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = 'dfb5f2a950b4';
+export const LEGAL_VERSION = 'ce89e36e7171';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

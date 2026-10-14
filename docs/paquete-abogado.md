@@ -481,9 +481,10 @@ cobranza, y hace falta alguna previsión adicional en §8.2 o en §4?
 - [ ] El importe bruto entra a mis cuentas aunque mi ingreso sea solo la
       comisión. ¿Cómo lo documento para que no cuente contra el tope del
       Monotributo?
-- [ ] Alternativa que estoy evaluando: **lanzar solo con Mercado Pago**, donde
-      la plata no pasa por mí, y sumar PayPal y USDT más adelante. ¿Con eso
-      desaparecen estas tres preguntas?
+- [ ] *13/10/2026: decidí lanzar con los tres medios (Mercado Pago, PayPal y
+      USDT), así que las tres preguntas de arriba bloquean el lanzamiento.* Si
+      alguna no tiene salida para una persona física, ¿alcanza con postergar
+      solo ese medio?
 
 **B.8 — Cifrado de los datos sensibles.**
 El diario y la gratitud se cifran en el teléfono antes de guardarse, así que en
@@ -545,9 +546,14 @@ pasarle los contratos y los datos sin volver a pedirle consentimiento a cada
 usuario?
 
 **B.14 — Obligaciones de la web pública.**
-- [ ] El botón de arrepentimiento hoy es un enlace que abre un correo. El código
-      de revocación en 24 horas (Res. 424/2020) depende de que yo lo conteste a
-      mano. ¿Cumple, o tiene que ser un formulario que emita el código solo?
+- [ ] *13/10/2026: el botón de arrepentimiento ya es un formulario que emite el
+      código de revocación en el momento, en pantalla y por correo.* Pide
+      nombre, correo y, opcional, datos para ubicar la reserva. No cancela ni
+      reintegra solo: eso lo hago yo después de ubicar la reserva, porque el
+      formulario no tiene forma de saber quién lo completa. ¿Cumple así con la
+      Res. 424/2020? ¿Hay un plazo máximo para el reintegro?
+- [ ] Guardo esas solicitudes tres años como constancia (Política §10). ¿Es el
+      plazo correcto?
 - [ ] ¿Me corresponde el "botón de baja" (Res. 271/2020), o no aplica porque no
       hay suscripción?
 - [ ] ¿Tiene que estar en la portada el enlace a Defensa del Consumidor / la

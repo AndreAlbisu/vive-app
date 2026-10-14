@@ -72,6 +72,25 @@
   }
   .nav a.regret[aria-current="page"] { text-decoration: none; }
   .fechas { color: var(--soft); }
+
+  /* Formulario del botón de arrepentimiento. Solo lo usa esa página. */
+  .revocar { margin: 1.25rem 0 2rem; padding: 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; }
+  .revocar label { display: block; margin: 0 0 14px; font-weight: 700; font-size: .92rem; }
+  .revocar .opcional { font-weight: 500; color: var(--soft); }
+  .revocar input, .revocar textarea {
+    display: block; width: 100%; margin-top: 6px; padding: 12px 14px;
+    font: inherit; font-weight: 500; color: var(--olive);
+    background: #FFFFFF; border: 1px solid rgba(86,94,50,.32); border-radius: 12px;
+  }
+  .revocar textarea { min-height: 96px; resize: vertical; }
+  .revocar button {
+    min-height: 48px; padding: 0 22px; border: 0; border-radius: 999px; cursor: pointer;
+    font: inherit; font-weight: 700; background: var(--terra-ink); color: #FFF6EC; touch-action: manipulation;
+  }
+  .revocar button[disabled] { opacity: .6; cursor: default; }
+  .revocar .trampa { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .revocar .aviso { margin: 14px 0 0; font-size: .92rem; color: var(--terra-ink); font-weight: 600; }
+  .revocar .codigo { display: block; margin: 10px 0; font-size: 1.4rem; font-weight: 800; letter-spacing: .04em; overflow-wrap: anywhere; }
   .draft {
     max-width: 720px; margin: 0 auto 2rem; padding: 12px 16px;
     background: rgba(193,105,79,.10); border: 1px solid rgba(193,105,79,.28);
@@ -93,21 +112,80 @@
 
 <main>
 <h1>Botón de arrepentimiento</h1>
-<p class="fechas"><strong>Última actualización:</strong> 25 de septiembre de 2026</p>
+<p class="fechas"><strong>Última actualización:</strong> 13 de octubre de 2026</p>
 <h2>Qué es</h2>
 <p>Si contrataste una Sesión en Vita, tenés derecho a <strong>arrepentirte y dejar sin efecto la contratación dentro de los 10 (diez) días corridos</strong>, contados desde que confirmaste la reserva.</p>
 <p>Es un derecho <strong>irrenunciable</strong>: no hace falta que expliques por qué, no tiene ningún costo para vos, y nadie puede pedirte que renuncies a él. Está previsto en el <strong>artículo 34 de la Ley 24.240</strong> de Defensa del Consumidor y en los <strong>artículos 1110 a 1116 del Código Civil y Comercial</strong>.</p>
 <h2>Cómo lo ejercés</h2>
-<p>No necesitás tener cuenta, ni estar logueado, ni hacer ningún trámite previo. Escribinos a <strong><a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a></strong> con el asunto <strong>&quot;ARREPENTIMIENTO&quot;</strong> e incluí:</p>
+<form class="revocar" id="revocar" hidden novalidate>
+  <label>Nombre y apellido
+    <input name="nombre" type="text" autocomplete="name" maxlength="120" required>
+  </label>
+  <label>Correo electrónico con el que reservaste o pagaste
+    <input name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required>
+  </label>
+  <label>Fecha de la reserva y profesional <span class="opcional">(si los tenés a mano)</span>
+    <textarea name="detalle" maxlength="600"></textarea>
+  </label>
+  <label class="trampa" aria-hidden="true">No completar
+    <input name="sitio" type="text" tabindex="-1" autocomplete="off">
+  </label>
+  <button type="submit">Enviar arrepentimiento</button>
+  <p class="aviso" role="alert" hidden></p>
+</form>
+<div class="revocar" id="revocar-listo" role="status" tabindex="-1" hidden></div>
+<script>
+(function () {
+  var form = document.getElementById('revocar');
+  var listo = document.getElementById('revocar-listo');
+  if (!form || !window.fetch) return;
+  form.hidden = false;
+  var aviso = form.querySelector('.aviso');
+  var boton = form.querySelector('button');
+  function fallo(texto) { aviso.textContent = texto; aviso.hidden = false; boton.disabled = false; }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    aviso.hidden = true;
+    var d = new FormData(form);
+    var nombre = String(d.get('nombre') || '').trim();
+    var email = String(d.get('email') || '').trim();
+    if (nombre.length < 2) return fallo('Escribí tu nombre y apellido.');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return fallo('Revisá el correo electrónico.');
+    boton.disabled = true;
+    fetch('https://ggygiihhnkjrerpinhha.supabase.co/functions/v1/revocacion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: nombre, email: email, detalle: String(d.get('detalle') || ''), sitio: String(d.get('sitio') || '') })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; });
+    }).then(function (res) {
+      if (!res.ok || !res.j.codigo) return fallo(res.j.error || 'No pudimos registrar tu solicitud. Escribinos a vitaappar@gmail.com.');
+      form.hidden = true;
+      listo.textContent = '';
+      var p1 = document.createElement('p'); p1.textContent = 'Recibimos tu arrepentimiento. Tu código de identificación de la revocación es:';
+      var c = document.createElement('strong'); c.className = 'codigo'; c.textContent = res.j.codigo;
+      var p2 = document.createElement('p');
+      p2.textContent = res.j.mail === false
+        ? 'Guardalo: es tu constancia. No pudimos mandártelo por correo, así que anotalo o sacale una captura.'
+        : 'Guardalo: es tu constancia. También te lo mandamos por correo.';
+      listo.appendChild(p1); listo.appendChild(c); listo.appendChild(p2);
+      listo.hidden = false; listo.focus();
+    }).catch(function () {
+      fallo('No pudimos conectarnos. Probá de nuevo o escribinos a vitaappar@gmail.com.');
+    });
+  });
+})();
+</script>
+<p>No necesitás tener cuenta, ni estar logueado, ni hacer ningún trámite previo. Completá el formulario de esta página, en <a href="https://vitaapp.com.ar/legal/arrepentimiento">https://vitaapp.com.ar/legal/arrepentimiento</a>, con:</p>
 <ul>
 <li>Tu nombre y apellido.</li>
 <li>El correo electrónico con el que reservaste (o el que usaste para pagar).</li>
 <li>La fecha en que hiciste la reserva y, si lo tenés a mano, con qué profesional.</li>
 </ul>
-<p>Con eso alcanza. No hace falta ningún formulario ni ningún dato adicional.</p>
+<p>Con eso alcanza. Si preferís, también podés escribirnos a <strong><a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a></strong> con el asunto <strong>&quot;ARREPENTIMIENTO&quot;</strong> y esos mismos datos.</p>
 <h2>Qué pasa después</h2>
 <ol>
-<li><strong>Dentro de las 24 horas</strong> de recibida tu solicitud te enviamos por correo electrónico un <strong>código de identificación de la revocación</strong>. Ese código es tu constancia: guardalo.</li>
+<li>Al enviar el formulario te mostramos en pantalla y te mandamos por correo electrónico un <strong>código de identificación de la revocación</strong>. Si nos escribiste por correo, te lo enviamos <strong>dentro de las 24 horas</strong>. Ese código es tu constancia: guardalo.</li>
 <li>Damos de baja la Sesión y te <strong>reintegramos el 100% de lo que pagaste</strong>, sin cargo alguno.</li>
 <li>El reintegro se hace a través del mismo medio de pago que usaste, por medio del procesador de pagos. <strong>Los tiempos de acreditación dependen de tu banco o de la tarjeta</strong>, no de nosotros: normalmente entre 5 y 20 días hábiles según el medio.</li>
 </ol>
