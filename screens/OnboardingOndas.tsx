@@ -223,7 +223,10 @@ export default function OnboardingOndas() {
     pendientes.current.forEach(clearTimeout);
     hintOp.value = withTiming(0, { duration: 200 });
     sale.value = withTiming(1, { duration: EXIT_MS, easing: EASE_OUT });
-    setTimeout(navegar, EXIT_MS);
+    // Trackeado: si el login OAuth desmonta la pantalla durante el fade, el
+    // cleanup cancela este timer y `navegar` no corre post-unmount (el index
+    // rutea según el user). Antes era un setTimeout suelto (review 14/10).
+    pendientes.current.push(setTimeout(navegar, EXIT_MS));
   }, [navegar]);
 
   const vibrar = useCallback((estilo: Haptics.ImpactFeedbackStyle) => {

@@ -326,8 +326,11 @@ export default function OnboardingPuente() {
     hintOp.value = withTiming(0, { duration: 200 });
     sale.value = withTiming(1, { duration: EXIT_MS, easing: EASE_OUT });
     // La pantalla que sigue es clara: la barra vuelve a oscuro con el fundido.
-    setTimeout(() => setOscuroYa(false), EXIT_MS * 0.6);
-    setTimeout(navegar, EXIT_MS);
+    // Trackeados para que el cleanup los cancele si se desmonta durante el fade
+    // (login OAuth): sin esto, `setOscuroYa` disparaba un warning post-unmount y
+    // `navegar` corría de más (review 14/10).
+    pendientes.current.push(setTimeout(() => setOscuroYa(false), EXIT_MS * 0.6));
+    pendientes.current.push(setTimeout(navegar, EXIT_MS));
   }, [navegar]);
 
   const vibrar = useCallback((estilo: Haptics.ImpactFeedbackStyle) => {
@@ -629,7 +632,7 @@ export default function OnboardingPuente() {
           style={[styles.etiquetas, { top: etiquetaY, width: W, marginLeft: -W / 2 }]}
         >
           <Animated.Text style={[styles.etiqueta, { width: 2 * ORILLA_IZQ * K }, etiquetaStyle]}>vos</Animated.Text>
-          <Animated.Text style={[styles.etiqueta, styles.etiquetaDer, etiquetaStyle]}>vos, en calma</Animated.Text>
+          <Animated.Text style={[styles.etiqueta, styles.etiquetaDer, etiquetaStyle]}>vos, de nuevo</Animated.Text>
         </View>
 
         {/* Un solo lugar para leer: la frase → "vita / te acompaña". */}

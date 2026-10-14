@@ -1,3 +1,23 @@
+## 2026-10-14 — Joaquín (Claude · device-test de lo nuevo de Andre + fix de Ondas)
+
+**Tocado:** `screens/OnboardingOndas.tsx`. Directo en `main`.
+
+**Resumen:**
+- **Barrido de calidad** del código nuevo de Andre (23 commits, `499ad611..e1c3f288`, vía subagente con `find-bugs`): el código está muy cuidado, **sin crashes ni fugas reales**. Tres hallazgos menores; el único accionable era el #1.
+- 🟢 **Pendiente de Andre CERRADO — "las ondas de la 8 (Ondas) se traban":** el loop `withRepeat(-1)` de `reloj` (la ola que inclina los aros) solo se cancelaba al desmontar, así que sus worklets seguían recalculando perspective/rotateZ/rotateX cada frame **para siempre**, incluso con los aros ya invisibles (`arosStyle` opacity→0 al terminar de tejerse). Se cancela `reloj` en el fin de `teje`. **Confirmado en device por Joaquín: ya NO se traba.** (Se reconcilió con el rework que Andre pusheó en paralelo del mismo archivo — se tomó su versión y se re-aplicó el fix encima.)
+- Device-test de lo nuevo de Andre, todo OK: 8 bienvenidas, reseña + vibración, guardados de Gratitud/Diario + vibración, cierre de las 6 herramientas (incl. las `visible:false`, a las que se entra por `<Redirect>` → se usó un acceso temporal, ya revertido).
+- **Privacidad fase 5 #2** (`bookings.user_message` que ve la admin): documentado como comentario en el PR #11, **sin fix** (confirmado, pero taparlo exige grants por columna en la tabla central de pagos por un dato que el panel ni muestra — decisión de Andre).
+
+- **Hallazgos #2 y #3 del review, ARREGLADOS:**
+  - **#2** (las 5 bienvenidas): el `setTimeout(navegar, EXIT_MS)` de `salir()` no iba al array `pendientes` → sobrevivía al unmount. Si el login OAuth desmontaba durante el fade, `navegar` corría de más (y en Puente `setOscuroYa` tiraba warning post-unmount). Ahora van por `pendientes.current`, que el cleanup cancela.
+  - **#3** (`SalaScreen`): el "+" (que contiene las notas) estaba gateado en `coachInternalId`, que solo necesita la recomendación de recursos. Si ese fetch fallaba por red, el coach perdía acceso a las notas (regresión vs. el botón viejo). Desacoplado: el "+" aparece si puede recomendar **o** anotar, y abre lo que haya disponible.
+- **Bienvenida Puente:** etiqueta de la orilla derecha `la ayuda` → **`vos, de nuevo`** (decisión de Joaquín sobre la metáfora: las dos orillas sos vos, antes y después de cruzar; sin género). Y la frase `la ayuda existe. falta el puente.` escala con el ancho (21→16.5) + `numberOfLines=1`: a 21 se partía en teléfonos ≤375pt (cerraba una duda de device de Andre, verificada por lógica).
+
+**Pendiente para la próxima sesión:**
+- Dudas de device de Andre aún abiertas: la bienvenida de las vueltas (¿marea? ¿salto al fundir?); splash (grano puntitos + letterSpacing del wordmark).
+- Nombre de la app: Joaquín eligió **"vos, de nuevo"** para Puente; y propone **mui/nui** (de Maui, "hogar") para el artifact de nombres de Andre ("Búsqueda de nombre", https://claude.ai/code/artifact/23c07f38-ffd3-4a5e-baaf-0fe3b2acae85) — falta sumarlo ahí.
+- PRs nuestros esperando a Andre: #7, #9, #11 (en #11 quedó documentada la obs. de privacidad #2, sin fix).
+
 ## 2026-10-13 — Andre (Claude · paquete del abogado listo para enviar)
 
 **Tocado:** `docs/paquete-abogado.md`. **Sin migraciones.**
@@ -42,7 +62,6 @@
 - El plazo de 3 años lo eligió Claude; está como pregunta en B.14 del paquete.
 - El tope de 5 por hora no se probó hasta el límite.
 
-<<<<<<< HEAD
 ## 2026-10-13 — Andre (Claude · revisión de los legales contra la app y paquete del abogado)
 
 **Tocado:** `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/paquete-abogado.md`, y lo que genera `npm run sync:legal` (`constants/legal.ts`, `web/legal-version.js`, `web/legal/*.html`). **Sin migraciones.**
@@ -58,22 +77,6 @@
 - Decisiones de Andre: lanzar solo con Mercado Pago o también con PayPal y USDT; convertir el botón de arrepentimiento en formulario que emita el código solo; qué domicilio publicar.
 - Los textos nuevos (§7.4, §8.9, §9.6) los redactó Claude describiendo el código; no los vio un abogado.
 - Falta publicar: la web toma los cambios cuando Andre haga push.
-=======
-## 2026-10-14 — Joaquín (Claude · device-test de lo nuevo de Andre + fix de Ondas)
-
-**Tocado:** `screens/OnboardingOndas.tsx`. Directo en `main`.
-
-**Resumen:**
-- **Barrido de calidad** del código nuevo de Andre (23 commits, `499ad611..e1c3f288`, vía subagente con `find-bugs`): el código está muy cuidado, **sin crashes ni fugas reales**. Tres hallazgos menores; el único accionable era el #1.
-- 🟢 **Pendiente de Andre CERRADO — "las ondas de la 8 (Ondas) se traban":** el loop `withRepeat(-1)` de `reloj` (la ola que inclina los aros) solo se cancelaba al desmontar, así que sus worklets seguían recalculando perspective/rotateZ/rotateX cada frame **para siempre**, incluso con los aros ya invisibles (`arosStyle` opacity→0 al terminar de tejerse). Se cancela `reloj` en el fin de `teje`. **Confirmado en device por Joaquín: ya NO se traba.** (Se reconcilió con el rework que Andre pusheó en paralelo del mismo archivo — se tomó su versión y se re-aplicó el fix encima.)
-- Device-test de lo nuevo de Andre, todo OK: 8 bienvenidas, reseña + vibración, guardados de Gratitud/Diario + vibración, cierre de las 6 herramientas (incl. las `visible:false`, a las que se entra por `<Redirect>` → se usó un acceso temporal, ya revertido).
-- **Privacidad fase 5 #2** (`bookings.user_message` que ve la admin): documentado como comentario en el PR #11, **sin fix** (confirmado, pero taparlo exige grants por columna en la tabla central de pagos por un dato que el panel ni muestra — decisión de Andre).
-
-**Pendiente para la próxima sesión:**
-- Hallazgos menores del review, sin accionar (bajo riesgo): #2 timers de `salir()` sin trackear en las 5 bienvenidas (warning post-unmount en ventana angosta de OAuth); #3 notas de sesión en `SalaScreen` requieren `coachInternalId` (confirmar que siempre esté poblado).
-- Dudas de device de Andre aún abiertas: bienvenida 4 (Puente) si la frase entra en una línea en pantallas angostas; splash (grano puntitos + letterSpacing del wordmark).
-- Nombre de la app: Joaquín propone **mui/nui** (de Maui, "hogar") para el artifact de nombres de Andre.
->>>>>>> ec28e1fa9e5c63e7076391259f831c771ffca2f0
 
 ## 2026-10-13 — Andre (Claude · se va "Perfil de ejemplo" del menú de Perfil)
 
