@@ -20,7 +20,7 @@ import Animated, {
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { CONCENTRICO_ALTO, CONCENTRICO_ANCHO, CONCENTRICO_D } from '@/constants/isotipoConcentrico';
-import { aroCaja } from '@/components/ui/Anillo';
+import { Anillo, aroCaja } from '@/components/ui/Anillo';
 import { Grain } from '@/components/ui/Grain';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { anotar, cronometro } from '@/lib/analytics';
@@ -32,15 +32,20 @@ import { anotar, cronometro } from '@/lib/analytics';
 //      aro se inclina hacia atrás y hacia adelante, como una moneda que se
 //      balancea, y cada uno lo hace un instante después que el de adentro:
 //      una ola lenta recorre el juego de adentro hacia afuera.
-//      "lo que te pasa le pasa a alguien más"
-//   2. Tocás: los aros se van quedando de frente, quietos, y los tres juegos
-//      se acercan hasta engancharse.
-//   3. Queda el isotipo concéntrico, con "vita / te acompaña" debajo.
+//      "lo que sentís se puede compartir"
+//   2. Tocás: los tres juegos se acercan y, mientras tanto, cada aro da media
+//      vuelta sobre sí mismo y queda de frente. No lo hacen todos juntos: va
+//      de adentro hacia afuera y un juego detrás del otro, así que se ve una
+//      seguidilla de aros dándose vuelta.
+//   3. Cuando el último queda de frente se enganchan: del medio salen dos
+//      ondas finas y queda el isotipo concéntrico, con "vita / te acompaña".
 //
 // 📌 Andre las pidió "artísticas y modernas, bellas, hasta hipnóticas", sin
 // confeti ni circo. Ya probó y descartó para este isotipo: las ondas que
-// crecían como gotas (aburridas, y se trababan) y los tres juegos encimados
-// armando un muaré ("marea").
+// crecían como gotas (aburridas, y se trababan), los tres juegos encimados
+// armando un muaré ("marea"), y el paso al logo en el que todos los aros se
+// aplanaban a la vez ("muy aburrido", 13/10/2026). Las dos ondas del final sí
+// le gustan: las vio en las bienvenidas 6 y 7.
 //
 // 🔴 Cómo está hecho. El isotipo es un dibujo calcado y tejido (los aros pasan
 // por arriba y por abajo, ver `constants/isotipoConcentrico.ts`): no se puede
@@ -79,13 +84,21 @@ const PERSPECTIVA = 700;
 // Cada juego se inclina alrededor de un eje distinto.
 const EJES = [0, (2 * Math.PI) / 3, -(2 * Math.PI) / 3];
 
-const FRASE_1 = 'lo que te pasa le pasa a alguien más';
+// 📌 Antes decía "lo que te pasa le pasa a alguien más": a Andre no le encantó (13/10/2026).
+const FRASE_1 = 'lo que sentís se puede compartir';
 
-const QUIETA_MS  = 1450;   // los aros quedan de frente y los juegos se acercan
-const TEJE_EN    = 1300;   // ya casi están: se funden con el dibujo verdadero
+const JUNTA_MS   = 1300;   // los tres juegos se acercan
+const VOLTEA_MS  = 800;    // lo que tarda un aro en dar su media vuelta
+const PASO_ARO   = 110;    // cada aro arranca esto después que el de adentro
+const PASO_JUEGO = 90;     // y cada juego, esto después que el anterior
+// Desde que arranca el primer aro hasta que el último queda de frente.
+const QUIETA_MS  = VOLTEA_MS + 3 * PASO_ARO + 2 * PASO_JUEGO;
+const TEJE_EN    = 1150;   // ya casi están: se funden con el dibujo verdadero
 const TEJE_MS    = 450;
-const MARCA_EN   = 1400;
-const FIN_EN     = 2150;   // todo quieto
+const ONDA_EN    = 1250;   // se enganchan: salen las dos ondas
+const ONDA_MS    = 1500;
+const MARCA_EN   = 1450;
+const FIN_EN     = 2250;   // todo quieto
 const HOLD_MS    = 700;
 const EXIT_MS    = 450;
 const AUTO_MS    = 4000;
@@ -101,30 +114,39 @@ function clamp01(x: number): number {
   return Math.min(1, Math.max(0, x));
 }
 
-/** Un aro: se inclina con la ola mientras espera y queda de frente con `quieta`. */
-function Aro({ r, n, i, k, medio, quieta, reloj }: {
+/**
+ * Un aro: se inclina con la ola mientras espera. Con `quieta` (que avanza
+ * parejo de 0 a 1) le llega el turno, da media vuelta y queda de frente. Un
+ * aro dado vuelta se ve igual que de frente, así que termina en su lugar.
+ * `vuelta` en 0 apaga la media vuelta (reduced motion): solo se aplana.
+ */
+function Aro({ r, n, i, k, medio, quieta, vuelta, reloj }: {
   r: number; n: number; i: number; k: number; medio: number;
-  quieta: SharedValue<number>; reloj: SharedValue<number>;
+  quieta: SharedValue<number>; vuelta: SharedValue<number>; reloj: SharedValue<number>;
 }) {
   const style = useAnimatedStyle(() => {
     const ola = Math.sin(2 * Math.PI * (reloj.value - n * DESFASE - i / 3));
+    const t = clamp01((quieta.value * QUIETA_MS - n * PASO_ARO - i * PASO_JUEGO) / VOLTEA_MS);
+    // Arranca despacio y frena despacio.
+    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(2 - 2 * t, 3) / 2;
     return {
       transform: [
         { perspective: PERSPECTIVA },
         { rotateZ: `${EJES[i]}rad` },
-        { rotateX: `${INCLINA * ola * (1 - quieta.value)}rad` },
+        { rotateX: `${INCLINA * ola * (1 - e) + Math.PI * e * vuelta.value}rad` },
       ],
     };
   });
   return <Animated.View style={[aroCaja(medio, medio, r * k, TRAZO * k), styles.aro, style]} />;
 }
 
-/** Uno de los tres juegos de aros: espera apartado y con `quieta` va a su lugar. */
-function Aros({ j, i, k, quieta, reloj }: {
-  j: Juego; i: number; k: number; quieta: SharedValue<number>; reloj: SharedValue<number>;
+/** Uno de los tres juegos de aros: espera apartado y con `junta` va a su lugar. */
+function Aros({ j, i, k, junta, quieta, vuelta, reloj }: {
+  j: Juego; i: number; k: number; junta: SharedValue<number>;
+  quieta: SharedValue<number>; vuelta: SharedValue<number>; reloj: SharedValue<number>;
 }) {
   const style = useAnimatedStyle(() => {
-    const lejos = SEPARA * (1 - quieta.value) * k;
+    const lejos = SEPARA * (1 - junta.value) * k;
     return {
       transform: [{ translateX: (j.cx - NIDO.x) * lejos }, { translateY: (j.cy - NIDO.y) * lejos }],
     };
@@ -135,7 +157,7 @@ function Aros({ j, i, k, quieta, reloj }: {
       style={[{ position: 'absolute', left: j.cx * k - medio, top: j.cy * k - medio, width: 2 * medio, height: 2 * medio }, style]}
     >
       {j.radios.map((r, n) => (
-        <Aro key={r} r={r} n={n} i={i} k={k} medio={medio} quieta={quieta} reloj={reloj} />
+        <Aro key={r} r={r} n={n} i={i} k={k} medio={medio} quieta={quieta} vuelta={vuelta} reloj={reloj} />
       ))}
     </Animated.View>
   );
@@ -167,11 +189,17 @@ export default function OnboardingOndas() {
   // El texto va debajo de hasta donde llegan los juegos mientras esperan apartados.
   const abajo = NIDO.y + (JUEGOS[1].cy - NIDO.y) * (1 + SEPARA) + JUEGOS[1].radios[3] + TRAZO;
   const textoY = centroY - H / 2 + abajo * K + 12;
+  // El medio de los tres juegos, en la pantalla: de ahí salen las ondas.
+  const medioY = centroY - H / 2 + NIDO.y * K;
+  const ondaRadio = Math.max(width, height) * 0.6;
 
   // ── Valores compartidos ────────────────────────────────────────────────────
   const aparece = useSharedValue(0);
-  const quieta  = useSharedValue(0);  // los aros quedan de frente y los juegos se acercan
+  const junta   = useSharedValue(0);  // los tres juegos se acercan
+  const quieta  = useSharedValue(0);  // avanza parejo: le va dando el turno a cada aro
+  const vuelta  = useSharedValue(1);  // 0: los aros se aplanan sin dar la media vuelta
   const teje    = useSharedValue(0);  // los aros simples se funden con el dibujo
+  const onda    = useSharedValue(0);  // las dos ondas finas del final
   const marca   = useSharedValue(0);
   const sale    = useSharedValue(0);
   const reloj   = useSharedValue(0);  // 0→1 en loop: el latido de los puntos
@@ -202,7 +230,7 @@ export default function OnboardingOndas() {
     if (Platform.OS === 'ios') Haptics.impactAsync(estilo).catch(() => {});
   }, []);
 
-  /** Toda la secuencia. `rapido`: sin ondas que crecen (reduced motion). */
+  /** Toda la secuencia. `rapido`: sin media vuelta ni ondas (reduced motion). */
   const arrancar = useCallback((rapido: boolean) => {
     if (armado.current) return;
     armado.current = true;
@@ -211,20 +239,17 @@ export default function OnboardingOndas() {
 
     const f = rapido ? 0 : 1;   // con reduced motion todo cae en el mismo instante
     if (rapido) {
+      vuelta.value = 0;
+      junta.value = withTiming(1, { duration: 300 });
       quieta.value = withTiming(1, { duration: 300 });
       teje.value = withDelay(200, withTiming(1, { duration: 300 }));
     } else {
-      quieta.value = withTiming(1, { duration: QUIETA_MS, easing: EASE_SUAVE });
-      teje.value = withDelay(TEJE_EN, withTiming(1, { duration: TEJE_MS, easing: Easing.linear }, (finished) => {
-        'worklet';
-        // Al terminar de tejerse, los aros simples ya quedaron invisibles
-        // (arosStyle → 0). Frenar la ola acá para que sus 12 worklets dejen de
-        // recalcular perspective/rotateZ/rotateX cada frame para siempre — era
-        // el sospechoso de que "las ondas se traban" (review de calidad 14/10).
-        if (finished) cancelAnimation(reloj);
-      }));
+      junta.value = withTiming(1, { duration: JUNTA_MS, easing: EASE_SUAVE });
+      quieta.value = withTiming(1, { duration: QUIETA_MS, easing: Easing.linear });
+      teje.value = withDelay(TEJE_EN, withTiming(1, { duration: TEJE_MS, easing: Easing.linear }));
+      onda.value = withDelay(ONDA_EN, withTiming(1, { duration: ONDA_MS, easing: Easing.linear }));
       luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), 0);
-      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), TEJE_EN);
+      luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ONDA_EN);
     }
     marca.value = withDelay(f * MARCA_EN, withTiming(1, { duration: rapido ? 300 : 520, easing: EASE_OUT }));
 
@@ -260,7 +285,7 @@ export default function OnboardingOndas() {
   }, []);
 
   // Mientras nadie toca: la ola que inclina los aros. No hace falta frenarla
-  // al tocar: se aplana sola a medida que `quieta` llega a 1.
+  // al tocar: se apaga sola en cada aro a medida que le llega el turno.
   useEffect(() => {
     if (reduced) {
       cancelAnimation(reloj);
@@ -342,16 +367,20 @@ export default function OnboardingOndas() {
         onPressIn={alApoyar}
         accessible
         accessibilityRole="button"
-        accessibilityLabel="Lo que te pasa le pasa a alguien más. Vita te acompaña. Empezar"
+        accessibilityLabel="Lo que sentís se puede compartir. Vita te acompaña. Empezar"
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
+        {/* Debajo de todo: las ondas que salen del medio cuando se enganchan. */}
+        <Anillo t={onda} x={width / 2} y={medioY} radio={ondaRadio} color={OLIVA} fuerza={0.4} />
+        <Anillo t={onda} x={width / 2} y={medioY} radio={ondaRadio} color={OLIVA} fuerza={0.4} retraso={0.28} />
+
         <View
           pointerEvents="none"
           style={[styles.centrado, { top: centroY - H / 2, marginLeft: -S / 2, width: S, height: H }]}
         >
           <Animated.View style={[StyleSheet.absoluteFill, arosStyle]}>
-            {JUEGOS.map((j, i) => <Aros key={i} j={j} i={i} k={K} quieta={quieta} reloj={reloj} />)}
+            {JUEGOS.map((j, i) => <Aros key={i} j={j} i={i} k={K} junta={junta} quieta={quieta} vuelta={vuelta} reloj={reloj} />)}
           </Animated.View>
           {/* El dibujo verdadero, quieto: aparece cuando los aros ya llegaron. */}
           <Animated.View style={[StyleSheet.absoluteFill, dibujoStyle]}>

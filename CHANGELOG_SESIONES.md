@@ -1,3 +1,35 @@
+## 2026-10-13 — Andre (Claude · bienvenida 8: otra frase)
+
+**Tocado:** `screens/OnboardingOndas.tsx`
+
+**Resumen:**
+- A Andre no le encantaba "lo que te pasa le pasa a alguien más" (la frase, no la animación). Ahora dice "lo que sentís se puede compartir", también para lectores de pantalla. La propuso Claude; Andre todavía no la aprobó.
+
+**Pendiente para la próxima sesión:**
+- Que Andre confirme las frases nuevas de la 5 y la 8 o elija otras.
+
+## 2026-10-13 — Andre (Claude · bienvenida 5: otra frase)
+
+**Tocado:** `screens/OnboardingCerca.tsx`
+
+**Resumen:**
+- Andre: "hay alguien cerca" sonaba "casi de terror". Ahora dice "siempre hay con quién hablar" (también en el texto para lectores de pantalla). La propuso Claude, sin género a propósito; Andre todavía no la aprobó.
+
+**Pendiente para la próxima sesión:**
+- Que Andre confirme la frase o elija otra.
+
+## 2026-10-13 — Andre (Claude · bienvenida 8: otro paso al logo)
+
+**Tocado:** `screens/OnboardingOndas.tsx`
+
+**Resumen:**
+- Andre: en la 8, cómo pasa de los aros que se balancean al logo era "muy aburrido" (todos los aros se aplanaban a la vez mientras los juegos se acercaban).
+- Ahora, al tocar, cada aro da media vuelta sobre sí mismo y queda de frente, pero de a uno: de adentro hacia afuera y un juego detrás del otro. Cuando el último queda de frente salen del medio las dos ondas finas de las bienvenidas 6 y 7, que a Andre le gustan.
+- Siguen siendo vistas con borde, sin SVG en movimiento. Con movimiento reducido no hay media vuelta ni ondas.
+
+**Pendiente para la próxima sesión:**
+- Sin probar en teléfono. Mirar que la seguidilla de vueltas no maree y que no se note un salto al fundirse con el dibujo tejido.
+
 ## 2026-10-12 — Andre (Claude · ondas del final sin trabarse)
 
 **Tocado:** `components/ui/Anillo.tsx`

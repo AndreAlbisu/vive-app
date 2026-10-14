@@ -29,7 +29,7 @@ import { anotar, cronometro } from '@/lib/analytics';
 //
 //   1. Una flor: seis círculos terracota, transparentes, girando despacio
 //      alrededor de un punto. Donde se pisan el color se hace más hondo. La
-//      flor se abre y se cierra, como si respirara. "hay alguien cerca"
+//      flor se abre y se cierra, como si respirara. "siempre hay con quién hablar"
 //   2. Tocás: la flor se resuelve en el isotipo. Tres de los seis círculos se
 //      juntan en uno solo, lleno, que se corre a su lugar. Los otros tres se
 //      VACÍAN: pierden el color, les queda el borde en oliva y cada uno viaja
@@ -91,7 +91,8 @@ const PETALO_MAX  = 0.92;
 const DISCO_DX = DISCO.cx - 50;
 const DISCO_DY = DISCO.cy - 50;
 
-const FRASE_1 = 'hay alguien cerca';
+// 📌 Antes decía "hay alguien cerca": a Andre le sonó "casi de terror" (13/10/2026).
+const FRASE_1 = 'siempre hay con quién hablar';
 
 const JUNTA_MS    = 950;   // los seis se hacen uno
 const ACOMODA_EN  = 250;
@@ -394,7 +395,7 @@ export default function OnboardingCerca() {
         onPressIn={alApoyar}
         accessible
         accessibilityRole="button"
-        accessibilityLabel="Hay alguien cerca. Vita te acompaña. Empezar"
+        accessibilityLabel="Siempre hay con quién hablar. Vita te acompaña. Empezar"
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={alActivar}
       >
