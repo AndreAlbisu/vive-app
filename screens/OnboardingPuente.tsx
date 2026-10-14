@@ -270,6 +270,12 @@ export default function OnboardingPuente() {
   // El isotipo se arma sobre el puente: sus dos círculos de abajo quedan a la
   // altura del tablero (ahí terminan las orillas) y el de arriba cae donde
   // estaba la cima del arco.
+  // La frase "la ayuda existe. falta el puente." entra en una línea en pantallas
+  // anchas, pero a fontSize 21 se desborda a dos en teléfonos angostos (≤375pt:
+  // SE, mini). Se escala con el ancho para que siga en una línea. 430pt (Pro Max)
+  // → 21; ~375pt → ~18. Tope inferior 16.5 para que no quede diminuta.
+  const fraseSize = Math.max(16.5, Math.min(21, (W / 398) * 21));
+
   const S = Math.min(width * 0.5, 220);    // lado del isotipo
   const KL = S / 100;
   const D = MARK_R * 2 * KL;               // diámetro final de cada círculo
@@ -623,12 +629,12 @@ export default function OnboardingPuente() {
           style={[styles.etiquetas, { top: etiquetaY, width: W, marginLeft: -W / 2 }]}
         >
           <Animated.Text style={[styles.etiqueta, { width: 2 * ORILLA_IZQ * K }, etiquetaStyle]}>vos</Animated.Text>
-          <Animated.Text style={[styles.etiqueta, styles.etiquetaDer, etiquetaStyle]}>la ayuda</Animated.Text>
+          <Animated.Text style={[styles.etiqueta, styles.etiquetaDer, etiquetaStyle]}>vos, en calma</Animated.Text>
         </View>
 
         {/* Un solo lugar para leer: la frase → "vita / te acompaña". */}
         <View style={[styles.arriba, { top: textoY }]} pointerEvents="none">
-          <Animated.Text style={[styles.frase, styles.encima, fraseStyle]}>{FRASE_1}</Animated.Text>
+          <Animated.Text numberOfLines={1} style={[styles.frase, styles.encima, { fontSize: fraseSize }, fraseStyle]}>{FRASE_1}</Animated.Text>
           <Animated.Text style={[styles.marca, marcaStyle]}>vita</Animated.Text>
           <Animated.Text style={[styles.lema, lemaStyle]}>te acompaña</Animated.Text>
         </View>
