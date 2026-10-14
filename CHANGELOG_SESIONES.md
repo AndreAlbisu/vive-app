@@ -1,3 +1,16 @@
+## 2026-10-14 — Joaquín (Claude · tests verdes + fix de timezone + cifrado verificado)
+
+**Tocado:** `lib/cambioDeNombre.ts`. Directo en `main`.
+
+**Resumen:**
+- **Suite de tests corrida: 979/979 verde.** La única falla era un **artefacto de timezone** (la máquina de Joaquín corre en AEST +10, el test asumía Argentina) — los commits recientes no rompieron nada.
+- 🐛 **Bug real destapado y arreglado (`lib/cambioDeNombre.ts`):** el cliente formateaba la fecha de "próximo cambio de nombre" en la zona del DISPOSITIVO, pero la base impone los 30 días en hora de Buenos Aires (`trg_limitar_cambio_de_nombre`). Para un usuario lejos de Argentina (como Joaquín) la app mostraba la fecha corrida un día respecto a la que la base aplica. Ahora `fechaLarga` fija `timeZone: 'America/Argentina/Buenos_Aires'` y el parseo de la fecha pelada de la base se ancla a mediodía -03:00.
+- 🟢 **Pendiente 🔴 CERRADO — cifrado del diario/gratitud verificado de punta a punta en device** (nunca se había probado): Joaquín guardó entradas nuevas, cerró y reabrió la app; se leen bien (descifra). En la base: las entradas nuevas arrancan con `vd1.` (cifrado), y **0 de 6 entradas (4 diario + 2 gratitud) están en claro**. El contenido no toca la base en texto plano por ningún camino.
+
+**Pendiente para la próxima sesión:**
+- El hueco de las notas con el chat deshabilitado (línea ~220): si la solicitud está pendiente o hay bloqueo, el "+" no aparece → el coach pierde entrada a las notas. Decidir/armar una entrada alternativa.
+- PRs nuestros esperando a Andre: #7, #9, #11.
+
 ## 2026-10-14 — Joaquín (Claude · device-test de lo nuevo de Andre + fix de Ondas)
 
 **Tocado:** `screens/OnboardingOndas.tsx`. Directo en `main`.
