@@ -1,3 +1,13 @@
+## 2026-10-13 — Andre (Claude · bienvenida 5: otra frase)
+
+**Tocado:** `screens/OnboardingCerca.tsx`
+
+**Resumen:**
+- Andre: "hay alguien cerca" sonaba "casi de terror". Ahora dice "siempre hay con quién hablar" (también en el texto para lectores de pantalla). La propuso Claude, sin género a propósito; Andre todavía no la aprobó.
+
+**Pendiente para la próxima sesión:**
+- Que Andre confirme la frase o elija otra.
+
 ## 2026-10-13 — Andre (Claude · bienvenida 8: otro paso al logo)
 
 **Tocado:** `screens/OnboardingOndas.tsx`
