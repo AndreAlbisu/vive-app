@@ -1,23 +1,5 @@
 # Paquete para la consulta legal — Vita
 
-> **Cómo usar este archivo.** Es lo que se le manda al abogado/a: contexto +
-> preguntas, redactado para que se entienda sin conocer la app. El estado de
-> cada punto (qué está construido, qué se destraba con cada respuesta) vive en
-> `docs/legal-instrucciones.md` y **no** se manda — es interno.
->
-> Antes de enviarlo: decidir si va la sección **C**, que depende de una decisión
-> de producto todavía abierta.
->
-> Los textos completos están en `docs/terminos-y-condiciones.md` y
-> `docs/politica-de-privacidad.md`, y publicados en
-> `https://vitaapp.com.ar/legal/`. Ya no tienen campos sin completar ni aviso de
-> borrador: están publicados sin revisión profesional.
->
-> **Revisado contra la app el 13/10/2026.** Los archivos `docs/…` que se nombran
-> adentro son internos: o se adjuntan, o se borra la mención antes de mandar.
-
----
-
 ## Mail de encuadre
 
 > Hola,
@@ -33,7 +15,8 @@
 > donde no me alcanza el criterio, y (b) que me digas qué está mal.
 >
 > Abajo te dejo el contexto del negocio y las preguntas concretas, agrupadas
-> por si bloquean o no la publicación. Los textos completos van adjuntos.
+> por si bloquean o no la publicación. Los textos completos van adjuntos y
+> también están publicados en https://vitaapp.com.ar/legal/.
 >
 > Una sola aclaración de alcance: escribí todo pensando en Argentina, pero la
 > app ya permite que alguien que está en el exterior reserve y pague en dólares.
@@ -136,8 +119,7 @@ Córdoba. ¿Es correcta así, considerando que opero desde **Córdoba** y los
 usuarios pueden estar en cualquier provincia o en el exterior?
 
 **A.2 — Consentimiento de datos sensibles (Política §3).**
-📌 *Investigué esto antes de preguntarte — el relevamiento está en
-`docs/consentimiento-datos-sensibles.md`. Lo que sigue es lo que no pude
+📌 *Investigué esto antes de preguntarte. Lo que sigue es lo que no pude
 resolver solo.*
 
 Me llamó la atención que el **art. 7 no menciona el consentimiento** entre las
@@ -176,7 +158,7 @@ empresa**, porque no es lo mismo y creo que las dos cosas cuentan:
 | **Mercado Pago** | datos de pago | Argentina | Argentina |
 | **PayPal** | datos de pago del riel en dólares | EEUU | EEUU |
 | **Resend** | la dirección de correo y el contenido de los mails que manda la app | EEUU | EEUU |
-| **Anthropic** | una categoría, un tono y dos o tres números, sin identificador (ver C.3) | EEUU | EEUU |
+| **Anthropic** | una categoría, un tono y dos o tres números, sin identificador (ver B.15) | EEUU | EEUU |
 | **Cloudflare** | IP y datos técnicos, al crear una cuenta o pedir un código | fuera del país | EEUU |
 | **Vercel** | IP y datos técnicos de quien visita las páginas web | fuera del país | EEUU |
 | **Google, Apple, YouTube** | lo mínimo de la cuenta si se inicia sesión con ellos; IP al reproducir un video o cargar la tipografía de la web | fuera del país | EEUU |
@@ -200,8 +182,7 @@ Tres preguntas que me quedan de la tabla misma:
       lista. Si eso resuelve el punto, es el camino que prefiero.
 
 📌 **Investigué esto por mi cuenta antes de preguntarte, así que la consulta es
-más chica de lo que parece.** El relevamiento completo está en
-`docs/transferencias-internacionales.md`. En resumen: los tres proveedores tienen
+más chica de lo que parece.** En resumen: Supabase, Daily y Expo tienen
 acuerdos de tratamiento de datos, y el de Supabase incorpora las cláusulas tipo
 europeas y se acepta con los términos, sin firma. La Res. 198/2023 admite
 expresamente contratos distintos de su modelo si reflejan los mismos principios.
@@ -223,10 +204,10 @@ Preguntas:
 - [ ] ¿Qué tiene que decir el texto de la Política §7 una vez resuelto? Hoy solo
       es verificable lo de Supabase.
 
-⚠️ **Esta pregunta absorbe a C.3.** Cuando la escribí, la transferencia al
-proveedor de IA me parecía un problema aparte; revisándola, es la transferencia
-**más chica** de todas las que ya hago, por varios órdenes de magnitud. Si esto
-se resuelve, C.3 se resuelve con lo mismo.
+⚠️ **Esta pregunta absorbe la parte de transferencia de B.15.** La que va al
+proveedor de IA es la transferencia **más chica** de todas las que ya hago, por
+varios órdenes de magnitud. Si esto se resuelve, esa parte se resuelve con lo
+mismo.
 
 **A.4 — Aviso de salud y emergencias (T&C §5).**
 La redacción actual aclara que Vita no presta servicios de salud, no diagnostica
@@ -319,7 +300,7 @@ construyó, se apagó, y después una psicóloga consultada corrigió el enfoque
 asociación entre lo que la persona sintió y lo que estaba pasando **es el trabajo
 de la sesión**, no algo que la app deba entregar resuelto. En vez de acceso
 permanente a una tendencia, la persona **arma y manda un paquete** antes de cada
-sesión (`docs/paquete-para-la-sesion.md`). Sin acceso continuo no hay permiso que
+sesión (es la pregunta A.11). Sin acceso continuo no hay permiso que
 consultar. **Contestala igual si te resulta simple** —sirve para saber si el
 camino descartado estaba bien descartado— pero **la pregunta que importa ahora es
 A.11**, y una nueva: ¿cambia algo que la persona envíe texto libre suyo por el
@@ -585,35 +566,8 @@ usuario?
       arrepentimiento.
 - [ ] ¿Tengo que mostrar el código QR de Data Fiscal siendo monotributista?
 
-### C. Solo si decidimos que Sofía conversa — *decidir antes de enviar*
-
-> **Nota interna, borrar antes de mandar:** esta sección solo va si se decide
-> que el asistente sea conversacional. Si queda como router de destinos
-> cerrados, se reemplaza por la pregunta de C.2, que es mucho más chica.
-
-La app tiene un asistente llamado **Sofía**. Hoy es solo interfaz: cuatro
-atajos que llevan a pantallas existentes, sin ninguna inteligencia detrás.
-Estamos evaluando conectarlo a un modelo de lenguaje.
-
-**C.1 — Chat abierto sobre malestar.**
-Si Sofía conversa libremente, cada mensaje es texto libre de una persona sobre
-cómo se siente, procesado por un proveedor externo fuera del país. ¿Qué exige
-eso — consentimiento propio, aviso específico, algo más? ¿Y cambia el encuadre
-de Vita como no prestadora de servicios de salud el hecho de tener un
-interlocutor automático que responde sobre malestar emocional?
-
-**C.2 — Clasificación de texto libre hacia un destino cerrado.**
-Alternativa mucho más acotada, y la que probablemente elijamos: la persona
-escribe qué necesita y el sistema **solo la deriva** a una de las secciones ya
-existentes, o a profesionales que trabajan uno de 28 temas predefinidos. No hay
-conversación ni respuesta generada. ¿Clasificar un relato de malestar para
-derivar puede interpretarse como **triage** o acto sanitario, aun sin
-diagnóstico ni indicación terapéutica?
-
-**C.3 — Redacción asistida de un texto ya decidido.**
-El caso más chico. **Está encendido desde el 04/09/2026** y declarado en la
-Política (§6 y §7), así que esta pregunta no depende de que Sofía converse: va
-en el envío aunque C.1 y C.2 no vayan. En
+**B.15 — Una frase redactada con inteligencia artificial.**
+**Está funcionando desde el 04/09/2026** y declarado en la Política (§6 y §7). En
 la pantalla de inicio se muestra una frase sobre la semana de la persona ("Tu
 semana viene pareja. No todo tiene que ser un antes y un después"). **Qué decir
 lo decide un algoritmo en el propio teléfono**, con reglas fijas. Al proveedor
@@ -639,8 +593,32 @@ modo de **retención cero** (el dato se descarta al terminar de procesarlo, no s
 conserva). Todavía no lo activamos, pero lo vamos a pedir en cualquier
 escenario. Si eso alcanza para cerrar el punto, decímelo.
 
-> ⚠️ Independientemente de la respuesta legal, ya está decidido del lado del
-> producto que **la detección de expresiones de riesgo corre antes que
+### C. Una idea a futuro: que el asistente converse
+
+*No está construido ni decidido. Contestala solo si te resulta rápido: me sirve
+para saber si vale la pena avanzar, no para publicar.*
+
+La app tiene un asistente llamado **Sofía**. Hoy es solo interfaz: cuatro
+atajos que llevan a pantallas existentes, sin ninguna inteligencia detrás.
+Es una idea, que puede hacerse o no, conectarlo a un modelo de lenguaje.
+
+**C.1 — Chat abierto sobre malestar.**
+Si Sofía conversa libremente, cada mensaje es texto libre de una persona sobre
+cómo se siente, procesado por un proveedor externo fuera del país. ¿Qué exige
+eso — consentimiento propio, aviso específico, algo más? ¿Y cambia el encuadre
+de Vita como no prestadora de servicios de salud el hecho de tener un
+interlocutor automático que responde sobre malestar emocional?
+
+**C.2 — Clasificación de texto libre hacia un destino cerrado.**
+Alternativa mucho más acotada, y la que probablemente elijamos si avanzamos: la persona
+escribe qué necesita y el sistema **solo la deriva** a una de las secciones ya
+existentes, o a profesionales que trabajan uno de 28 temas predefinidos. No hay
+conversación ni respuesta generada. ¿Clasificar un relato de malestar para
+derivar puede interpretarse como **triage** o acto sanitario, aun sin
+diagnóstico ni indicación terapéutica?
+
+> ⚠️ Independientemente de la respuesta legal, si esto se construye ya está
+> decidido del lado del producto que **la detección de expresiones de riesgo corre antes que
 > cualquier modelo**, con reglas fijas: si el texto trae señales de crisis, el
 > flujo corta y muestra las líneas de emergencia, sin devolver ninguna
 > recomendación. No es negociable ni depende de esta consulta.
@@ -668,7 +646,7 @@ Para que no gastes tiempo ahí:
 
 1. Los **puntos de A** resueltos, con la redacción que corresponda.
 2. Tu lectura de **B**.
-3. La respuesta de **C** si esa sección quedó en el envío.
+3. **C** solo si te resulta rápido.
 4. Cualquier cosa que veas mal y que yo no haya preguntado. Es lo que más me
    sirve.
 

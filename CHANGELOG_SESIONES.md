@@ -1,3 +1,15 @@
+## 2026-10-13 — Andre (Claude · paquete del abogado listo para enviar)
+
+**Tocado:** `docs/paquete-abogado.md`. **Sin migraciones.**
+
+**Resumen:**
+- Por pedido de Andre se borraron las notas internas (el recuadro "Cómo usar este archivo" y el de la sección C) y las tres menciones a archivos `docs/…`: ninguno hacía falta adjuntarlo, porque cada pregunta ya resume lo que importa.
+- Sofía conversando es una idea que puede hacerse o no (confirmado por Andre). La sección C quedó como "idea a futuro, contestala solo si es rápido", con C.1 y C.2. La frase con IA, que sí está encendida, salió de ahí y pasó a ser B.15.
+
+**Pendiente para la próxima sesión:**
+- Andre lo lee una vez antes de enviarlo: está en su voz y afirma datos de su Monotributo que Claude no puede verificar. Se adjuntan los Términos, la Política, el botón de arrepentimiento y eliminar cuenta, o se manda el enlace una vez hecho el push.
+- Permiso para que Codex corra tareas: lo tiene que agregar Andre.
+
 ## 2026-10-13 — Andre (Claude · paquete del abogado revisado y formulario probado en navegador)
 
 **Tocado:** `docs/paquete-abogado.md`. **Sin migraciones.**
