@@ -1,3 +1,17 @@
+## 2026-10-13 — Andre (Claude · paquete del abogado revisado y formulario probado en navegador)
+
+**Tocado:** `docs/paquete-abogado.md`. **Sin migraciones.**
+
+**Resumen:**
+- El paquete describía una app vieja en varios puntos: placeholders que ya no existen (A.1), consentimiento separado que ya está construido (A.2), una §10.3 "falsa" que ya se corrigió (A.12), la frase con IA como apagada cuando está encendida desde el 04/09 (C.3), sesiones desde el exterior como futuras (B.5), comisión única en los tres rieles, la URL vieja de Vercel y el aviso de borrador. Corregido todo contra el código. Se sumó arriba una lista de las cinco preguntas que más pesan y se completó la tabla de proveedores de A.3.
+- El formulario de arrepentimiento se probó en un navegador con tamaño de teléfono, sirviendo el archivo local bajo el dominio real: validaciones sin pedido de red, envío real con código en pantalla, foco en el recuadro, sin scroll horizontal ni errores. La fila de prueba se borró.
+- Se le pidió la prueba a Codex y el control de permisos bloqueó la llamada que le pasa la tarea; la corrió Claude.
+
+**Pendiente para la próxima sesión:**
+- Andre tiene que decidir si la sección C (Sofía conversando) va en el envío; C.3 va igual. Borrar la nota interna de esa sección y las menciones a archivos `docs/…` o adjuntarlos.
+- A vitaappar@gmail.com llegaron cuatro correos de prueba (códigos REV-20261013-N73L53 y REV-20261013-QVBUE4).
+- La página con el formulario sigue sin publicar hasta el push. Main está 3 commits adelante y 1 atrás de origin.
+
 ## 2026-10-13 — Andre (Claude · el botón de arrepentimiento pasa a ser un formulario)
 
 **Tocado:** `supabase/migrations/20261013010000_revocaciones.sql` (nuevo), `supabase/functions/revocacion/index.ts` (nuevo), `supabase/config.toml`, `scripts/sync-legal.mjs`, `docs/boton-de-arrepentimiento.md`, `docs/politica-de-privacidad.md`, `docs/paquete-abogado.md`, `SCHEMA.md`, y lo que genera `npm run sync:legal`.
