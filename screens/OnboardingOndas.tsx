@@ -246,7 +246,14 @@ export default function OnboardingOndas() {
     } else {
       junta.value = withTiming(1, { duration: JUNTA_MS, easing: EASE_SUAVE });
       quieta.value = withTiming(1, { duration: QUIETA_MS, easing: Easing.linear });
-      teje.value = withDelay(TEJE_EN, withTiming(1, { duration: TEJE_MS, easing: Easing.linear }));
+      teje.value = withDelay(TEJE_EN, withTiming(1, { duration: TEJE_MS, easing: Easing.linear }, (finished) => {
+        'worklet';
+        // Al terminar de tejerse, los aros simples ya quedaron invisibles
+        // (arosStyle → 0). Frenar la ola acá para que sus worklets dejen de
+        // recalcular perspective/rotateZ/rotateX cada frame para siempre — lo
+        // marcó el review de calidad (14/10) como trabajo de UI que sobra.
+        if (finished) cancelAnimation(reloj);
+      }));
       onda.value = withDelay(ONDA_EN, withTiming(1, { duration: ONDA_MS, easing: Easing.linear }));
       luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), 0);
       luego(() => vibrar(Haptics.ImpactFeedbackStyle.Soft), ONDA_EN);
