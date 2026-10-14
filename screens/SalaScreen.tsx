@@ -2029,24 +2029,42 @@ export default function SalaScreen() {
         >
           {isChatFrozen ? (
             <View style={styles.frozenNotice}>
-              <MaterialCommunityIcons
-                name={pairBlocked ? 'account-cancel-outline' : 'lock-outline'}
-                size={16}
-                color="rgba(135,131,92,0.70)"
-              />
-              <Text style={styles.frozenNoticeText}>
-                {/* El bloqueo gana sobre "pendiente": si están bloqueados, el
-                    chat no se destraba aceptando la solicitud. El texto de
-                    quien NO bloqueó es neutro a propósito — enterarse de que te
-                    bloquearon es justo lo que la función tiene que evitar. */}
-                {pairBlocked
-                  ? (iBlockedThem
-                      ? `Bloqueaste a ${recipientProfile?.name?.split(' ')[0] ?? 'esta persona'}. Desbloqueá desde el menú “⋯” para volver a escribirle.`
-                      : 'No podés escribir en esta conversación.')
-                  : isCurrentUserCoach
-                    ? 'Aceptá o rechazá la solicitud desde Reservas para habilitar el chat'
-                    : `El chat se habilita cuando ${recipientProfile?.name ?? 'el profesional'} acepte tu solicitud`}
-              </Text>
+              <View style={styles.frozenNoticeRow}>
+                <MaterialCommunityIcons
+                  name={pairBlocked ? 'account-cancel-outline' : 'lock-outline'}
+                  size={16}
+                  color="rgba(135,131,92,0.70)"
+                />
+                <Text style={styles.frozenNoticeText}>
+                  {/* El bloqueo gana sobre "pendiente": si están bloqueados, el
+                      chat no se destraba aceptando la solicitud. El texto de
+                      quien NO bloqueó es neutro a propósito — enterarse de que te
+                      bloquearon es justo lo que la función tiene que evitar. */}
+                  {pairBlocked
+                    ? (iBlockedThem
+                        ? `Bloqueaste a ${recipientProfile?.name?.split(' ')[0] ?? 'esta persona'}. Desbloqueá desde el menú “⋯” para volver a escribirle.`
+                        : 'No podés escribir en esta conversación.')
+                    : isCurrentUserCoach
+                      ? 'Aceptá o rechazá la solicitud desde Reservas para habilitar el chat'
+                      : `El chat se habilita cuando ${recipientProfile?.name ?? 'el profesional'} acepte tu solicitud`}
+                </Text>
+              </View>
+              {/* El "+" no está con el chat congelado, pero las notas de una
+                  sesión pasada no son parte del chat: son el registro del
+                  profesional. Entrada in-situ para no tener que volver al Inicio
+                  (donde igual siguen accesibles). Solo el coach, solo si hay
+                  sesión que anotar (review 14/10, cierre del hueco de notas). */}
+              {isCurrentUserCoach && !recipientIsCoach && notesBookingId && recipientProfile && (
+                <TouchableOpacity
+                  style={styles.frozenNotesLink}
+                  onPress={() => setNotesOpen(true)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir las notas de la sesión">
+                  <MaterialCommunityIcons name="note-text-outline" size={15} color="#566245" />
+                  <Text style={styles.frozenNotesLinkText}>Notas de la sesión</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <>
@@ -2652,11 +2670,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, maxHeight: 120, lineHeight: 21,
   },
   frozenNotice: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: 8,
     backgroundColor: 'rgba(255,248,240,0.48)', borderRadius: 22,
     paddingHorizontal: 16, paddingVertical: 12,
   },
+  frozenNoticeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch' },
   frozenNoticeText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 13, color: 'rgba(135,131,92,0.80)', lineHeight: 18 },
+  frozenNotesLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 2 },
+  frozenNotesLinkText: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#566245' },
   sendBtn: {
     width: 42, height: 42, borderRadius: 21, backgroundColor: ViveColors.primary,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
