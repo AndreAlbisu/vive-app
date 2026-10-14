@@ -197,7 +197,9 @@ export default function OnboardingAbrirse() {
     pendientes.current.forEach(clearTimeout);
     hintOp.value = withTiming(0, { duration: 200 });
     sale.value = withTiming(1, { duration: EXIT_MS, easing: EASE_OUT });
-    setTimeout(navegar, EXIT_MS);
+    // Trackeado para que el cleanup lo cancele si se desmonta durante el fade
+    // (login OAuth) y `navegar` no corra post-unmount (review 14/10).
+    pendientes.current.push(setTimeout(navegar, EXIT_MS));
   }, [navegar]);
 
   const vibrar = useCallback((estilo: Haptics.ImpactFeedbackStyle) => {
