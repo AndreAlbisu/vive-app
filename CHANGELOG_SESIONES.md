@@ -1,3 +1,14 @@
+## 2026-10-13 — Andre (Claude · se va "Perfil de ejemplo" del menú de Perfil)
+
+**Tocado:** `screens/ProfileOwnScreen.tsx`. **Sin migraciones.**
+
+**Resumen:**
+- Andre pidió sacar la entrada "Perfil de ejemplo" de la configuración. Solo la veían las cuentas admin.
+- El perfil de ejemplo en sí no se borró (`lib/perfilEjemplo.ts` y su manejo en `ProfesionalScreen.tsx`), pero esa entrada era la única forma de abrirlo desde la app.
+
+**Pendiente para la próxima sesión:**
+- Decidir si el perfil de ejemplo se borra del todo o se deja por si vuelve a hacer falta para mostrar la app.
+
 ## 2026-10-13 — Andre (Claude · bienvenida 8: otra frase)
 
 **Tocado:** `screens/OnboardingOndas.tsx`
