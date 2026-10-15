@@ -77,7 +77,14 @@ export function montoLegible(r: Pick<PagoRow, 'amount' | 'charged_amount' | 'ref
 
 function fechaCorta(iso: string | null): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+  // En hora de Buenos Aires, NO la del dispositivo: un reembolso confirmado a la
+  // noche (hora AR) le salía corrido un día a un usuario lejos de Argentina.
+  // Mismo criterio que `lib/cambioDeNombre.ts` (fix del 14/10).
+  return new Date(iso).toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  });
 }
 
 /** El estado del dinero de una reserva, dicho para quien pagó. */
