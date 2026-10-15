@@ -17,7 +17,7 @@ import {
   SpaceGrotesk_400Regular,
   SpaceGrotesk_600SemiBold,
 } from '@expo-google-fonts/space-grotesk';
-import { Stack, useSegments, useRouter } from 'expo-router';
+import { Stack, useSegments, useRouter, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -97,6 +97,12 @@ function AuthRedirect() {
   const { user, loading, role, mailPendiente } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  // Para no redirigir antes de que el navegador raíz esté montado: en el arranque
+  // en frío el guard de abajo podía disparar `router.replace('/')` cuando el Stack
+  // todavía no registró `index`, y saltaba el LogBox *"REPLACE … not handled by
+  // any navigator"* (dev-only, cosmético). `navState.key` existe recién cuando el
+  // navegador está listo. Solución canónica de expo-router.
+  const navState = useRootNavigationState();
 
   // 🔴 Un alta de coach a medio hacer. Si la persona CIERRA LA APP en medio del
   // alta no corre ningún guard de navegación: la sesión sobrevive en
@@ -132,6 +138,9 @@ function AuthRedirect() {
   }, [user, role]);
 
   useEffect(() => {
+    // Esperar a que el navegador raíz esté montado (ver `navState` arriba): sin
+    // esto, un redirect en el arranque en frío tiraba el warning de "not handled".
+    if (!navState?.key) return;
     if (loading || pasoAlta === undefined) return;
     const inCoachGroup = segments[0] === '(coach)';
     const inTabsGroup = segments[0] === '(tabs)';
@@ -218,7 +227,7 @@ function AuthRedirect() {
     } else if (role === 'user' && inCoachGroup) {
       router.replace('/(tabs)');
     }
-  }, [user, loading, role, segments, router, pasoAlta, mailPendiente, postulacion]);
+  }, [navState?.key, user, loading, role, segments, router, pasoAlta, mailPendiente, postulacion]);
 
   return null;
 }
