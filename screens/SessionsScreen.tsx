@@ -989,12 +989,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     marginBottom: 16,
   },
-  headerTitle: {
-    fontFamily: ViveFonts.title,
-    fontSize: 34,
-    color: '#3F512F',
-    lineHeight: 40,
-  },
 
   loadingState: { flex: 1, padding: 20, gap: 12 },
   skeletonHero: {

@@ -930,12 +930,6 @@ const s = StyleSheet.create({
     marginTop: 10,
     marginBottom: 6,
   },
-  title: {
-    fontFamily: ViveFonts.title,
-    fontSize: 32,
-    color: FOREST,
-    lineHeight: 38,
-  },
   hicons: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1069,11 +1063,6 @@ const s = StyleSheet.create({
   // Mismo estilo que "Herramientas de Vita" en recursos.tsx (sectionTitle),
   // pedido explícito — solo para Fase 1 ("Elegí un área de bienestar para
   // empezar"), no para el subtítulo de Fase 2, que sigue con el estilo chico.
-  askSubBig: {
-    fontFamily: ViveFonts.title,
-    fontSize: 20,
-    color: FOREST,
-  },
   askSub: {
     fontFamily: ViveFonts.regular,
     fontSize: 13.5,

@@ -598,12 +598,6 @@ const s = StyleSheet.create({
     marginTop: -2,
     marginBottom: 5,   // menos aire título→"Herramientas" (Joaquín, 15/10)
   },
-  pageTitle: {
-    fontFamily: ViveFonts.title,
-    fontSize: 34,
-    color: FOREST,
-    lineHeight: 40,
-  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -765,24 +759,9 @@ const s = StyleSheet.create({
   },
 
   // ── Sección "De tu coach" ─────────────────────────────────────────────────
-  sectionTitle: {
-    fontFamily: ViveFonts.title,
-    fontSize: 20,
-    color: FOREST,
-    marginTop: 8,
-    marginBottom: 10,
-  },
   // marginTop bajó de 8 a 2 (sesión 128): Plus Jakarta Sans trae más "aire"
   // propio que Fraunces para el mismo lineHeight del título — se compensa acá,
   // trayendo el contenido hacia el título, no achicando el título en sí.
-  libraryHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-    marginBottom: 14,
-  },
-  sectionTitleFlush: { marginTop: 0, marginBottom: 0, flexShrink: 1 },
   // "Herramientas de Vita": Plus Jakarta Sans medium 18, mismo verde que el
   // título de la pantalla, separado de él. (Antes era un título grande.)
   herramientasTitulo: { fontFamily: ViveFonts.titleMedium, fontSize: 18, color: '#565E32', marginTop: 2 },
