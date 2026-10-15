@@ -24,6 +24,7 @@ import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useRecommendedResource, type Reco, type MoodLite } from '@/hooks/useRecommendedResource';
 import { TOOL_MAP, TOOL_GROUPS, type Tool, type IoniconName } from '@/constants/tools';
 import { HERRAMIENTAS_BAJADA } from '@/constants/herramientasParaQue';
+import { screenHeader } from '@/constants/screenHeader';
 
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -517,7 +518,7 @@ export default function RecursosScreen() {
           {/* 1. Header + guardados. La racha se sacó de acá el 05/10/2026 (Andre:
               quedaba rara al lado del título); vive en Progreso. */}
           <View style={s.header}>
-            <Text style={s.pageTitle}>Recursos</Text>
+            <Text style={screenHeader.title}>Recursos</Text>
             <View style={s.headerActions}>
               <TouchableOpacity
                 onPress={() => (user ? router.push('/mis-recordatorios' as any) : requestAuth('ver_recordatorios'))}
@@ -541,10 +542,9 @@ export default function RecursosScreen() {
             </View>
           </View>
 
-          {/* 1. Herramientas de Vita — sugerencia del día (hero/línea) + tiles */}
-          <View style={s.libraryHeaderRow}>
-            <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Herramientas de Vita</Text>
-          </View>
+          {/* 1. Herramientas de Vita — sub-encabezado (PJ medium 18) + descripción,
+              debajo del título de la pantalla; luego la sugerencia del día + tiles */}
+          <Text style={s.herramientasTitulo}>Herramientas de Vita</Text>
           <Text style={s.herramientasBajada}>{HERRAMIENTAS_BAJADA}</Text>
           <RecommendedCard
             reco={reco}
@@ -596,7 +596,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: -2,
-    marginBottom: 8,
+    marginBottom: 5,   // menos aire título→"Herramientas" (Joaquín, 15/10)
   },
   pageTitle: {
     fontFamily: ViveFonts.title,
@@ -783,7 +783,10 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitleFlush: { marginTop: 0, marginBottom: 0, flexShrink: 1 },
-  herramientasBajada: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: FOREST_SOFT, marginTop: -8, marginBottom: 14 },
+  // "Herramientas de Vita": Plus Jakarta Sans medium 18, mismo verde que el
+  // título de la pantalla, separado de él. (Antes era un título grande.)
+  herramientasTitulo: { fontFamily: ViveFonts.titleMedium, fontSize: 18, color: '#565E32', marginTop: 2 },
+  herramientasBajada: { fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: '#7A8277', marginTop: 3, marginBottom: 14 },
 
   // ── Eyebrow (encabezado chico) + grilla de formatos ────────────────────────
   eyebrowRow: {

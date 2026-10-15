@@ -21,6 +21,7 @@ import * as Calendar from 'expo-calendar';
 import { abrirVideollamada, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 import { getLatestSharedNotesByCoach } from '@/lib/sessionNotes';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { screenHeader } from '@/constants/screenHeader';
 import { ordenarSalas } from '@/lib/salaOrder';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
@@ -29,6 +30,9 @@ import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel, todayInAr, sessio
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+
+// Subtítulo de Mensajes (provisorio — editar acá).
+const MENSAJES_SUBTITULO = 'Tus conversaciones con profesionales';
 
 type SalaItem = {
   id: string;
@@ -534,7 +538,11 @@ export default function SessionsScreen() {
           },
         ]}
       >
-        <Text style={styles.headerTitle}>Mensajes</Text>
+        <Text style={screenHeader.title}>Mensajes</Text>
+        {/* marginTop 10 (no el 4 del token): acá el subtítulo va directo bajo el
+            título, sin el margen del header que suman Profesionales/Recursos.
+            Así los tres quedan a la misma altura (~10px). */}
+        <Text style={[screenHeader.subtitle, { marginTop: 7 }]}>{MENSAJES_SUBTITULO}</Text>
       </Animated.View>
 
       {loading ? (
@@ -976,9 +984,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
 
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    // Columna: título + subtítulo (Mensajes no tiene acciones a la derecha).
     paddingHorizontal: 20,
     paddingTop: 20,
     marginBottom: 16,

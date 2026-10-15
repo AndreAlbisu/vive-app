@@ -1,3 +1,16 @@
+## 2026-10-15 — Joaquín (Claude · headers de tabs unificados + fix nav raíz)
+
+**Tocado:** `constants/screenHeader.ts` (nuevo), `constants/theme.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `screens/SessionsScreen.tsx`, `app/index.tsx`. Directo en `main`.
+
+**Resumen:**
+- **Headers de Profesionales, Recursos y Mensajes unificados con el estilo del saludo de Inicio** (la referencia aprobada por Joaquín, con capturas). Valores EXACTOS del saludo (`index.tsx` → `greetingLine1`): Plus Jakarta Sans **bold, 30px, #565E32, lineHeight 38** (no la aproximación "semibold 36" — se usaron los del código, como pidió). Estilo compartido nuevo `constants/screenHeader.ts` (`title` + `subtitle`: Poppins 15 / #7A8277). Inicio NO se tocó.
+  - Subtítulos: Profesionales "Elegí un área…"; Mensajes "Tus conversaciones con profesionales" (en `MENSAJES_SUBTITULO`, editable); Recursos sin subtítulo de pantalla.
+  - Recursos: "Herramientas de Vita" dejó de ser título grande → sub-encabezado Plus Jakarta **medium 18** #565E32 (token nuevo `ViveFonts.titleMedium` = PlusJakarta 500, ya cargada); descripción Poppins 14 #7A8277; orden intacto (banner "Hoy:" + tiles).
+  - Spacing afinado al pixel con Joaquín (capturas): los 3 subtítulos a ~7px del título (parejos); el buscador de Profesionales a ~16px del subtítulo.
+- 🟢 **Error "REPLACE index not handled" — cerrado del todo.** Ayer guardé el redirect de `AuthRedirect` (`_layout`), pero faltaba la 2da fuente: `app/index.tsx` también redirige en el arranque. Se le agregó el mismo `useRootNavigationState()` + early-return. **Confirmado en device: ya no aparece.** ⚠️ Cambios en archivos raíz (`_layout`/`index`) NO los agarra Fast Refresh (`r`) — requieren reload completo.
+
+**Pendiente:** los estilos viejos de título (`s.title`, `pageTitle`, `headerTitle`, `askSubBig`) quedaron definidos sin usar (inofensivos); limpiar si molestan.
+
 ## 2026-10-14 — Joaquín (Claude · tests verdes + fix de timezone + cifrado verificado)
 
 **Tocado:** `lib/cambioDeNombre.ts`, `screens/SalaScreen.tsx`. Directo en `main`.

@@ -80,6 +80,9 @@ export const ViveFonts = {
   // frauncesSerif) y `titleSemiBold` (600, donde antes iba frauncesSemiBold).
   title: 'PlusJakartaSans_700Bold',
   titleSemiBold: 'PlusJakartaSans_600SemiBold',
+  // Plus Jakarta Sans 500 (ya se carga en _layout). Para sub-encabezados como
+  // "Herramientas de Vita" — más liviano que un título, más que el cuerpo.
+  titleMedium: 'PlusJakartaSans_500Medium',
   // Texto de devolución/feedback generado — la card "Sobre vos", el momento de
   // pantalla completa, y cualquier otro texto de reflexión dinámica.
   feedback: 'PlusJakartaSans_600SemiBold',

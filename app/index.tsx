@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useRootNavigationState } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { ViveColors } from '@/constants/theme';
 // Las bienvenidas conviven y sale una AL AZAR cada vez que se abre la app
@@ -64,6 +64,10 @@ function sortear(): Opcion {
 export default function Index() {
   const { user, loading, role } = useAuth();
   const router = useRouter();
+  // No redirigir antes de que el navegador raíz esté montado: en el arranque en
+  // frío este efecto podía disparar `router.replace` antes de que el Stack
+  // estuviera listo y saltaba el LogBox "… not handled by any navigator".
+  const navState = useRootNavigationState();
   const insets = useSafeAreaInsets();
   const [opcion, setOpcion] = useState<Opcion>(sortear);
   // Cambia en cada toque del selector: tocar la misma opción la repite.
@@ -75,6 +79,7 @@ export default function Index() {
   }, [mostrando, opcion, vuelta]);
 
   useEffect(() => {
+    if (!navState?.key) return;
     if (loading) return;
     if (user) {
       // Entrar a la app es el final del onboarding: el tono del camino elegido
@@ -86,7 +91,7 @@ export default function Index() {
       // empezar?", no saltearla.
       void destinoTrasEntrar(user, role).then(d => router.replace(d as any));
     }
-  }, [user, loading, role, router]);
+  }, [navState?.key, user, loading, role, router]);
 
   if (loading) {
     return (

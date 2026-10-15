@@ -20,6 +20,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { screenHeader } from '@/constants/screenHeader';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { EjeIcon } from '@/components/EjeIcon';
 import { MatriculaPill } from '@/components/MatriculaPill';
@@ -675,7 +676,7 @@ export default function ConexionesScreen() {
 
           {/* ── Header ─────────────────────────────────────────────────── */}
           <View style={s.header}>
-            <Text style={s.title}>Profesionales</Text>
+            <Text style={screenHeader.title}>Profesionales</Text>
             <View style={s.hicons}>
               <TouchableOpacity
                 onPress={() => (user ? router.push('/favoritos') : requestAuth('ver_favoritos'))}
@@ -769,7 +770,7 @@ export default function ConexionesScreen() {
             /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
             <SlideInView key="fase1">
               <View style={[s.askWrap, s.askWrapTight]}>
-                <Text style={[s.askSub, s.askSubBig]}>Elegí un área de bienestar para empezar</Text>
+                <Text style={screenHeader.subtitle}>Elegí un área de bienestar para empezar</Text>
               </View>
 
               {/* Búsqueda por nombre — en vivo sobre el cache de coaches */}
@@ -955,14 +956,11 @@ const s = StyleSheet.create({
     // subtítulo al buscador y 4 del buscador a las columnas — el buscador
     // quedaba pegado a los ejes y los tres se leían como un solo bulto.
     //
-    // 24 arriba (2 que aporta `askWrapTight` + 22) y 26 abajo. Va apretado
+    // Subtítulo→buscador: más pegado pero sin encimarse (Joaquín, 15/10).
+    // 16 arriba (2 de `askWrapTight.marginBottom` + 14) y 26 abajo. Va apretado
     // adentro de un grupo y suelto entre grupos: el título y su bajada son UN
     // bloque, el buscador es otro y las columnas son otro.
-    //
-    // ⚠️ El hueco título→bajada NO se toca. Su `marginTop: 2` está calculado
-    // para dar 28pt exactos, los mismos que `recursos.tsx`, y arriba de ese
-    // estilo está documentado el error de unidades que costó llegar ahí.
-    marginTop: 22,
+    marginTop: 14,
     marginBottom: 26,
     paddingHorizontal: 14,
     height: 46,
@@ -1058,7 +1056,7 @@ const s = StyleSheet.create({
   // densidad de la pantalla. Objetivo: 84px = 28pt (recursos.tsx) →
   // marginTop = 28 − 26 = 2.
   askWrapTight: {
-    marginTop: 2,
+    marginTop: 0,     // el subtítulo queda pegado al título (Joaquín, 15/10)
     marginBottom: 2,
   },
   // Título de Fase 2 (nombre del eje elegido) — Fase 1 ya no tiene título propio.
